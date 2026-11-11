@@ -92,15 +92,18 @@ export function createLeadsRouter(
         return;
       }
 
-      if (!lead.phone) {
+      const phoneToUse = req.body.phone || lead.phone;
+      if (!phoneToUse || phoneToUse === "#ERROR!") {
         res.status(400).json({ error: "This lead does not have a phone number to convert into a customer" });
         return;
       }
 
+      const cleanPhone = phoneToUse.replace(/[^0-9+]/g, "");
+
       const customer = await db.customers.create({
         userId: lead.userId,
         name: lead.name,
-        phone: lead.phone,
+        phone: cleanPhone,
         notes: `Converted from lead. Address: ${lead.address || "N/A"}`,
         tags: `Lead, ${lead.category}`,
       });
