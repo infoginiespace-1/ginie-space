@@ -82,7 +82,7 @@ export function createLeadsRouter(
 
   router.post("/:id/convert", async (req: Request, res: Response): Promise<void> => {
     try {
-      const lead = await db.leads.findById(req.params.id);
+      const lead = await db.leads.findById((req.params.id as string));
       if (!lead) {
         res.status(404).json({ error: "Lead not found" });
         return;
@@ -132,7 +132,7 @@ export function createLeadsRouter(
         return;
       }
 
-      const existing = await db.leads.findById(req.params.id);
+      const existing = await db.leads.findById((req.params.id as string));
       if (!existing) {
         res.status(404).json({ error: "Lead not found" });
         return;
@@ -142,7 +142,7 @@ export function createLeadsRouter(
         return;
       }
 
-      const updated = await db.leads.update(req.params.id, {
+      const updated = await db.leads.update((req.params.id as string), {
         status: status as LeadStatus,
       });
 
