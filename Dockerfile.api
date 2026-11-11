@@ -1,0 +1,39 @@
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Copy root and package manifests
+COPY package*.json ./
+COPY apps/api/package*.json ./apps/api/
+COPY packages/sheets-db/package*.json ./packages/sheets-db/
+COPY packages/places-client/package*.json ./packages/places-client/
+COPY packages/whatsapp-engine/package*.json ./packages/whatsapp-engine/
+
+# Install dependencies
+RUN npm install
+
+# Copy source code
+COPY packages/ ./packages/
+COPY apps/api/ ./apps/api/
+
+# Build packages and API
+RUN npm run build --workspace=@giniespace/sheets-db
+RUN npm run build --workspace=@giniespace/places-client
+RUN npm run build --workspace=@giniespace/whatsapp-engine
+RUN npm run build --workspace=@giniespace/api
+
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+ENV NODE_ENV=production
+ENV PORT=4000
+ENV WHATSAPP_STORAGE_PATH=/data/whatsapp-sessions
+
+# Create persistent storage directory for WhatsApp credentials
+RUN mkdir -p /data/whatsapp-sessions
+
+COPY --from=builder /app /app
+
+EXPOSE 4000
+
+CMD ["node", "apps/api/dist/server.js"]
