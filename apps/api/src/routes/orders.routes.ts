@@ -22,7 +22,7 @@ export function createOrdersRouter(
 
   router.get("/:id", async (req: Request, res: Response): Promise<void> => {
     try {
-      const order = await db.orders.findById(req.params.id);
+      const order = await db.orders.findById((req.params.id as string));
       if (!order) {
         res.status(404).json({ error: "Order not found" });
         return;
@@ -75,7 +75,7 @@ export function createOrdersRouter(
         return;
       }
 
-      const existing = await db.orders.findById(req.params.id);
+      const existing = await db.orders.findById((req.params.id as string));
       if (!existing) {
         res.status(404).json({ error: "Order not found" });
         return;
@@ -85,7 +85,7 @@ export function createOrdersRouter(
         return;
       }
 
-      const updated = await db.orders.update(req.params.id, {
+      const updated = await db.orders.update((req.params.id as string), {
         status: status as OrderStatus,
       });
 
@@ -120,7 +120,7 @@ export function createOrdersRouter(
 
   router.delete("/:id", async (req: Request, res: Response): Promise<void> => {
     try {
-      const existing = await db.orders.findById(req.params.id);
+      const existing = await db.orders.findById((req.params.id as string));
       if (!existing) {
         res.status(404).json({ error: "Order not found" });
         return;
@@ -130,8 +130,8 @@ export function createOrdersRouter(
         return;
       }
 
-      await db.orders.delete(req.params.id);
-      io.to(`user:${existing.userId}`).emit("order:deleted", { id: req.params.id });
+      await db.orders.delete((req.params.id as string));
+      io.to(`user:${existing.userId}`).emit("order:deleted", { id: (req.params.id as string) });
 
       res.json({ message: "Order removed successfully" });
     } catch {
