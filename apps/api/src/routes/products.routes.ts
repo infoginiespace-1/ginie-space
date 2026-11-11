@@ -17,7 +17,7 @@ export function createProductsRouter(db: IDatabase, io: Server): Router {
 
   router.get("/:id", async (req: Request, res: Response): Promise<void> => {
     try {
-      const product = await db.products.findById(req.params.id);
+      const product = await db.products.findById((req.params.id as string));
       if (!product) {
         res.status(404).json({ error: "Item not found" });
         return;
@@ -60,7 +60,7 @@ export function createProductsRouter(db: IDatabase, io: Server): Router {
 
   router.put("/:id", async (req: Request, res: Response): Promise<void> => {
     try {
-      const existing = await db.products.findById(req.params.id);
+      const existing = await db.products.findById((req.params.id as string));
       if (!existing) {
         res.status(404).json({ error: "Item not found" });
         return;
@@ -71,7 +71,7 @@ export function createProductsRouter(db: IDatabase, io: Server): Router {
       }
 
       const { name, description, price, unit, stock, imageUrl } = req.body;
-      const updated = await db.products.update(req.params.id, {
+      const updated = await db.products.update((req.params.id as string), {
         name: name !== undefined ? name.trim() : existing.name,
         description: description !== undefined ? description.trim() : existing.description,
         price: price !== undefined ? Number(price) : existing.price,
@@ -90,7 +90,7 @@ export function createProductsRouter(db: IDatabase, io: Server): Router {
 
   router.delete("/:id", async (req: Request, res: Response): Promise<void> => {
     try {
-      const existing = await db.products.findById(req.params.id);
+      const existing = await db.products.findById((req.params.id as string));
       if (!existing) {
         res.status(404).json({ error: "Item not found" });
         return;
@@ -100,8 +100,8 @@ export function createProductsRouter(db: IDatabase, io: Server): Router {
         return;
       }
 
-      await db.products.delete(req.params.id);
-      io.to(`user:${existing.userId}`).emit("product:deleted", { id: req.params.id });
+      await db.products.delete((req.params.id as string));
+      io.to(`user:${existing.userId}`).emit("product:deleted", { id: (req.params.id as string) });
 
       res.json({ message: "Item removed successfully" });
     } catch {
