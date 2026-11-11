@@ -64,12 +64,17 @@ export class GoogleSheetsRepository<T extends { id: string; createdAt?: string; 
   private rowToEntity(row: string[]): T {
     const entity: any = {};
     this.headers.forEach((header, index) => {
-      const val = row[index] !== undefined ? row[index] : "";
-      if (val === "" || val === undefined) {
+      let val = row[index] !== undefined ? row[index] : "";
+      if (typeof val === "string" && val.startsWith("'")) {
+        val = val.substring(1);
+      }
+      if (val === "" || val === undefined || val === "#ERROR!") {
         entity[header] = undefined;
       } else {
         const num = Number(val);
-        if (!isNaN(num) && val.trim() !== "" && (header as string).toLowerCase().includes("count") || (header as string).toLowerCase().includes("price") || (header as string).toLowerCase().includes("rating") || (header as string).toLowerCase().includes("stock") || (header as string).toLowerCase().includes("amount")) {
+        const headerStr = (header as string).toLowerCase();
+        const isNumeric = headerStr.includes("count") || headerStr.includes("price") || headerStr.includes("rating") || headerStr.includes("stock") || headerStr.includes("amount");
+        if (isNumeric && !isNaN(num) && val.trim() !== "") {
           entity[header] = num;
         } else {
           entity[header] = val;
@@ -82,7 +87,12 @@ export class GoogleSheetsRepository<T extends { id: string; createdAt?: string; 
   private entityToRow(entity: Partial<T>): string[] {
     return this.headers.map((h) => {
       const val = (entity as any)[h];
-      return val === undefined || val === null ? "" : String(val);
+      if (val === undefined || val === null) return "";
+      const str = String(val);
+      if (str.startsWith("+") || str.startsWith("=") || (str.startsWith("-") && isNaN(Number(str)))) {
+        return `'${str}`;
+      }
+      return str;
     });
   }
 
