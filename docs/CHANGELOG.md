@@ -48,3 +48,6 @@ All notable changes to the GinieSpace platform are documented in this file.
   - `docker-compose.yml`: Multi-service orchestration (`web`, `api`, `redis`) with named persistent volumes.
   - `docs/DEPLOYMENT.md`: Cloudflare DNS, Full (Strict) SSL, WAF, WebSocket proxying, and VPS reverse proxy instructions.
 - Authenticated Cloudflare CLI (`wrangler`) using OAuth Device Authorization with account `info.giniespace@gmail.com` (`c6301363fd58cd0b7ab59767160fd75b`).
+- Verified Cloudflare Zone for `ginie.space`:
+  - Zone ID: `3f02b6c560d55263517c6433c5f352c2`
+  - Assigned Nameservers: `armfazh.ns.cloudflare.com` & `khloe.ns.cloudflare.com`
