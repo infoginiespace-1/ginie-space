@@ -1,0 +1,41 @@
+services:
+  - type: web
+    name: giniespace-api
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm install && npm run build --workspace=@giniespace/sheets-db && npm run build --workspace=@giniespace/places-client && npm run build --workspace=@giniespace/whatsapp-engine && npm run build --workspace=@giniespace/api
+    startCommand: node apps/api/dist/server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: NODE_ENV
+        value: production
+      - key: CORS_ORIGIN
+        value: https://ginie.space
+      - key: JWT_SECRET
+        generateValue: true
+      - key: GOOGLE_SHEET_ID
+        sync: false
+      - key: GOOGLE_PLACES_API_KEY
+        sync: false
+      - key: GOOGLE_SERVICE_ACCOUNT_JSON
+        sync: false
+      - key: WHATSAPP_STORAGE_PATH
+        value: /tmp/whatsapp-sessions
+
+  - type: web
+    name: giniespace-web
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm install && npm run build --workspace=@giniespace/web
+    startCommand: npm run start --workspace=@giniespace/web
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: NEXT_PUBLIC_API_URL
+        value: https://api.ginie.space
