@@ -31,3 +31,14 @@ All notable changes to the GinieSpace platform are documented in this file.
   - WhatsApp multi-session controller (`/api/whatsapp`) for live QR generation and message dispatch.
   - Settings & admin user management router (`/api/settings`).
   - Real-time Socket.io gateway broadcasting inbound messages, status changes, and order events to tenant rooms.
+- Implemented `@giniespace/web` (Next.js 14 App Router + Ant Design):
+  - Friendly, non-technical UI terminology throughout.
+  - Live WhatsApp Inbox (`/inbox`) with instant incoming/outgoing chat synchronization via Socket.io.
+  - Orders & Sales dashboard (`/orders`) with real-time status transitions and automated WhatsApp customer notifications.
+  - Local Lead Discovery (`/leads`) querying official Google Places data by category, area, city, and pincode with one-click customer conversion.
+  - Customer directory (`/customers`) with direct WhatsApp messaging actions.
+  - Product & Catalog management (`/products`) for pricing and inventory tracking.
+  - Interactive WhatsApp Link QR Modal with live auto-refresh and connection state badge.
+  - Signup with mandatory business type selector (Retail vs. Wholesale) and secure Sign In.
+  - Settings & auto-welcome responder management (`/settings`).
+  - Admin Panel (`/admin`) for system metrics and user management.
