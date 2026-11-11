@@ -42,3 +42,8 @@ All notable changes to the GinieSpace platform are documented in this file.
   - Signup with mandatory business type selector (Retail vs. Wholesale) and secure Sign In.
   - Settings & auto-welcome responder management (`/settings`).
   - Admin Panel (`/admin`) for system metrics and user management.
+- Implemented Production Infrastructure & Hosting:
+  - `Dockerfile.api`: Multi-stage Alpine container with persistent `/data/whatsapp-sessions` storage.
+  - `Dockerfile.web`: Standalone optimized container for Next.js 14 frontend.
+  - `docker-compose.yml`: Multi-service orchestration (`web`, `api`, `redis`) with named persistent volumes.
+  - `docs/DEPLOYMENT.md`: Cloudflare DNS, Full (Strict) SSL, WAF, WebSocket proxying, and VPS reverse proxy instructions.
