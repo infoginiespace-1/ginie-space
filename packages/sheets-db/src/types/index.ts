@@ -1,0 +1,108 @@
+export type UserRole = "admin" | "user";
+export type BusinessType = "retail" | "wholesale";
+export type OrderStatus = "pending" | "confirmed" | "dispatched" | "delivered" | "cancelled";
+export type LeadStatus = "new" | "contacted" | "converted" | "archived";
+export type WhatsAppStatus = "disconnected" | "connecting" | "connected";
+
+export interface User {
+  id: string;
+  email: string;
+  passwordHash: string;
+  name: string;
+  role: UserRole;
+  businessType: BusinessType;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BusinessProfile {
+  id: string;
+  userId: string;
+  name: string;
+  phone: string;
+  address: string;
+  settingsJson: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Customer {
+  id: string;
+  userId: string;
+  name: string;
+  phone: string;
+  email?: string;
+  notes?: string;
+  tags?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Product {
+  id: string;
+  userId: string;
+  name: string;
+  description: string;
+  price: number;
+  unit: string;
+  stock: number;
+  imageUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrderItem {
+  productId: string;
+  name: string;
+  quantity: number;
+  price: number;
+}
+
+export interface Order {
+  id: string;
+  userId: string;
+  customerId: string;
+  customerName: string;
+  customerPhone: string;
+  itemsJson: string;
+  totalAmount: number;
+  status: OrderStatus;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Lead {
+  id: string;
+  userId: string;
+  placeId: string;
+  name: string;
+  phone?: string;
+  address?: string;
+  website?: string;
+  rating?: number;
+  ratingCount?: number;
+  category: string;
+  status: LeadStatus;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Setting {
+  id: string;
+  userId: string;
+  key: string;
+  value: string;
+  updatedAt: string;
+}
+
+export interface WhatsAppSession {
+  id: string;
+  userId: string;
+  status: WhatsAppStatus;
+  qrCode?: string;
+  phoneNumber?: string;
+  lastSeen?: string;
+  updatedAt: string;
+}
