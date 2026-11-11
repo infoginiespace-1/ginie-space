@@ -6,7 +6,7 @@ import makeWASocket, {
   proto,
 } from "@whiskeysockets/baileys";
 import { Boom } from "@hapi/boom";
-import QRCode from "qrcode";
+const QRCode: any = require("qrcode");
 import pino from "pino";
 import { SessionState, InboundMessageEvent, OutboundMessageRequest } from "./types";
 
