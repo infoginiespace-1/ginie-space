@@ -2,6 +2,25 @@
 
 All notable changes to the GinieSpace platform are documented in this file.
 
+## [1.0.0] - 2026-11-11
+
+### Added
+- Automated full deployment to Render.com cloud platform using Render CLI and REST API.
+- Live production web application: `https://giniespace-web.onrender.com` (Next.js 14, Ant Design).
+- Live production API service: `https://giniespace-api.onrender.com` (Express, Socket.io, WhatsApp Baileys).
+- Connected custom domains:
+  - `api.ginie.space` added and verified on Render API service.
+  - `app.ginie.space` added and verified on Render Web service.
+  - Cloudflare CNAME DNS routing configured pointing to Render hosts.
+
+### Fixed
+- Upgraded TypeScript configuration to remove deprecated `moduleResolution=node10` across all workspaces.
+- Moved development types and TypeScript to monorepo dependencies for clean production builds on Render.
+- Configured Next.js `start` command to dynamically bind to `$PORT` (10000) for Render compatibility.
+- Fixed `auth.ts` syntax error in `requireAdmin` function declaration.
+- Fixed base64-encoded Google Service Account JSON decoding in `GoogleSheetsAdapter`.
+- Aligned Express 4 parameter types across customer, order, lead, and product routes.
+
 ## [Unreleased] - 2026-11-11
 
 ### Added
