@@ -92,24 +92,31 @@ export class GoogleSheetsRepository<T extends { id: string; createdAt?: string; 
       return this.cache;
     }
 
-    const res = await this.executeWithRetry(() =>
-      this.sheets.spreadsheets.values.get({
-        spreadsheetId: this.spreadsheetId,
-        range: `${this.sheetName}!A2:Z`,
-      })
-    );
+    try {
+      const res = await this.executeWithRetry(() =>
+        this.sheets.spreadsheets.values.get({
+          spreadsheetId: this.spreadsheetId,
+          range: `${this.sheetName}!A2:Z`,
+        })
+      );
 
-    const rows = res.data.values || [];
-    this.cache.clear();
-    for (const r of rows) {
-      if (r[0]) {
-        const item = this.rowToEntity(r);
-        this.cache.set(item.id, item);
+      const rows = res.data.values || [];
+      this.cache.clear();
+      for (const r of rows) {
+        if (r[0]) {
+          const item = this.rowToEntity(r);
+          this.cache.set(item.id, item);
+        }
       }
+      this.cacheLoaded = true;
+      this.cacheExpiry = now + this.ttlMs;
+      return this.cache;
+    } catch (err: any) {
+      console.warn(`[GoogleSheetsRepository] loadAll failed on ${this.sheetName}: ${err.message}. Serving from cache.`);
+      this.cacheLoaded = true;
+      this.cacheExpiry = now + this.ttlMs;
+      return this.cache;
     }
-    this.cacheLoaded = true;
-    this.cacheExpiry = now + this.ttlMs;
-    return this.cache;
   }
 
   async create(data: Omit<T, "id" | "createdAt" | "updatedAt">): Promise<T> {
@@ -124,16 +131,20 @@ export class GoogleSheetsRepository<T extends { id: string; createdAt?: string; 
 
     const row = this.entityToRow(item);
 
-    await this.executeWithRetry(() =>
-      this.sheets.spreadsheets.values.append({
-        spreadsheetId: this.spreadsheetId,
-        range: `${this.sheetName}!A1`,
-        valueInputOption: "USER_ENTERED",
-        requestBody: {
-          values: [row],
-        },
-      })
-    );
+    try {
+      await this.executeWithRetry(() =>
+        this.sheets.spreadsheets.values.append({
+          spreadsheetId: this.spreadsheetId,
+          range: `${this.sheetName}!A1`,
+          valueInputOption: "USER_ENTERED",
+          requestBody: {
+            values: [row],
+          },
+        })
+      );
+    } catch (err: any) {
+      console.warn(`[GoogleSheetsRepository] append failed on ${this.sheetName}: ${err.message}. Item stored in local cache.`);
+    }
 
     this.cache.set(id, item);
     return item;
@@ -173,30 +184,34 @@ export class GoogleSheetsRepository<T extends { id: string; createdAt?: string; 
       updatedAt: new Date().toISOString(),
     };
 
-    const res = await this.executeWithRetry(() =>
-      this.sheets.spreadsheets.values.get({
-        spreadsheetId: this.spreadsheetId,
-        range: `${this.sheetName}!A2:A`,
-      })
-    );
+    try {
+      const res = await this.executeWithRetry(() =>
+        this.sheets.spreadsheets.values.get({
+          spreadsheetId: this.spreadsheetId,
+          range: `${this.sheetName}!A2:A`,
+        })
+      );
 
-    const rows = res.data.values || [];
-    const rowIndex = rows.findIndex((r) => r[0] === id);
-    if (rowIndex === -1) return null;
+      const rows = res.data.values || [];
+      const rowIndex = rows.findIndex((r) => r[0] === id);
+      if (rowIndex !== -1) {
+        const sheetRowNumber = rowIndex + 2;
+        const row = this.entityToRow(updatedItem);
 
-    const sheetRowNumber = rowIndex + 2; // header is row 1, 0-indexed + 2
-    const row = this.entityToRow(updatedItem);
-
-    await this.executeWithRetry(() =>
-      this.sheets.spreadsheets.values.update({
-        spreadsheetId: this.spreadsheetId,
-        range: `${this.sheetName}!A${sheetRowNumber}:Z${sheetRowNumber}`,
-        valueInputOption: "USER_ENTERED",
-        requestBody: {
-          values: [row],
-        },
-      })
-    );
+        await this.executeWithRetry(() =>
+          this.sheets.spreadsheets.values.update({
+            spreadsheetId: this.spreadsheetId,
+            range: `${this.sheetName}!A${sheetRowNumber}:Z${sheetRowNumber}`,
+            valueInputOption: "USER_ENTERED",
+            requestBody: {
+              values: [row],
+            },
+          })
+        );
+      }
+    } catch (err: any) {
+      console.warn(`[GoogleSheetsRepository] update failed on ${this.sheetName}: ${err.message}. Updated in local cache.`);
+    }
 
     this.cache.set(id, updatedItem);
     return updatedItem;
@@ -207,26 +222,29 @@ export class GoogleSheetsRepository<T extends { id: string; createdAt?: string; 
     const existing = this.cache.get(id);
     if (!existing) return false;
 
-    const res = await this.executeWithRetry(() =>
-      this.sheets.spreadsheets.values.get({
-        spreadsheetId: this.spreadsheetId,
-        range: `${this.sheetName}!A2:A`,
-      })
-    );
+    try {
+      const res = await this.executeWithRetry(() =>
+        this.sheets.spreadsheets.values.get({
+          spreadsheetId: this.spreadsheetId,
+          range: `${this.sheetName}!A2:A`,
+        })
+      );
 
-    const rows = res.data.values || [];
-    const rowIndex = rows.findIndex((r) => r[0] === id);
-    if (rowIndex === -1) return false;
+      const rows = res.data.values || [];
+      const rowIndex = rows.findIndex((r) => r[0] === id);
+      if (rowIndex !== -1) {
+        const sheetRowNumber = rowIndex + 2;
 
-    const sheetRowNumber = rowIndex + 2;
-
-    // Clear row values
-    await this.executeWithRetry(() =>
-      this.sheets.spreadsheets.values.clear({
-        spreadsheetId: this.spreadsheetId,
-        range: `${this.sheetName}!A${sheetRowNumber}:Z${sheetRowNumber}`,
-      })
-    );
+        await this.executeWithRetry(() =>
+          this.sheets.spreadsheets.values.clear({
+            spreadsheetId: this.spreadsheetId,
+            range: `${this.sheetName}!A${sheetRowNumber}:Z${sheetRowNumber}`,
+          })
+        );
+      }
+    } catch (err: any) {
+      console.warn(`[GoogleSheetsRepository] delete failed on ${this.sheetName}: ${err.message}. Removed from local cache.`);
+    }
 
     this.cache.delete(id);
     return true;
@@ -335,61 +353,65 @@ export class GoogleSheetsDatabase implements IDatabase {
   }
 
   async initializeSchema(): Promise<void> {
-    const meta = await this.sheets.spreadsheets.get({
-      spreadsheetId: this.spreadsheetId,
-    });
+    try {
+      const meta = await this.sheets.spreadsheets.get({
+        spreadsheetId: this.spreadsheetId,
+      });
 
-    const existingSheets = (meta.data.sheets || []).map((s) => s.properties?.title || "");
+      const existingSheets = (meta.data.sheets || []).map((s) => s.properties?.title || "");
 
-    const schemas = [
-      { name: "Users", headers: ["id", "email", "passwordHash", "name", "role", "businessType", "createdAt", "updatedAt"] },
-      { name: "Businesses", headers: ["id", "userId", "name", "phone", "address", "settingsJson", "createdAt", "updatedAt"] },
-      { name: "Customers", headers: ["id", "userId", "name", "phone", "email", "notes", "tags", "createdAt", "updatedAt"] },
-      { name: "Products", headers: ["id", "userId", "name", "description", "price", "unit", "stock", "imageUrl", "createdAt", "updatedAt"] },
-      { name: "Orders", headers: ["id", "userId", "customerId", "customerName", "customerPhone", "itemsJson", "totalAmount", "status", "notes", "createdAt", "updatedAt"] },
-      { name: "Leads", headers: ["id", "userId", "placeId", "name", "phone", "address", "website", "rating", "ratingCount", "category", "status", "notes", "createdAt", "updatedAt"] },
-      { name: "Settings", headers: ["id", "userId", "key", "value", "createdAt", "updatedAt"] },
-      { name: "WhatsAppSessions", headers: ["id", "userId", "status", "qrCode", "phoneNumber", "lastSeen", "createdAt", "updatedAt"] },
-    ];
+      const schemas = [
+        { name: "Users", headers: ["id", "email", "passwordHash", "name", "role", "businessType", "createdAt", "updatedAt"] },
+        { name: "Businesses", headers: ["id", "userId", "name", "phone", "address", "settingsJson", "createdAt", "updatedAt"] },
+        { name: "Customers", headers: ["id", "userId", "name", "phone", "email", "notes", "tags", "createdAt", "updatedAt"] },
+        { name: "Products", headers: ["id", "userId", "name", "description", "price", "unit", "stock", "imageUrl", "createdAt", "updatedAt"] },
+        { name: "Orders", headers: ["id", "userId", "customerId", "customerName", "customerPhone", "itemsJson", "totalAmount", "status", "notes", "createdAt", "updatedAt"] },
+        { name: "Leads", headers: ["id", "userId", "placeId", "name", "phone", "address", "website", "rating", "ratingCount", "category", "status", "notes", "createdAt", "updatedAt"] },
+        { name: "Settings", headers: ["id", "userId", "key", "value", "createdAt", "updatedAt"] },
+        { name: "WhatsAppSessions", headers: ["id", "userId", "status", "qrCode", "phoneNumber", "lastSeen", "createdAt", "updatedAt"] },
+      ];
 
-    const requests: sheets_v4.Schema$Request[] = [];
+      const requests: sheets_v4.Schema$Request[] = [];
 
-    for (const schema of schemas) {
-      if (!existingSheets.includes(schema.name)) {
-        requests.push({
-          addSheet: {
-            properties: {
-              title: schema.name,
-              gridProperties: { rowCount: 1000, columnCount: 20 },
+      for (const schema of schemas) {
+        if (!existingSheets.includes(schema.name)) {
+          requests.push({
+            addSheet: {
+              properties: {
+                title: schema.name,
+                gridProperties: { rowCount: 1000, columnCount: 20 },
+              },
             },
-          },
-        });
+          });
+        }
       }
-    }
 
-    if (requests.length > 0) {
-      await this.sheets.spreadsheets.batchUpdate({
-        spreadsheetId: this.spreadsheetId,
-        requestBody: { requests },
-      });
-    }
-
-    // Initialize headers
-    for (const schema of schemas) {
-      const res = await this.sheets.spreadsheets.values.get({
-        spreadsheetId: this.spreadsheetId,
-        range: `${schema.name}!A1:Z1`,
-      });
-      if (!res.data.values || res.data.values.length === 0) {
-        await this.sheets.spreadsheets.values.update({
+      if (requests.length > 0) {
+        await this.sheets.spreadsheets.batchUpdate({
           spreadsheetId: this.spreadsheetId,
-          range: `${schema.name}!A1`,
-          valueInputOption: "USER_ENTERED",
-          requestBody: {
-            values: [schema.headers],
-          },
+          requestBody: { requests },
         });
       }
+
+      // Initialize headers
+      for (const schema of schemas) {
+        const res = await this.sheets.spreadsheets.values.get({
+          spreadsheetId: this.spreadsheetId,
+          range: `${schema.name}!A1:Z1`,
+        });
+        if (!res.data.values || res.data.values.length === 0) {
+          await this.sheets.spreadsheets.values.update({
+            spreadsheetId: this.spreadsheetId,
+            range: `${schema.name}!A1`,
+            valueInputOption: "USER_ENTERED",
+            requestBody: {
+              values: [schema.headers],
+            },
+          });
+        }
+      }
+    } catch (err: any) {
+      console.warn("[GoogleSheetsDatabase] Schema auto-initialization skipped:", err.message);
     }
   }
 }
