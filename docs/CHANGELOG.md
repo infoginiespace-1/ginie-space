@@ -6,7 +6,7 @@ All notable changes to the GinieSpace platform are documented in this file.
 
 ### Added
 - Created remote repository `infoginiespace-1/ginie-space` on GitHub with zero local disk footprint.
-- Verified and stored production secrets in GitHub Actions Secrets (`GOOGLE_PLACES_API_KEY`, `GOOGLE_SERVICE_ACCOUNT_JSON`, `GOOGLE_SHEET_ID`).
+- Verified and stored production secrets in GitHub Actions Secrets (`GOOGLE_PLACES_API_KEY`, `GOOGLE_SERVICE_ACCOUNT_JSON`, `GOOGLE_SHEET_ID`, `CLOUDFLARE_API_TOKEN`).
 - Authored initial Architecture Decision Records in `docs/DECISIONS.md`.
 - Implemented `@giniespace/sheets-db`:
   - `IRepository<T>` generic repository pattern enabling a zero-rewrite transition to PostgreSQL.
@@ -48,6 +48,9 @@ All notable changes to the GinieSpace platform are documented in this file.
   - `docker-compose.yml`: Multi-service orchestration (`web`, `api`, `redis`) with named persistent volumes.
   - `docs/DEPLOYMENT.md`: Cloudflare DNS, Full (Strict) SSL, WAF, WebSocket proxying, and VPS reverse proxy instructions.
 - Authenticated Cloudflare CLI (`wrangler`) using OAuth Device Authorization with account `info.giniespace@gmail.com` (`c6301363fd58cd0b7ab59767160fd75b`).
-- Verified Cloudflare Zone for `ginie.space`:
-  - Zone ID: `3f02b6c560d55263517c6433c5f352c2`
-  - Assigned Nameservers: `armfazh.ns.cloudflare.com` & `khloe.ns.cloudflare.com`
+- Programmatically configured Cloudflare Zone for `ginie.space` (Zone ID: `3f02b6c560d55263517c6433c5f352c2`):
+  - Proxied `A` record for `@` (`ginie.space`) pointing to `103.195.253.2`.
+  - Proxied `A` record for `api` (`api.ginie.space`) pointing to `103.195.253.2`.
+  - Enabled Cloudflare WebSockets (`value: on`).
+  - Enabled Always Use HTTPS (`value: on`).
+  - Enabled SSL/TLS Mode (`value: full`).
