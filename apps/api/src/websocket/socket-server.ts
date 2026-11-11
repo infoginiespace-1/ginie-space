@@ -14,7 +14,7 @@ export function setupSocketServer(
 ): SocketIOServer {
   const io = new SocketIOServer(httpServer, {
     cors: {
-      origin: corsOrigin === "*" ? true : corsOrigin,
+      origin: (origin, callback) => callback(null, true),
       methods: ["GET", "POST"],
       credentials: true,
     },
@@ -41,7 +41,7 @@ export function setupSocketServer(
 
   io.on("connection", (socket: Socket) => {
     const user: AuthenticatedUser = socket.data.user;
-    const room = `user:${user.id}`;
+    const room = user: + user.id;
     socket.join(room);
 
     // Send immediate WhatsApp connection state upon connecting
@@ -55,15 +55,15 @@ export function setupSocketServer(
 
   // Relay WhatsApp Events to User Room in Real-Time
   waManager.on("qr", ({ userId, qrCode }) => {
-    io.to(`user:${userId}`).emit("whatsapp:qr", { qrCode });
+    io.to(user: + userId).emit("whatsapp:qr", { qrCode });
   });
 
   waManager.on("status", (data) => {
-    io.to(`user:${data.userId}`).emit("whatsapp:status", data);
+    io.to(user: + data.userId).emit("whatsapp:status", data);
   });
 
   waManager.on("message", async (event: InboundMessageEvent) => {
-    io.to(`user:${event.userId}`).emit("whatsapp:message", event);
+    io.to(user: + event.userId).emit("whatsapp:message", event);
 
     // Auto-discover or log customer
     try {
