@@ -47,6 +47,7 @@ All notable changes to the GinieSpace platform are documented in this file.
   - `Dockerfile.web`: Standalone optimized container for Next.js 14 frontend.
   - `docker-compose.yml`: Multi-service orchestration (`web`, `api`, `redis`) with named persistent volumes.
   - `docs/DEPLOYMENT.md`: Cloudflare DNS, Full (Strict) SSL, WAF, WebSocket proxying, and VPS reverse proxy instructions.
+  - `render.yaml`: 1-Click Infrastructure-as-Code blueprint for deploying on Render.com's Free Tier with automatic health-check keep-alive monitoring.
 - Authenticated Cloudflare CLI (`wrangler`) using OAuth Device Authorization with account `info.giniespace@gmail.com` (`c6301363fd58cd0b7ab59767160fd75b`).
 - Programmatically configured Cloudflare Zone for `ginie.space` (Zone ID: `3f02b6c560d55263517c6433c5f352c2`):
   - Proxied `A` record for `@` (`ginie.space`) pointing to `103.195.253.2`.
