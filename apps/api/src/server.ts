@@ -24,20 +24,7 @@ async function bootstrap() {
   app.use(helmet());
   app.use(
     cors({
-      origin: (origin, callback) => {
-        // Allow requests with no origin (like mobile apps or curl)
-        if (!origin) return callback(null, true);
-        if (
-          config.corsOrigin === "*" ||
-          origin === config.corsOrigin ||
-          origin.includes("ginie.space") ||
-          origin.includes("onrender.com") ||
-          origin.includes("localhost")
-        ) {
-          return callback(null, true);
-        }
-        return callback(null, true);
-      },
+      origin: true,
       credentials: true,
     })
   );
@@ -79,7 +66,7 @@ async function bootstrap() {
   app.use("/api/settings", auth, createSettingsRouter(db));
 
   server.listen(config.port, () => {
-    console.log(GinieSpace API service active on port );
+    console.log("GinieSpace API service active on port " + config.port);
   });
 }
 
