@@ -1,0 +1,17 @@
+{
+  "name": "giniespace",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "init:db": "npm run init-db --workspace=@giniespace/sheets-db",
+    "lint": "npm run lint --workspaces"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}
