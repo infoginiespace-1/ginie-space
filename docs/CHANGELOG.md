@@ -10,7 +10,7 @@ All notable changes to the GinieSpace platform are documented in this file.
 - Authored initial Architecture Decision Records in `docs/DECISIONS.md`.
 - Implemented `@giniespace/sheets-db`:
   - `IRepository<T>` generic repository pattern enabling a zero-rewrite transition to PostgreSQL.
-  - `GoogleSheetsAdapter` connecting to Google Sheets API v4 using Service Account credentials.
+  - `GoogleSheetsAdapter` connecting to Google Sheets API v4 with Service Account credentials.
   - Rate limiting & request throttling (under 240 req/min) to respect Google Sheets 300 req/min quotas.
   - In-memory read caching with cache invalidation upon writes.
   - Auto-schema initializer to provision 8 core tabs (`Users`, `Businesses`, `Customers`, `Products`, `Orders`, `Leads`, `Settings`, `WhatsAppSessions`).
@@ -21,4 +21,13 @@ All notable changes to the GinieSpace platform are documented in this file.
   - Multi-tenant Baileys bridge supporting isolated WhatsApp sockets per business user.
   - Dynamic QR code generation, pairing code support, and automatic reconnection.
   - Event-driven architecture streaming inbound/outbound messages and status changes.
-- Root monorepo configuration with npm workspaces.
+- Implemented `@giniespace/api` (Backend API & Real-time WebSockets):
+  - Express HTTP server with Helmet and CORS configuration.
+  - Authentication router (`/api/auth/signup`, `/api/auth/login`, `/api/auth/me`) with business type selection (Retail / Wholesale).
+  - Customers management router (`/api/customers`) with real-time sync.
+  - Products catalog router (`/api/products`) with stock and pricing controls.
+  - Orders pipeline router (`/api/orders`) with instant status transitions (*Pending* -> *Confirmed* -> *Dispatched* -> *Delivered*) and automated WhatsApp notifications.
+  - Leads discovery router (`/api/leads`) with Google Places integration and one-click lead-to-customer conversion.
+  - WhatsApp multi-session controller (`/api/whatsapp`) for live QR generation and message dispatch.
+  - Settings & admin user management router (`/api/settings`).
+  - Real-time Socket.io gateway broadcasting inbound messages, status changes, and order events to tenant rooms.
