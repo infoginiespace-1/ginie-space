@@ -94,6 +94,7 @@ export interface Setting {
   userId: string;
   key: string;
   value: string;
+  createdAt: string;
   updatedAt: string;
 }
 
@@ -104,5 +105,6 @@ export interface WhatsAppSession {
   qrCode?: string;
   phoneNumber?: string;
   lastSeen?: string;
+  createdAt: string;
   updatedAt: string;
 }
