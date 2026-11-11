@@ -250,9 +250,11 @@ export class GoogleSheetsDatabase implements IDatabase {
   constructor(config: GoogleSheetsConfig) {
     this.spreadsheetId = config.spreadsheetId;
 
-    let sa = config.serviceAccountJson;
-    if (sa.startsWith("ey")) {
-      sa = Buffer.from(sa, "base64").toString("utf-8");
+    let sa = (config.serviceAccountJson || "").trim();
+    if (!sa.startsWith("{")) {
+      try {
+        sa = Buffer.from(sa, "base64").toString("utf-8");
+      } catch {}
     }
     const credentials = JSON.parse(sa);
 
