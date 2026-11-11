@@ -1,3 +1,5 @@
+declare module "qrcode";
+
 export type SessionStatus = "disconnected" | "connecting" | "connected";
 
 export interface SessionState {
