@@ -1,0 +1,17 @@
+{
+  "name": "@giniespace/places-client",
+  "version": "1.0.0",
+  "description": "Google Places API (New) client with field-mask optimization",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "axios": "^1.7.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "typescript": "^5.6.3"
+  }
+}
