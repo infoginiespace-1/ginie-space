@@ -161,7 +161,17 @@ export function createAuthRouter(db: IDatabase, jwtSecret: string): Router {
   });
 
   router.get("/me", async (req: Request, res: Response): Promise<void> => {
-    if (!req.user) {
+    let userPayload = req.user;
+    if (!userPayload) {
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith("Bearer ")) {
+        try {
+          userPayload = jwt.verify(authHeader.substring(7), jwtSecret) as AuthenticatedUser;
+        } catch {}
+      }
+    }
+
+    if (!userPayload) {
       res.status(401).json({ error: "Please log in" });
       return;
     }
@@ -170,25 +180,25 @@ export function createAuthRouter(db: IDatabase, jwtSecret: string): Router {
       let user: any = null;
       let business: any = null;
       try {
-        user = await db.users.findById(req.user.id);
-        business = await db.businesses.findOne({ userId: req.user.id });
+        user = await db.users.findById(userPayload.id);
+        business = await db.businesses.findOne({ userId: userPayload.id });
       } catch (dbErr: any) {
         console.warn("[Auth /me] DB fetch error, using token payload fallback:", dbErr.message);
       }
 
       res.json({
         user: {
-          id: user?.id || req.user.id,
-          name: user?.name || req.user.name,
-          email: user?.email || req.user.email,
-          role: req.user.role || "admin",
-          businessType: user?.businessType || req.user.businessType || "retail",
+          id: user?.id || userPayload.id,
+          name: user?.name || userPayload.name,
+          email: user?.email || userPayload.email,
+          role: userPayload.role || "admin",
+          businessType: user?.businessType || userPayload.businessType || "retail",
           createdAt: user?.createdAt || new Date().toISOString(),
         },
         business: business || {
           id: "biz-default",
-          userId: req.user.id,
-          name: `${req.user.name}'s Business`,
+          userId: userPayload.id,
+          name: `${userPayload.name}'s Business`,
           phone: "",
           address: "",
           settingsJson: JSON.stringify({ autoReply: true, welcomeMessage: "Hello! Welcome to GinieSpace." })
