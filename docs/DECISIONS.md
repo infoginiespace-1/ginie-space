@@ -37,3 +37,11 @@
 - **Status**: Accepted
 - **Context**: Automated zero-downtime deployments to VPS with enterprise edge security.
 - **Decision**: Docker Compose orchestrates `web`, `api`, and `redis`. Cloudflare provides DNS proxying, SSL/TLS encryption, and WAF. A GitHub Actions CI/CD pipeline triggers on push to `main` to build images and deploy to VPS.
+## ADR 008: Render.com Cloud Platform Deployment
+- **Status**: Accepted
+- **Context**: The client required a 100% free hosting solution that delivers production-grade reliability, automatic Git-triggered deployments, and native Node.js runtime support for persistent WhatsApp WebSocket connections.
+- **Decision**: Deploy frontend and backend as two decoupled web services on Render.com:
+  1. `giniespace-api`: Long-running Node.js process managing Socket.io and Baileys WhatsApp sessions.
+  2. `giniespace-web`: Next.js 14 App Router optimized production build.
+  3. Custom domain routing managed via Cloudflare CNAME flattening and proxying.
+  4. Scheduled 5-minute health check keep-alive prevents free tier instance sleep.
