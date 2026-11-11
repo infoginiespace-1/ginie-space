@@ -13,7 +13,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: CORS_ORIGIN
-        value: https://ginie.space
+        value: "*"
       - key: JWT_SECRET
         generateValue: true
       - key: GOOGLE_SHEET_ID
