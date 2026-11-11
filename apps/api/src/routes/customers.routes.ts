@@ -17,7 +17,7 @@ export function createCustomersRouter(db: IDatabase, io: Server): Router {
 
   router.get("/:id", async (req: Request, res: Response): Promise<void> => {
     try {
-      const customer = await db.customers.findById(req.params.id);
+      const customer = await db.customers.findById((req.params.id as string));
       if (!customer) {
         res.status(404).json({ error: "Customer not found" });
         return;
@@ -61,7 +61,7 @@ export function createCustomersRouter(db: IDatabase, io: Server): Router {
 
   router.put("/:id", async (req: Request, res: Response): Promise<void> => {
     try {
-      const existing = await db.customers.findById(req.params.id);
+      const existing = await db.customers.findById((req.params.id as string));
       if (!existing) {
         res.status(404).json({ error: "Customer not found" });
         return;
@@ -72,7 +72,7 @@ export function createCustomersRouter(db: IDatabase, io: Server): Router {
       }
 
       const { name, phone, email, notes, tags } = req.body;
-      const updated = await db.customers.update(req.params.id, {
+      const updated = await db.customers.update((req.params.id as string), {
         name: name !== undefined ? name.trim() : existing.name,
         phone: phone !== undefined ? phone.replace(/[^0-9+]/g, "") : existing.phone,
         email: email !== undefined ? email.trim() : existing.email,
@@ -90,7 +90,7 @@ export function createCustomersRouter(db: IDatabase, io: Server): Router {
 
   router.delete("/:id", async (req: Request, res: Response): Promise<void> => {
     try {
-      const existing = await db.customers.findById(req.params.id);
+      const existing = await db.customers.findById((req.params.id as string));
       if (!existing) {
         res.status(404).json({ error: "Customer not found" });
         return;
@@ -100,8 +100,8 @@ export function createCustomersRouter(db: IDatabase, io: Server): Router {
         return;
       }
 
-      await db.customers.delete(req.params.id);
-      io.to(`user:${existing.userId}`).emit("customer:deleted", { id: req.params.id });
+      await db.customers.delete((req.params.id as string));
+      io.to(`user:${existing.userId}`).emit("customer:deleted", { id: (req.params.id as string) });
 
       res.json({ message: "Customer removed successfully" });
     } catch {
