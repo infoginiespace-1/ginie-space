@@ -1,0 +1,30 @@
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Copy root and package manifests
+COPY package*.json ./
+COPY apps/web/package*.json ./apps/web/
+
+# Install dependencies
+RUN npm install
+
+# Copy web source code
+COPY apps/web/ ./apps/web/
+
+# Build Next.js
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://api.ginie.space}
+RUN npm run build --workspace=@giniespace/web
+
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+ENV NODE_ENV=production
+ENV PORT=3000
+
+COPY --from=builder /app /app
+
+EXPOSE 3000
+
+CMD ["npm", "run", "start", "--workspace=@giniespace/web"]
