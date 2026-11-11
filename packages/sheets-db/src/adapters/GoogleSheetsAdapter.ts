@@ -32,7 +32,7 @@ export class GoogleSheetsThrottler {
   }
 }
 
-export class GoogleSheetsRepository<T extends { id: string; createdAt: string; updatedAt: string }>
+export class GoogleSheetsRepository<T extends { id: string; createdAt?: string; updatedAt?: string }>
   implements IRepository<T>
 {
   private cache: Map<string, T> = new Map();
@@ -319,7 +319,7 @@ export class GoogleSheetsDatabase implements IDatabase {
       this.sheets,
       this.spreadsheetId,
       "Settings",
-      ["id", "userId", "key", "value", "updatedAt"],
+      ["id", "userId", "key", "value", "createdAt", "updatedAt"],
       this.throttler
     );
 
@@ -327,7 +327,7 @@ export class GoogleSheetsDatabase implements IDatabase {
       this.sheets,
       this.spreadsheetId,
       "WhatsAppSessions",
-      ["id", "userId", "status", "qrCode", "phoneNumber", "lastSeen", "updatedAt"],
+      ["id", "userId", "status", "qrCode", "phoneNumber", "lastSeen", "createdAt", "updatedAt"],
       this.throttler
     );
   }
@@ -346,8 +346,8 @@ export class GoogleSheetsDatabase implements IDatabase {
       { name: "Products", headers: ["id", "userId", "name", "description", "price", "unit", "stock", "imageUrl", "createdAt", "updatedAt"] },
       { name: "Orders", headers: ["id", "userId", "customerId", "customerName", "customerPhone", "itemsJson", "totalAmount", "status", "notes", "createdAt", "updatedAt"] },
       { name: "Leads", headers: ["id", "userId", "placeId", "name", "phone", "address", "website", "rating", "ratingCount", "category", "status", "notes", "createdAt", "updatedAt"] },
-      { name: "Settings", headers: ["id", "userId", "key", "value", "updatedAt"] },
-      { name: "WhatsAppSessions", headers: ["id", "userId", "status", "qrCode", "phoneNumber", "lastSeen", "updatedAt"] },
+      { name: "Settings", headers: ["id", "userId", "key", "value", "createdAt", "updatedAt"] },
+      { name: "WhatsAppSessions", headers: ["id", "userId", "status", "qrCode", "phoneNumber", "lastSeen", "createdAt", "updatedAt"] },
     ];
 
     const requests: sheets_v4.Schema$Request[] = [];
