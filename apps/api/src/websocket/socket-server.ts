@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import { WhatsAppSessionManager, InboundMessageEvent } from "@giniespace/whatsapp-engine";
 import { IDatabase } from "@giniespace/sheets-db";
 import { AuthenticatedUser } from "../middleware/auth";
+import { SYSTEM_SUPPORT_SESSION_ID } from "../services/notification.service";
 
 export function setupSocketServer(
   httpServer: HttpServer,
@@ -48,22 +49,42 @@ export function setupSocketServer(
     const waState = waManager.getSessionState(user.id);
     socket.emit("whatsapp:status", waState);
 
+    // Admin support room
+    if (user.role === "admin") {
+      socket.join("admin:support");
+      const supportState = waManager.getSessionState(SYSTEM_SUPPORT_SESSION_ID);
+      socket.emit("admin:whatsapp:status", supportState);
+    }
+
     socket.on("disconnect", () => {
       socket.leave(room);
+      if (user.role === "admin") {
+        socket.leave("admin:support");
+      }
     });
   });
 
   // Relay WhatsApp Events to User Room in Real-Time
   waManager.on("qr", ({ userId, qrCode }) => {
     io.to("user:" + userId).emit("whatsapp:qr", { qrCode });
+    if (userId === SYSTEM_SUPPORT_SESSION_ID) {
+      io.to("admin:support").emit("admin:whatsapp:qr", { qrCode });
+    }
   });
 
   waManager.on("status", (data) => {
     io.to("user:" + data.userId).emit("whatsapp:status", data);
+    if (data.userId === SYSTEM_SUPPORT_SESSION_ID) {
+      io.to("admin:support").emit("admin:whatsapp:status", data);
+    }
   });
 
   waManager.on("message", async (event: InboundMessageEvent) => {
     io.to("user:" + event.userId).emit("whatsapp:message", event);
+
+    if (event.userId === SYSTEM_SUPPORT_SESSION_ID) {
+      io.to("admin:support").emit("admin:whatsapp:message", event);
+    }
 
     // Auto-discover or log customer
     try {

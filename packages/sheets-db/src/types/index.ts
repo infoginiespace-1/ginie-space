@@ -104,6 +104,7 @@ export interface WhatsAppSession {
   status: WhatsAppStatus;
   qrCode?: string;
   phoneNumber?: string;
+  credentialsZip?: string;
   lastSeen?: string;
   createdAt: string;
   updatedAt: string;

@@ -24,3 +24,9 @@ export interface OutboundMessageRequest {
   recipientPhone: string;
   messageText: string;
 }
+
+export interface AuthStateProvider {
+  loadAuthState: (userId: string) => Promise<string | null>;
+  saveAuthState: (userId: string, authDataZip: string, phoneNumber?: string) => Promise<void>;
+  clearAuthState: (userId: string) => Promise<void>;
+}

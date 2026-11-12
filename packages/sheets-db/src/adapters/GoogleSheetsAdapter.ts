@@ -357,7 +357,7 @@ export class GoogleSheetsDatabase implements IDatabase {
       this.sheets,
       this.spreadsheetId,
       "WhatsAppSessions",
-      ["id", "userId", "status", "qrCode", "phoneNumber", "lastSeen", "createdAt", "updatedAt"],
+      ["id", "userId", "status", "qrCode", "phoneNumber", "credentialsZip", "lastSeen", "createdAt", "updatedAt"],
       this.throttler
     );
   }
@@ -378,7 +378,7 @@ export class GoogleSheetsDatabase implements IDatabase {
         { name: "Orders", headers: ["id", "userId", "customerId", "customerName", "customerPhone", "itemsJson", "totalAmount", "status", "notes", "createdAt", "updatedAt"] },
         { name: "Leads", headers: ["id", "userId", "placeId", "name", "phone", "address", "website", "rating", "ratingCount", "category", "status", "notes", "createdAt", "updatedAt"] },
         { name: "Settings", headers: ["id", "userId", "key", "value", "createdAt", "updatedAt"] },
-        { name: "WhatsAppSessions", headers: ["id", "userId", "status", "qrCode", "phoneNumber", "lastSeen", "createdAt", "updatedAt"] },
+        { name: "WhatsAppSessions", headers: ["id", "userId", "status", "qrCode", "phoneNumber", "credentialsZip", "lastSeen", "createdAt", "updatedAt"] },
       ];
 
       const requests: sheets_v4.Schema$Request[] = [];

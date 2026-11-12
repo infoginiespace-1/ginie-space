@@ -1,0 +1,114 @@
+import { Router, Request, Response } from "express";
+import { IDatabase } from "@giniespace/sheets-db";
+import { WhatsAppSessionManager } from "@giniespace/whatsapp-engine";
+import { SYSTEM_SUPPORT_SESSION_ID, SYSTEM_SUPPORT_PHONE, NotificationService } from "../services/notification.service";
+
+export function createAdminRouter(
+  db: IDatabase,
+  waManager: WhatsAppSessionManager,
+  notificationService: NotificationService
+): Router {
+  const router = Router();
+
+  // 1. Get Support WhatsApp Connection Status
+  router.get("/whatsapp/status", async (_req: Request, res: Response): Promise<void> => {
+    try {
+      const state = waManager.getSessionState(SYSTEM_SUPPORT_SESSION_ID);
+      res.json({
+        session: state,
+        supportPhone: SYSTEM_SUPPORT_PHONE,
+        sessionId: SYSTEM_SUPPORT_SESSION_ID,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Failed to retrieve support WhatsApp status" });
+    }
+  });
+
+  // 2. Connect / Generate QR for Support WhatsApp (9279259690)
+  router.post("/whatsapp/connect", async (_req: Request, res: Response): Promise<void> => {
+    try {
+      const state = await waManager.startSession(SYSTEM_SUPPORT_SESSION_ID);
+      res.json({
+        session: state,
+        message: "Support WhatsApp connection initiated. Please scan the QR code to link +91 9279259690.",
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Failed to connect support WhatsApp" });
+    }
+  });
+
+  // 3. Disconnect Support WhatsApp (Admin-Only Action)
+  router.post("/whatsapp/disconnect", async (_req: Request, res: Response): Promise<void> => {
+    try {
+      await waManager.disconnectSession(SYSTEM_SUPPORT_SESSION_ID);
+      res.json({ message: "Official Support WhatsApp has been disconnected and credentials cleared." });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Failed to disconnect support WhatsApp" });
+    }
+  });
+
+  // 4. Send Test Message from Support WhatsApp
+  router.post("/whatsapp/send-test", async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { recipientPhone, messageText } = req.body;
+      if (!recipientPhone || !messageText) {
+        res.status(400).json({ error: "Recipient phone number and message text are required" });
+        return;
+      }
+
+      const success = await notificationService.sendSupportNotification(
+        recipientPhone.trim(),
+        messageText.trim()
+      );
+
+      if (!success) {
+        res.status(503).json({ error: "Support WhatsApp (9279259690) is currently disconnected. Please link it first." });
+        return;
+      }
+
+      res.json({ message: `Test message sent successfully to ${recipientPhone}` });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Failed to send test message" });
+    }
+  });
+
+  // 5. Notification Rules Settings
+  router.get("/whatsapp/rules", async (_req: Request, res: Response): Promise<void> => {
+    try {
+      const setting = await db.settings.findOne({ userId: "admin", key: "notification_rules" });
+      const defaultRules = {
+        newUserWelcome: true,
+        orderPlacedAlert: true,
+        leadConvertedAlert: true,
+        supportAutoReply: true,
+      };
+      const rules = setting ? JSON.parse(setting.value) : defaultRules;
+      res.json({ rules });
+    } catch {
+      res.status(500).json({ error: "Failed to load notification rules" });
+    }
+  });
+
+  router.post("/whatsapp/rules", async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { rules } = req.body;
+      const existing = await db.settings.findOne({ userId: "admin", key: "notification_rules" });
+      if (existing) {
+        await db.settings.update(existing.id, {
+          value: JSON.stringify(rules),
+        });
+      } else {
+        await db.settings.create({
+          userId: "admin",
+          key: "notification_rules",
+          value: JSON.stringify(rules),
+        });
+      }
+      res.json({ message: "Notification rules updated successfully", rules });
+    } catch {
+      res.status(500).json({ error: "Failed to save notification rules" });
+    }
+  });
+
+  return router;
+}
