@@ -141,9 +141,10 @@ export class WhatsAppSessionManager extends EventEmitter {
     try {
       const results = await sock.onWhatsApp(digits);
       if (results && results.length > 0 && results[0].exists) {
-        return await sock.sendMessage(results[0].jid, {
+        const sent = await sock.sendMessage(results[0].jid, {
           text: req.messageText,
         });
+        return sent || null;
       }
     } catch (err: any) {
       console.warn(`[WhatsAppManager] onWhatsApp query warning: ${err.message}`);
