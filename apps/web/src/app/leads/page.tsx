@@ -65,6 +65,16 @@ interface SavedLead {
   notes?: string;
 }
 
+function getDefaultPitchTemplate(businessType?: string): string {
+  if (businessType === "services") {
+    return "Namaste {name} ji! Hum reliable maintenance, repair & annual AMC services provide karte hain. Kya aap apni team/office ke liye service rate card aur slot details WhatsApp par chahenge?";
+  }
+  if (businessType === "retail") {
+    return "Namaste {name} ji! Hamare store par latest collection aur special offers live hain. Kya aapko hamara online catalog link WhatsApp par share karoon?";
+  }
+  return "Namaste {name} ji! Hum wholesale suppliers hain aur best B2B rates par stock supply karte hain. Kya aapko hamara latest price catalog WhatsApp par chahiye?";
+}
+
 export default function LeadsPage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("discover");
@@ -84,11 +94,15 @@ export default function LeadsPage() {
   const [savingFollowUp, setSavingFollowUp] = useState(false);
   const [selectedLeadKeys, setSelectedLeadKeys] = useState<React.Key[]>([]);
   const [campaignModalOpen, setCampaignModalOpen] = useState(false);
-  const [campaignTemplate, setCampaignTemplate] = useState(
-    "Namaste {name} ji! Hum wholesale suppliers hain aur best B2B rates par stock supply karte hain. Kya aapko hamara latest price catalog WhatsApp par chahiye?"
-  );
+  const [campaignTemplate, setCampaignTemplate] = useState(() => getDefaultPitchTemplate(user?.businessType));
   const [sendingCampaign, setSendingCampaign] = useState(false);
   const [campaignProgress, setCampaignProgress] = useState({ sent: 0, failed: 0, total: 0 });
+
+  useEffect(() => {
+    if (user?.businessType) {
+      setCampaignTemplate(getDefaultPitchTemplate(user.businessType));
+    }
+  }, [user?.businessType]);
 
   const loadSavedLeads = async () => {
     try {

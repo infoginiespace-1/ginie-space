@@ -170,6 +170,7 @@ export default function ProductsPage() {
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
   const [importingPack, setImportingPack] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>("");
+  const [storeSlug, setStoreSlug] = useState<string>("");
   const [form] = Form.useForm();
 
   const watchedItemType = Form.useWatch("itemType", form) || "product";
@@ -195,6 +196,13 @@ export default function ProductsPage() {
 
   useEffect(() => {
     loadProducts();
+    api.get("/api/settings")
+      .then((res) => {
+        if (res.data?.business?.slug) {
+          setStoreSlug(String(res.data.business.slug));
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const handleBeforeImageUpload = async (file: File) => {
@@ -293,6 +301,9 @@ export default function ProductsPage() {
       const stockIdx = header.findIndex((h) => h.includes("stock") || h.includes("qty"));
       const catIdx = header.findIndex((h) => h.includes("cat"));
       const moqIdx = header.findIndex((h) => h.includes("moq") || h.includes("min"));
+      const typeIdx = header.findIndex((h) => h.includes("type"));
+      const durIdx = header.findIndex((h) => h.includes("dur"));
+      const modeIdx = header.findIndex((h) => h.includes("mode"));
 
       if (nameIdx === -1 || priceIdx === -1) {
         message.error("CSV header must include 'Name' and 'Price' columns");
@@ -304,14 +315,18 @@ export default function ProductsPage() {
         const name = (cols[nameIdx] || "").trim();
         const price = Number(cols[priceIdx]);
         if (!name || Number.isNaN(price)) continue;
+        const itemTypeVal = typeIdx >= 0 && cols[typeIdx]?.trim().toLowerCase() === "service" ? "service" : "product";
         await api.post("/api/products", {
           name,
           description: descIdx >= 0 ? (cols[descIdx] || "").trim() : "",
           price,
-          unit: unitIdx >= 0 && cols[unitIdx]?.trim() ? cols[unitIdx].trim() : "pcs",
-          stock: stockIdx >= 0 && !Number.isNaN(Number(cols[stockIdx])) ? Number(cols[stockIdx]) : 10,
-          category: catIdx >= 0 && cols[catIdx]?.trim() ? cols[catIdx].trim() : "General",
+          unit: unitIdx >= 0 && cols[unitIdx]?.trim() ? cols[unitIdx].trim() : itemTypeVal === "service" ? "session" : "pcs",
+          stock: stockIdx >= 0 && !Number.isNaN(Number(cols[stockIdx])) ? Number(cols[stockIdx]) : itemTypeVal === "service" ? 999999 : 10,
+          category: catIdx >= 0 && cols[catIdx]?.trim() ? cols[catIdx].trim() : itemTypeVal === "service" ? "Services" : "General",
           minOrderQty: moqIdx >= 0 && Number(cols[moqIdx]) > 1 ? Number(cols[moqIdx]) : 1,
+          itemType: itemTypeVal,
+          duration: durIdx >= 0 ? (cols[durIdx] || "").trim() || undefined : undefined,
+          serviceMode: modeIdx >= 0 ? (cols[modeIdx] || "").trim() || undefined : undefined,
         });
         imported++;
       }
@@ -523,8 +538,21 @@ export default function ProductsPage() {
             onClick={() =>
               downloadCsv(
                 "giniespace-catalog.csv",
-                ["ID", "Name", "Category", "Description", "Price", "CostPrice", "Unit", "Stock", "MinOrderQty"],
-                products.map((p) => [p.id, p.name, p.category || "General", p.description, p.price, p.costPrice ?? "", p.unit, p.stock, p.minOrderQty || 1])
+                ["ID", "ItemType", "Name", "Category", "Description", "Price", "CostPrice", "Unit", "Duration", "ServiceMode", "Stock", "MinOrderQty"],
+                products.map((p) => [
+                  p.id,
+                  p.itemType || "product",
+                  p.name,
+                  p.category || "General",
+                  p.description,
+                  p.price,
+                  p.costPrice ?? "",
+                  p.unit,
+                  p.duration || "",
+                  p.serviceMode || "",
+                  p.stock,
+                  p.minOrderQty || 1,
+                ])
               )
             }
           >
@@ -551,21 +579,21 @@ export default function ProductsPage() {
               <Text strong style={{ color: "#15803d" }}>
                 <ShopOutlined /> Shareable Public Catalog Link:
               </Text>{" "}
-              <Text code>{`https://app.ginie.space/shop/${user.id}`}</Text>
+              <Text code>{`https://app.ginie.space/shop/${storeSlug || user.id}`}</Text>
             </div>
             <Space>
               <Button
                 size="small"
                 icon={<CopyOutlined />}
                 onClick={() => {
-                  const url = `${window.location.origin}/shop/${user.id}`;
+                  const url = `${window.location.origin}/shop/${storeSlug || user.id}`;
                   navigator.clipboard?.writeText(url);
                   message.success("Storefront link copied!");
                 }}
               >
                 Copy Link
               </Button>
-              <Button size="small" type="primary" href={`/shop/${user.id}`} target="_blank">
+              <Button size="small" type="primary" href={`/shop/${storeSlug || user.id}`} target="_blank">
                 Preview Store
               </Button>
             </Space>
@@ -878,7 +906,7 @@ export default function ProductsPage() {
                 </div>
               )}
 
-              <Space direction="vertical" size={6}>
+              <Space direction="vertical" size={6} style={{ flex: 1, minWidth: 220 }}>
                 <Space>
                   <Upload
                     accept=".jpg,.jpeg,image/jpeg"
@@ -895,8 +923,14 @@ export default function ProductsPage() {
                     </Button>
                   )}
                 </Space>
+                <Input
+                  size="small"
+                  placeholder="Or paste external image URL (https://...)"
+                  value={!imagePreview.startsWith("data:") ? imagePreview : ""}
+                  onChange={(e) => setImagePreview(e.target.value)}
+                />
                 <Text type="secondary" style={{ fontSize: 12 }}>
-                  Allowed format: <strong>.jpg / .jpeg</strong> • Strict max size: <strong>60 KB</strong>
+                  Allowed format: <strong>.jpg / .jpeg</strong> (Max <strong>60 KB</strong>) or direct HTTPS image link
                 </Text>
               </Space>
             </div>

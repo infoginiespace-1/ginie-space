@@ -62,7 +62,18 @@ interface ProductItem {
   unit: string;
   stock: number;
   imageUrl?: string;
+  itemType?: "product" | "service";
+  duration?: string;
+  serviceMode?: string;
 }
+
+const INBOX_TIME_SLOTS = [
+  "09:00 AM - 11:00 AM",
+  "11:00 AM - 01:00 PM",
+  "02:00 PM - 04:00 PM",
+  "04:00 PM - 06:00 PM",
+  "06:00 PM - 08:00 PM",
+];
 
 function normalizePhoneKey(raw: string): string {
   let digits = (raw || "").replace(/[^0-9]/g, "");
@@ -317,7 +328,11 @@ export default function InboxPage() {
   const handleSendProductQuote = async (p: ProductItem) => {
     const activeConv = activeKey ? conversations.get(activeKey) : null;
     const greeting = activeConv ? `Namaste ${activeConv.name},\n\n` : "";
-    const msg = `${greeting}📦 *${p.name}*\n💰 *Price:* ₹${p.price} / ${p.unit}\n📊 *Status:* ${p.stock > 0 ? `In Stock (${p.stock} ${p.unit})` : "Limited Stock"}${p.description ? `\n📝 ${p.description}` : ""}\n\nOrder karne ke liye reply karein!`;
+    const statusLine =
+      p.itemType === "service"
+        ? `🛠️ *Service Available*${p.duration ? ` (${p.duration})` : ""}`
+        : `📊 *Status:* ${p.stock > 0 ? `In Stock (${p.stock} ${p.unit})` : "Limited Stock"}`;
+    const msg = `${greeting}${p.itemType === "service" ? "🛠️" : "📦"} *${p.name}*\n💰 *Fee / Price:* ₹${p.price} / ${p.unit}\n${statusLine}${p.description ? `\n📝 ${p.description}` : ""}\n\n${p.itemType === "service" ? "Book karne ke liye reply karein!" : "Order karne ke liye reply karein!"}`;
     setCatalogModalVisible(false);
     await sendTextMessage(msg, p.imageUrl || undefined);
   };
@@ -428,6 +443,9 @@ export default function InboxPage() {
         notes: values.notes,
         paymentStatus,
         paidAmount: paymentStatus === "paid" ? total : 0,
+        bookingDate: values.bookingDate || undefined,
+        timeSlot: values.timeSlot || undefined,
+        assignedStaff: values.assignedStaff || undefined,
       });
       message.success(`Order created for ${activeConv.name}!`);
       setOrderModalOpen(false);
@@ -681,7 +699,10 @@ export default function InboxPage() {
               style={{ flex: 1, minWidth: 180 }}
               options={products.map((p) => ({
                 value: p.id,
-                label: `${p.name} — ₹${p.price}/${p.unit || "pcs"} (Stock: ${p.stock})`,
+                label:
+                  p.itemType === "service"
+                    ? `${p.name} — ₹${p.price}/${p.unit || "session"} (Service${p.duration ? `, ${p.duration}` : ""})`
+                    : `${p.name} — ₹${p.price}/${p.unit || "pcs"} (Stock: ${p.stock})`,
               }))}
             />
             <InputNumber
@@ -736,8 +757,23 @@ export default function InboxPage() {
               />
             </Form.Item>
           </div>
-          <Form.Item name="notes" label="Items & Delivery Notes">
-            <Input.TextArea rows={2} placeholder="e.g. urgent evening delivery" />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <Form.Item name="bookingDate" label="Booking Date (If Service)">
+              <Input type="date" />
+            </Form.Item>
+            <Form.Item name="timeSlot" label="Time Slot">
+              <Select
+                allowClear
+                placeholder="Select slot"
+                options={INBOX_TIME_SLOTS.map((s) => ({ value: s, label: s }))}
+              />
+            </Form.Item>
+          </div>
+          <Form.Item name="assignedStaff" label="Assign Technician / Staff (Optional)">
+            <Input placeholder="e.g. Raju Tech" />
+          </Form.Item>
+          <Form.Item name="notes" label="Items & Delivery / Visit Notes">
+            <Input.TextArea rows={2} placeholder="e.g. urgent evening delivery or home AC checkup" />
           </Form.Item>
           <Button
             type="primary"
@@ -790,7 +826,11 @@ export default function InboxPage() {
                 description={
                   <Space size="small">
                     <Tag color="green">₹{item.price} / {item.unit}</Tag>
-                    <Text type="secondary" style={{ fontSize: 12 }}>Stock: {item.stock}</Text>
+                    {item.itemType === "service" ? (
+                      <Tag color="geekblue">Service{item.duration ? ` • ${item.duration}` : ""}</Tag>
+                    ) : (
+                      <Text type="secondary" style={{ fontSize: 12 }}>Stock: {item.stock}</Text>
+                    )}
                   </Space>
                 }
               />

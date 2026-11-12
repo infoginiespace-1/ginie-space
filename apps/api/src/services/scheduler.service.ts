@@ -50,14 +50,27 @@ export function startDailyReportScheduler(
         const totalPendingDue = orders
           .filter((o) => o.status !== "cancelled" && o.paymentStatus !== "paid")
           .reduce((s, o) => s + Math.max(0, (Number(o.totalAmount) || 0) - (Number(o.paidAmount) || 0)), 0);
-        const lowStock = products.filter((p) => Number(p.stock) <= 5);
+        const lowStock = products.filter((p) => p.itemType !== "service" && Number(p.stock) <= 5);
+        const tomorrowStr = new Date(Date.now() + (330 + 24 * 60) * 60 * 1000).toISOString().slice(0, 10);
+        const todayBookings = orders.filter(
+          (o) => o.status !== "cancelled" && String(o.bookingDate || "").trim() === dateStr
+        );
+        const dueRenewals = orders.filter(
+          (o) => o.status !== "cancelled" && Boolean(o.nextRenewalDate) && String(o.nextRenewalDate) <= tomorrowStr
+        );
 
         const reportMsg =
           `🌙 *GinieSpace Automated Nightly Summary (${dateStr})*\n` +
           `🏪 *${biz.name || "Your Business"}*\n\n` +
-          `🛒 Today's Orders: *${todayOrders.length}* (₹${todayRevenue.toLocaleString("en-IN")})\n` +
-          `⏳ Pending Orders: *${pendingOrders}*\n` +
+          `🛒 Today's Orders & Bookings: *${todayOrders.length}* (₹${todayRevenue.toLocaleString("en-IN")})\n` +
+          (todayBookings.length > 0 ? `🗓️ Today's Scheduled Visits: *${todayBookings.length}*\n` : "") +
+          `⏳ Pending Queue: *${pendingOrders}*\n` +
           `📒 Total Udhar/Due: *₹${totalPendingDue.toLocaleString("en-IN")}*\n` +
+          (dueRenewals.length > 0
+            ? `🔔 Renewals Due (${dateStr} / Tomorrow): *${dueRenewals.length}*\n` +
+              dueRenewals.slice(0, 3).map((r) => `  • ${r.customerName} (${r.nextRenewalDate})`).join("\n") +
+              "\n"
+            : "") +
           `⚠️ Low Stock Items: *${lowStock.length}*` +
           (lowStock.length > 0 ? `\n${lowStock.slice(0, 5).map((p) => `  • ${p.name} (${p.stock})`).join("\n")}` : "");
 

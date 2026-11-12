@@ -145,8 +145,12 @@ export default function OrdersPage() {
         }
       } catch {}
 
+      const scheduleLine =
+        order.bookingDate || order.assignedStaff || order.nextRenewalDate
+          ? `${order.bookingDate ? `\n📅 *Scheduled Date:* ${order.bookingDate}${order.timeSlot ? ` (${order.timeSlot})` : ""}` : ""}${order.assignedStaff ? `\n👷 *Assigned Staff:* ${order.assignedStaff}` : ""}${order.nextRenewalDate ? `\n🔔 *Next Renewal:* ${order.nextRenewalDate}` : ""}`
+          : "";
       const upiLine = upiId ? `\n💳 *Pay via UPI:* ${upiId}` : "";
-      const billText = `🧾 *Order Invoice / Bill #${order.id.slice(-6)}*\n\nNamaste *${order.customerName}*,\nAapka order detail neeche diya gaya hai:${itemsSummary}\n\n💰 *Total Amount:* ₹${order.totalAmount}\n📌 *Status:* ${order.status.toUpperCase()}${order.notes ? `\n📝 *Note:* ${order.notes}` : ""}${upiLine}\n📅 *Date:* ${new Date(order.createdAt).toLocaleDateString()}\n\nThank you for your business! 🙏`;
+      const billText = `🧾 *Order / Booking Invoice #${order.id.slice(-6)}*\n\nNamaste *${order.customerName}*,\nAapki details neeche di gayi hain:${itemsSummary}${scheduleLine}\n\n💰 *Total Amount:* ₹${order.totalAmount}\n📌 *Status:* ${order.status.toUpperCase()}${order.notes ? `\n📝 *Note:* ${order.notes}` : ""}${upiLine}\n📅 *Bill Date:* ${new Date(order.createdAt).toLocaleDateString()}\n\nThank you for your business! 🙏`;
 
       await api.post("/api/whatsapp/send", {
         recipientPhone: order.customerPhone,
@@ -688,6 +692,10 @@ export default function OrdersPage() {
         </div>
       </div>
       <div><strong>Billed To:</strong> ${order.customerName} (+${order.customerPhone.replace(/^\+/, "")})</div>
+      ${order.deliveryAddress ? `<div><strong>Address:</strong> ${order.deliveryAddress}</div>` : ""}
+      ${order.bookingDate ? `<div><strong>Booking Schedule:</strong> ${order.bookingDate}${order.timeSlot ? ` (${order.timeSlot})` : ""}${order.serviceMode ? ` • ${SERVICE_MODE_NAMES[order.serviceMode] || order.serviceMode}` : ""}</div>` : ""}
+      ${order.assignedStaff ? `<div><strong>Assigned Staff:</strong> ${order.assignedStaff}</div>` : ""}
+      ${order.nextRenewalDate ? `<div><strong>Next Renewal Date:</strong> ${order.nextRenewalDate}</div>` : ""}
       <table><thead><tr><th>#</th><th>Item</th><th style="text-align:right">Qty</th><th style="text-align:right">Rate</th><th style="text-align:right">Total</th></tr></thead><tbody>${itemRows}</tbody></table>
       <div class="totals">
         ${Number(order.discountAmount) > 0 ? `<div><span>Discount${order.couponCode ? ` (${order.couponCode})` : ""}:</span><span>-₹${Number(order.discountAmount).toFixed(2)}</span></div>` : ""}
@@ -717,7 +725,7 @@ export default function OrdersPage() {
             onClick={() =>
               downloadCsv(
                 "giniespace-orders.csv",
-                ["OrderID", "Customer", "Phone", "Amount", "Status", "PaymentStatus", "PaidAmount", "Notes", "Date"],
+                ["OrderID", "Customer", "Phone", "Amount", "Status", "PaymentStatus", "PaidAmount", "BookingDate", "TimeSlot", "AssignedStaff", "ServiceMode", "NextRenewalDate", "Notes", "Date"],
                 filteredOrders.map((o) => [
                   o.id,
                   o.customerName,
@@ -726,6 +734,11 @@ export default function OrdersPage() {
                   o.status,
                   o.paymentStatus || "unpaid",
                   o.paidAmount || 0,
+                  o.bookingDate || "",
+                  o.timeSlot || "",
+                  o.assignedStaff || "",
+                  o.serviceMode || "",
+                  o.nextRenewalDate || "",
                   o.notes,
                   o.createdAt,
                 ])
@@ -1083,7 +1096,20 @@ export default function OrdersPage() {
             <div style={{ marginBottom: 12 }}>
               <div><Text strong>Customer:</Text> {invoiceOrder.customerName} (+{invoiceOrder.customerPhone.replace(/^\+/, "")})</div>
               {invoiceOrder.deliveryAddress && (
-                <div><Text strong>Delivery Address:</Text> {invoiceOrder.deliveryAddress}</div>
+                <div><Text strong>Address:</Text> {invoiceOrder.deliveryAddress}</div>
+              )}
+              {invoiceOrder.bookingDate && (
+                <div>
+                  <Text strong>Schedule:</Text> {invoiceOrder.bookingDate}
+                  {invoiceOrder.timeSlot ? ` • ${invoiceOrder.timeSlot}` : ""}
+                  {invoiceOrder.serviceMode ? ` (${SERVICE_MODE_NAMES[invoiceOrder.serviceMode] || invoiceOrder.serviceMode})` : ""}
+                </div>
+              )}
+              {invoiceOrder.assignedStaff && (
+                <div><Text strong>Assigned Staff:</Text> {invoiceOrder.assignedStaff}</div>
+              )}
+              {invoiceOrder.nextRenewalDate && (
+                <div><Text strong>Next Renewal:</Text> {invoiceOrder.nextRenewalDate}</div>
               )}
             </div>
             {(() => {

@@ -50,7 +50,7 @@ interface AdminUser {
   name: string;
   email: string;
   role: "admin" | "user";
-  businessType: "retail" | "wholesale";
+  businessType: "retail" | "wholesale" | "services";
   status?: "active" | "suspended";
   plan?: "free" | "pro";
   createdAt: string;
@@ -302,7 +302,7 @@ export default function AdminPage() {
       dataIndex: "businessType",
       key: "businessType",
       render: (type: string) => (
-        <Tag color={type === "wholesale" ? "blue" : "green"}>
+        <Tag color={type === "wholesale" ? "blue" : type === "services" ? "purple" : "green"}>
           {type?.toUpperCase() || "RETAIL"}
         </Tag>
       ),
@@ -369,6 +369,7 @@ export default function AdminPage() {
   const totalUsers = users.length;
   const retailUsers = users.filter((u) => u.businessType === "retail").length;
   const wholesaleUsers = users.filter((u) => u.businessType === "wholesale").length;
+  const serviceUsers = users.filter((u) => u.businessType === "services").length;
 
   return (
     <AppLayout>
@@ -616,7 +617,7 @@ export default function AdminPage() {
             children: (
               <div>
                 <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-                  <Col xs={24} sm={8}>
+                  <Col xs={24} sm={12} lg={6}>
                     <Card style={{ borderRadius: 12 }}>
                       <Statistic
                         title="Total Business Accounts"
@@ -625,7 +626,7 @@ export default function AdminPage() {
                       />
                     </Card>
                   </Col>
-                  <Col xs={24} sm={8}>
+                  <Col xs={24} sm={12} lg={6}>
                     <Card style={{ borderRadius: 12 }}>
                       <Statistic
                         title="Retail Businesses"
@@ -634,12 +635,21 @@ export default function AdminPage() {
                       />
                     </Card>
                   </Col>
-                  <Col xs={24} sm={8}>
+                  <Col xs={24} sm={12} lg={6}>
                     <Card style={{ borderRadius: 12 }}>
                       <Statistic
                         title="Wholesale Businesses"
                         value={wholesaleUsers}
                         prefix={<ShopOutlined style={{ color: "#0284c7" }} />}
+                      />
+                    </Card>
+                  </Col>
+                  <Col xs={24} sm={12} lg={6}>
+                    <Card style={{ borderRadius: 12 }}>
+                      <Statistic
+                        title="Service Businesses"
+                        value={serviceUsers}
+                        prefix={<ShopOutlined style={{ color: "#7c3aed" }} />}
                       />
                     </Card>
                   </Col>
