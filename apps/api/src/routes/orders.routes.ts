@@ -43,7 +43,25 @@ export function createOrdersRouter(
 
   router.post("/", async (req: Request, res: Response): Promise<void> => {
     try {
-      const { customerId, customerName, customerPhone, items, totalAmount, notes, paymentStatus, paidAmount, discountAmount, deliveryCharge, couponCode, deliveryAddress } = req.body;
+      const {
+        customerId,
+        customerName,
+        customerPhone,
+        items,
+        totalAmount,
+        notes,
+        paymentStatus,
+        paidAmount,
+        discountAmount,
+        deliveryCharge,
+        couponCode,
+        deliveryAddress,
+        bookingDate,
+        timeSlot,
+        assignedStaff,
+        serviceMode,
+        nextRenewalDate,
+      } = req.body;
 
       if (!customerName || !customerPhone) {
         res.status(400).json({ error: "Customer name and phone number are required" });
@@ -73,7 +91,7 @@ export function createOrdersRouter(
           const unitPrice = prod ? Number(prod.price) : Number(it.price) || 0;
           computedItemsTotal += unitPrice * qty;
 
-          if (prod && Number(prod.stock) > 0) {
+          if (prod && prod.itemType !== "service" && Number(prod.stock) > 0) {
             const nextStock = Math.max(0, Number(prod.stock) - qty);
             db.products.update(prod.id, { stock: nextStock }).catch(() => {});
           }
@@ -84,6 +102,8 @@ export function createOrdersRouter(
             price: unitPrice,
             unit: prod?.unit || it.unit || "pcs",
             quantity: qty,
+            itemType: prod?.itemType || it.itemType || "product",
+            duration: prod?.duration || it.duration || undefined,
           };
         });
 
@@ -139,6 +159,11 @@ export function createOrdersRouter(
         deliveryCharge: cleanDelivery,
         couponCode: couponCode ? String(couponCode).trim().toUpperCase() : undefined,
         deliveryAddress: deliveryAddress ? String(deliveryAddress).trim() : undefined,
+        bookingDate: bookingDate ? String(bookingDate).trim() : undefined,
+        timeSlot: timeSlot ? String(timeSlot).trim() : undefined,
+        assignedStaff: assignedStaff ? String(assignedStaff).trim() : undefined,
+        serviceMode: serviceMode ? String(serviceMode).trim() : undefined,
+        nextRenewalDate: nextRenewalDate ? String(nextRenewalDate).trim() : undefined,
       });
 
       io.to(`user:${req.user!.id}`).emit("order:created", order);
@@ -189,7 +214,7 @@ export function createOrdersRouter(
             for (const item of ordItems) {
               const prod = item.productId ? prodMap.get(String(item.productId)) : undefined;
               const qty = Math.max(1, Number(item.quantity) || 1);
-              if (prod) {
+              if (prod && prod.itemType !== "service") {
                 const nextStock = becomingCancelled
                   ? Number(prod.stock || 0) + qty
                   : Math.max(0, Number(prod.stock || 0) - qty);
@@ -273,6 +298,55 @@ export function createOrdersRouter(
       res.json({ order: updated, message: `Payment marked as ${paymentStatus}` });
     } catch {
       res.status(500).json({ error: "Could not update payment status" });
+    }
+  });
+
+  router.put("/:id/booking", async (req: Request, res: Response): Promise<void> => {
+    try {
+      const existing = await db.orders.findById((req.params.id as string));
+      if (!existing) {
+        res.status(404).json({ error: "Order not found" });
+        return;
+      }
+      if (req.user?.role !== "admin" && existing.userId !== req.user!.id) {
+        res.status(403).json({ error: "Access denied" });
+        return;
+      }
+
+      const { bookingDate, timeSlot, assignedStaff, serviceMode, nextRenewalDate, notifyCustomer } = req.body;
+      const updated = await db.orders.update((req.params.id as string), {
+        bookingDate: bookingDate !== undefined ? String(bookingDate).trim() : existing.bookingDate,
+        timeSlot: timeSlot !== undefined ? String(timeSlot).trim() : existing.timeSlot,
+        assignedStaff: assignedStaff !== undefined ? String(assignedStaff).trim() : existing.assignedStaff,
+        serviceMode: serviceMode !== undefined ? String(serviceMode).trim() : existing.serviceMode,
+        nextRenewalDate: nextRenewalDate !== undefined ? String(nextRenewalDate).trim() : existing.nextRenewalDate,
+      });
+
+      io.to(`user:${existing.userId}`).emit("order:updated", updated);
+
+      if (notifyCustomer && existing.customerPhone) {
+        const msg =
+          `🗓️ *Booking Updated (#${existing.id.slice(-6).toUpperCase()})*\n` +
+          `Hello ${existing.customerName}!\n` +
+          (updated.bookingDate ? `📅 Date: *${updated.bookingDate}*\n` : "") +
+          (updated.timeSlot ? `⏰ Slot: *${updated.timeSlot}*\n` : "") +
+          (updated.assignedStaff ? `👷 Assigned Staff: *${updated.assignedStaff}*\n` : "") +
+          `Total: ₹${existing.totalAmount}`;
+        const merchantState = waManager.getSessionState(existing.userId);
+        if (merchantState.status === "connected") {
+          waManager.sendMessage({
+            userId: existing.userId,
+            recipientPhone: existing.customerPhone,
+            messageText: msg,
+          }).catch(() => {});
+        } else if (notificationService) {
+          notificationService.sendSupportNotification(existing.customerPhone, msg).catch(() => {});
+        }
+      }
+
+      res.json({ order: updated, message: "Booking schedule & technician updated" });
+    } catch {
+      res.status(500).json({ error: "Could not update booking schedule" });
     }
   });
 

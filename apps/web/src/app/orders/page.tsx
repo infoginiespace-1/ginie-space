@@ -29,10 +29,12 @@ import {
   SearchOutlined,
   DeleteOutlined,
   MinusCircleOutlined,
+  CalendarOutlined,
 } from "@ant-design/icons";
 import { api } from "../../lib/api";
 import { getSocket } from "../../lib/socket";
 import { downloadCsv } from "../../lib/csv";
+import { useAuth } from "../../context/AuthContext";
 
 const { Title, Text } = Typography;
 
@@ -49,6 +51,11 @@ interface Order {
   deliveryCharge?: number;
   couponCode?: string;
   deliveryAddress?: string;
+  bookingDate?: string;
+  timeSlot?: string;
+  assignedStaff?: string;
+  serviceMode?: string;
+  nextRenewalDate?: string;
   notes?: string;
   createdAt: string;
 }
@@ -59,7 +66,24 @@ interface CatalogProduct {
   price: number;
   unit: string;
   stock: number;
+  itemType?: "product" | "service";
+  duration?: string;
 }
+
+const BOOKING_TIME_SLOTS = [
+  "09:00 AM - 11:00 AM",
+  "11:00 AM - 01:00 PM",
+  "02:00 PM - 04:00 PM",
+  "04:00 PM - 06:00 PM",
+  "06:00 PM - 08:00 PM",
+];
+
+const SERVICE_MODE_NAMES: Record<string, string> = {
+  home_visit: "Home Visit",
+  at_store: "At Store / Clinic",
+  online: "Online / Video",
+  any: "Flexible",
+};
 
 interface CustomerOption {
   id: string;
@@ -76,13 +100,19 @@ interface OrderLineItem {
 }
 
 export default function OrdersPage() {
+  const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<CatalogProduct[]>([]);
   const [customers, setCustomers] = useState<CustomerOption[]>([]);
+  const [staffNames, setStaffNames] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [creatingOrder, setCreatingOrder] = useState(false);
   const [form] = Form.useForm();
+  const [bookingForm] = Form.useForm();
+  const [bookingModalOrder, setBookingModalOrder] = useState<Order | null>(null);
+  const [savingBooking, setSavingBooking] = useState(false);
+  const [scheduleFilter, setScheduleFilter] = useState<"all" | "today" | "upcoming" | "renewals">("all");
   const [lineItems, setLineItems] = useState<OrderLineItem[]>([]);
   const [pickerProductId, setPickerProductId] = useState<string | undefined>(undefined);
   const [pickerQty, setPickerQty] = useState<number>(1);
@@ -142,6 +172,11 @@ export default function OrdersPage() {
       setOrders(ordRes.data.orders || []);
       setProducts(prodRes.data.products || []);
       setCustomers(custRes.data.customers || []);
+      if (user?.role !== "staff") {
+        api.get("/api/settings/staff")
+          .then((r) => setStaffNames((r.data?.staff || []).map((s: any) => s.name).filter(Boolean)))
+          .catch(() => {});
+      }
     } catch {
       message.error("Could not load orders");
     } finally {
@@ -267,6 +302,11 @@ export default function OrdersPage() {
         discountAmount: Number(values.discountAmount) || 0,
         deliveryCharge: Number(values.deliveryCharge) || 0,
         deliveryAddress: values.deliveryAddress || "",
+        bookingDate: values.bookingDate || "",
+        timeSlot: values.timeSlot || "",
+        assignedStaff: values.assignedStaff || "",
+        serviceMode: values.serviceMode || "",
+        nextRenewalDate: values.nextRenewalDate || "",
       });
       message.success("Order created successfully!");
       setCreateModalVisible(false);
@@ -317,6 +357,48 @@ export default function OrdersPage() {
       message.success("Order deleted");
     } catch (err: any) {
       message.error(err.message || "Could not delete order");
+    }
+  };
+
+  const handleSaveBookingUpdate = async (values: any) => {
+    if (!bookingModalOrder) return;
+    try {
+      setSavingBooking(true);
+      const res = await api.put(`/api/orders/${bookingModalOrder.id}/booking`, {
+        bookingDate: values.bookingDate || "",
+        timeSlot: values.timeSlot || "",
+        assignedStaff: values.assignedStaff || "",
+        serviceMode: values.serviceMode || "",
+        nextRenewalDate: values.nextRenewalDate || "",
+        notifyCustomer: Boolean(values.notifyCustomer),
+      });
+      if (res.data?.order) {
+        setOrders((prev) => prev.map((o) => (o.id === bookingModalOrder.id ? res.data.order : o)));
+      }
+      message.success("Booking schedule & technician updated!");
+      setBookingModalOrder(null);
+    } catch (err: any) {
+      message.error(err.message || "Could not update schedule");
+    } finally {
+      setSavingBooking(false);
+    }
+  };
+
+  const handleSendRenewalReminder = async (order: Order) => {
+    try {
+      const msg =
+        `🔔 *Service Due / Renewal Reminder — ${businessProfile.name}*\n\n` +
+        `Namaste *${order.customerName}*,\n` +
+        `Your next scheduled service / AMC renewal is due on *${order.nextRenewalDate}*.\n` +
+        `Reply here to confirm your convenient time slot!`;
+      await api.post("/api/whatsapp/send", {
+        recipientPhone: order.customerPhone,
+        messageText: msg,
+        contactName: order.customerName,
+      });
+      message.success(`Renewal reminder sent to ${order.customerName}!`);
+    } catch (err: any) {
+      message.error(err.response?.data?.error || err.message || "Connect WhatsApp first to send reminder");
     }
   };
 
@@ -427,16 +509,60 @@ export default function OrdersPage() {
       render: (date: string) => new Date(date).toLocaleDateString(),
     },
     {
-      title: "Notes",
+      title: "Notes & Schedule",
       dataIndex: "notes",
       key: "notes",
-      render: (notes: string) => notes || "-",
+      render: (notes: string, record: Order) => (
+        <div style={{ fontSize: 12 }}>
+          {record.bookingDate && (
+            <div>
+              <Tag color="geekblue">
+                {record.bookingDate} {record.timeSlot ? `• ${record.timeSlot}` : ""}
+              </Tag>
+            </div>
+          )}
+          {record.assignedStaff && (
+            <div style={{ color: "#475569", marginTop: 2 }}>
+              Staff: <strong>{record.assignedStaff}</strong>
+              {record.serviceMode ? ` (${SERVICE_MODE_NAMES[record.serviceMode] || record.serviceMode})` : ""}
+            </div>
+          )}
+          {record.nextRenewalDate && (
+            <div style={{ color: "#7c3aed", marginTop: 2 }}>
+              Renewal Due: <strong>{record.nextRenewalDate}</strong>
+            </div>
+          )}
+          <div>{notes || (!record.bookingDate ? "-" : "")}</div>
+        </div>
+      ),
     },
     {
       title: "Action",
       key: "action",
       render: (_: any, record: Order) => (
-        <Space size="small">
+        <Space size="small" wrap>
+          <Button
+            size="small"
+            icon={<CalendarOutlined />}
+            onClick={() => {
+              setBookingModalOrder(record);
+              bookingForm.setFieldsValue({
+                bookingDate: record.bookingDate || "",
+                timeSlot: record.timeSlot || undefined,
+                assignedStaff: record.assignedStaff || "",
+                serviceMode: record.serviceMode || "any",
+                nextRenewalDate: record.nextRenewalDate || "",
+                notifyCustomer: true,
+              });
+            }}
+          >
+            Schedule
+          </Button>
+          {record.nextRenewalDate && (
+            <Button size="small" onClick={() => handleSendRenewalReminder(record)} style={{ color: "#7c3aed", borderColor: "#c4b5fd" }}>
+              Renewal WA
+            </Button>
+          )}
           <Button
             size="small"
             icon={<PrinterOutlined />}
@@ -484,15 +610,22 @@ export default function OrdersPage() {
     },
   ];
 
+  const todayStr = new Date().toISOString().slice(0, 10);
   const filteredOrders = orders.filter((o) => {
     const matchesStatus = statusFilter === "all" || o.status === statusFilter;
+    const matchesSchedule =
+      scheduleFilter === "all" ||
+      (scheduleFilter === "today" && String(o.bookingDate || "") === todayStr) ||
+      (scheduleFilter === "upcoming" && Boolean(o.bookingDate) && String(o.bookingDate) >= todayStr) ||
+      (scheduleFilter === "renewals" && Boolean(o.nextRenewalDate));
     const q = searchText.trim().toLowerCase();
     const matchesSearch =
       !q ||
       o.customerName.toLowerCase().includes(q) ||
       o.customerPhone.toLowerCase().includes(q) ||
+      (o.assignedStaff || "").toLowerCase().includes(q) ||
       o.id.toLowerCase().includes(q);
-    return matchesStatus && matchesSearch;
+    return matchesStatus && matchesSchedule && matchesSearch;
   });
 
   const handlePrintInvoiceWindow = (order: Order) => {
@@ -641,6 +774,17 @@ export default function OrdersPage() {
               { value: "dispatched", label: "Dispatched" },
               { value: "delivered", label: "Delivered" },
               { value: "cancelled", label: "Cancelled" },
+            ]}
+          />
+          <Select
+            value={scheduleFilter}
+            onChange={setScheduleFilter}
+            style={{ width: 185 }}
+            options={[
+              { value: "all", label: "All Orders & Bookings" },
+              { value: "today", label: "Today's Schedule" },
+              { value: "upcoming", label: "Upcoming Bookings" },
+              { value: "renewals", label: "Upcoming Renewals" },
             ]}
           />
         </div>
@@ -805,7 +949,48 @@ export default function OrdersPage() {
             </Form.Item>
           </div>
 
-          <Form.Item name="deliveryAddress" label="Delivery Address &amp; Pincode (Optional)">
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <Form.Item name="bookingDate" label="Appointment / Visit Date (Services)">
+              <Input type="date" />
+            </Form.Item>
+            <Form.Item name="timeSlot" label="Time Slot">
+              <Select
+                allowClear
+                placeholder="Select slot"
+                options={BOOKING_TIME_SLOTS.map((s) => ({ value: s, label: s }))}
+              />
+            </Form.Item>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+            <Form.Item name="serviceMode" label="Service Mode">
+              <Select
+                allowClear
+                placeholder="Mode"
+                options={[
+                  { value: "home_visit", label: "Home Visit" },
+                  { value: "at_store", label: "At Store / Clinic" },
+                  { value: "online", label: "Online / Video" },
+                ]}
+              />
+            </Form.Item>
+            <Form.Item name="assignedStaff" label="Assign Technician / Staff">
+              <Input
+                list="staff-datalist"
+                placeholder="e.g. Raju Tech"
+              />
+            </Form.Item>
+            <Form.Item name="nextRenewalDate" label="Next Renewal / AMC Date">
+              <Input type="date" />
+            </Form.Item>
+          </div>
+          <datalist id="staff-datalist">
+            {staffNames.map((n) => (
+              <option key={n} value={n} />
+            ))}
+          </datalist>
+
+          <Form.Item name="deliveryAddress" label="Delivery / Visit Address &amp; Pincode (Optional)">
             <Input placeholder="Shop/House No, Area, City, Pincode..." />
           </Form.Item>
 
@@ -975,6 +1160,53 @@ export default function OrdersPage() {
             )}
           </div>
         )}
+      </Modal>
+      {/* Schedule / Technician Assignment Modal */}
+      <Modal
+        title={`Booking Schedule & Technician — #${bookingModalOrder ? bookingModalOrder.id.slice(-6).toUpperCase() : ""}`}
+        open={Boolean(bookingModalOrder)}
+        onCancel={() => setBookingModalOrder(null)}
+        footer={null}
+        destroyOnClose
+      >
+        <Form form={bookingForm} layout="vertical" onFinish={handleSaveBookingUpdate}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <Form.Item name="bookingDate" label="Appointment Date">
+              <Input type="date" />
+            </Form.Item>
+            <Form.Item name="timeSlot" label="Time Slot">
+              <Select
+                allowClear
+                placeholder="Choose time slot"
+                options={BOOKING_TIME_SLOTS.map((s) => ({ value: s, label: s }))}
+              />
+            </Form.Item>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <Form.Item name="assignedStaff" label="Assigned Staff / Technician">
+              <Input list="staff-datalist" placeholder="e.g. Suresh Electrician" />
+            </Form.Item>
+            <Form.Item name="serviceMode" label="Service Mode">
+              <Select
+                options={[
+                  { value: "home_visit", label: "Home Visit" },
+                  { value: "at_store", label: "At Store / Clinic" },
+                  { value: "online", label: "Online / Video" },
+                  { value: "any", label: "Flexible" },
+                ]}
+              />
+            </Form.Item>
+          </div>
+          <Form.Item name="nextRenewalDate" label="Next Service Due / AMC Renewal Date">
+            <Input type="date" />
+          </Form.Item>
+          <Form.Item name="notifyCustomer" valuePropName="checked">
+            <Checkbox>Notify customer on WhatsApp with updated schedule</Checkbox>
+          </Form.Item>
+          <Button type="primary" htmlType="submit" block loading={savingBooking} style={{ background: "#25D366", borderColor: "#25D366", fontWeight: 600 }}>
+            Save Schedule
+          </Button>
+        </Form>
       </Modal>
     </AppLayout>
   );

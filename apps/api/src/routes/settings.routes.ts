@@ -14,8 +14,14 @@ export function createSettingsRouter(
 
   router.get("/", async (req: Request, res: Response): Promise<void> => {
     try {
-      const business = await db.businesses.findOne({ userId: req.user!.id });
-      res.json({ business });
+      const [business, currentUser] = await Promise.all([
+        db.businesses.findOne({ userId: req.user!.id }),
+        db.users.findById(req.user!.id).catch(() => null),
+      ]);
+      res.json({
+        business,
+        businessType: currentUser?.businessType || req.user?.businessType || "retail",
+      });
     } catch {
       res.status(500).json({ error: "Could not load settings" });
     }
@@ -23,7 +29,16 @@ export function createSettingsRouter(
 
   router.put("/business", requireOwnerOrAdmin, async (req: Request, res: Response): Promise<void> => {
     try {
-      const { name, phone, address, settingsJson, slug } = req.body;
+      const { name, phone, address, settingsJson, slug, businessType } = req.body;
+      let updatedBusinessType: "retail" | "wholesale" | "services" | undefined;
+      if (businessType !== undefined) {
+        if (!["retail", "wholesale", "services"].includes(String(businessType))) {
+          res.status(400).json({ error: "Invalid businessType. Must be retail, wholesale, or services." });
+          return;
+        }
+        updatedBusinessType = businessType as "retail" | "wholesale" | "services";
+      }
+
       let cleanSlug: string | undefined;
       if (slug !== undefined) {
         const trimmedSlug = String(slug).trim().toLowerCase().replace(/[^a-z0-9-]/g, "");
@@ -65,7 +80,13 @@ export function createSettingsRouter(
         });
       }
 
-      res.json({ business, message: "Settings saved successfully" });
+      let resolvedBusinessType = req.user?.businessType || "retail";
+      if (updatedBusinessType) {
+        const ownerUser = await db.users.update(req.user!.id, { businessType: updatedBusinessType }).catch(() => null);
+        resolvedBusinessType = ownerUser?.businessType || updatedBusinessType;
+      }
+
+      res.json({ business, businessType: resolvedBusinessType, message: "Settings saved successfully" });
     } catch {
       res.status(500).json({ error: "Could not save settings" });
     }

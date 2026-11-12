@@ -119,7 +119,8 @@ export default function DashboardPage() {
   const todayRevenue = todayOrders.reduce((sum, o) => sum + (Number(o.totalAmount) || 0), 0);
   const totalRevenue = filteredOrders.filter((o) => o.status !== "cancelled").reduce((sum, o) => sum + (Number(o.totalAmount) || 0), 0);
   const pendingOrders = filteredOrders.filter((o) => o.status === "pending");
-  const lowStockProducts = products.filter((p) => Number(p.stock) <= 5);
+  const lowStockProducts = products.filter((p) => (p as any).itemType !== "service" && Number(p.stock) <= 5);
+  const todayBookingsCount = orders.filter((o: any) => o.status !== "cancelled" && String(o.bookingDate || "") === todayPrefix).length;
   const recentOrders = [...filteredOrders]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 6);
@@ -334,6 +335,20 @@ export default function DashboardPage() {
           </Button>
         </Space>
       </div>
+
+      {todayBookingsCount > 0 && (
+        <Alert
+          type="info"
+          showIcon
+          style={{ marginBottom: 16, borderRadius: 10 }}
+          message={`You have ${todayBookingsCount} scheduled service booking(s) for today (${todayPrefix})`}
+          action={
+            <Button size="small" type="primary" onClick={() => router.push("/orders")}>
+              View Schedule
+            </Button>
+          }
+        />
+      )}
 
       {lowStockProducts.length > 0 && (
         <Alert

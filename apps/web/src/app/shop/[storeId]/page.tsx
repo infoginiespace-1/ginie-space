@@ -63,7 +63,25 @@ interface StoreProduct {
   imageUrl?: string;
   category?: string;
   minOrderQty?: number;
+  itemType?: "product" | "service";
+  duration?: string;
+  serviceMode?: "at_store" | "home_visit" | "online" | "any";
 }
+
+const STORE_TIME_SLOTS = [
+  "09:00 AM - 11:00 AM",
+  "11:00 AM - 01:00 PM",
+  "02:00 PM - 04:00 PM",
+  "04:00 PM - 06:00 PM",
+  "06:00 PM - 08:00 PM",
+];
+
+const STORE_SERVICE_MODE_TEXT: Record<string, string> = {
+  home_visit: "Home Visit",
+  at_store: "At Store / Clinic",
+  online: "Online / Remote",
+  any: "Store or Home Visit",
+};
 
 export default function PublicStorefrontPage() {
   const params = useParams();
@@ -86,6 +104,8 @@ export default function PublicStorefrontPage() {
   const [trackOrderId, setTrackOrderId] = useState("");
   const [trackingLoading, setTrackingLoading] = useState(false);
   const [trackedOrders, setTrackedOrders] = useState<any[] | null>(null);
+  const [bookedSlots, setBookedSlots] = useState<string[]>([]);
+  const [selectedBookingDate, setSelectedBookingDate] = useState<string>("");
   const [orderResult, setOrderResult] = useState<{
     orderId: string;
     totalAmount: number;
@@ -131,6 +151,17 @@ export default function PublicStorefrontPage() {
     });
   };
 
+  useEffect(() => {
+    if (!storeId || !selectedBookingDate) {
+      setBookedSlots([]);
+      return;
+    }
+    api
+      .get(`/api/storefront/${storeId}/booked-slots`, { params: { date: selectedBookingDate } })
+      .then((res) => setBookedSlots(res.data?.bookedSlots || []))
+      .catch(() => setBookedSlots([]));
+  }, [storeId, selectedBookingDate]);
+
   const cartItems = products
     .filter((p) => (cart[p.id] || 0) > 0)
     .map((p) => ({
@@ -139,7 +170,10 @@ export default function PublicStorefrontPage() {
       price: Number(p.price) || 0,
       unit: p.unit || "pcs",
       quantity: cart[p.id],
+      itemType: p.itemType || "product",
     }));
+
+  const hasServiceInCart = cartItems.some((it) => it.itemType === "service") || store?.businessType === "services";
 
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const cartSubtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -175,6 +209,9 @@ export default function PublicStorefrontPage() {
         customerName: values.customerName,
         customerPhone: values.customerPhone,
         deliveryAddress: values.deliveryAddress,
+        bookingDate: values.bookingDate,
+        timeSlot: values.timeSlot,
+        serviceMode: values.serviceMode,
         items: cartItems,
         notes: values.notes,
         couponCode: appliedCoupon?.code,
@@ -384,7 +421,9 @@ export default function PublicStorefrontPage() {
           <Row gutter={[16, 16]}>
             {filteredProducts.map((p) => {
               const qty = cart[p.id] || 0;
-              const outOfStock = Number(p.stock) <= 0;
+              const isService = p.itemType === "service";
+              const outOfStock = !isService && Number(p.stock) <= 0;
+              const effectiveMax = isService ? 999 : Number(p.stock);
               return (
                 <Col xs={24} sm={12} md={8} key={p.id}>
                   <Card
@@ -412,6 +451,13 @@ export default function PublicStorefrontPage() {
                         <div>
                           <Title level={5} style={{ margin: 0 }}>{p.name}</Title>
                           <Space size={4} style={{ marginTop: 4 }} wrap>
+                            {isService && <Tag color="geekblue" style={{ fontSize: 11 }}>Service</Tag>}
+                            {p.duration && <Tag color="cyan" style={{ fontSize: 11 }}>{p.duration}</Tag>}
+                            {isService && p.serviceMode && (
+                              <Tag color="purple" style={{ fontSize: 11 }}>
+                                {STORE_SERVICE_MODE_TEXT[p.serviceMode] || p.serviceMode}
+                              </Tag>
+                            )}
                             {p.category && p.category !== "General" && (
                               <Tag color="blue" style={{ fontSize: 11 }}>{p.category}</Tag>
                             )}
@@ -420,12 +466,12 @@ export default function PublicStorefrontPage() {
                             )}
                           </Space>
                         </div>
-                        <Tag color={outOfStock ? "red" : "green"}>
-                          {outOfStock ? "Out of Stock" : `${p.stock} ${p.unit} left`}
+                        <Tag color={isService ? "purple" : outOfStock ? "red" : "green"}>
+                          {isService ? "Available" : outOfStock ? "Out of Stock" : `${p.stock} ${p.unit} left`}
                         </Tag>
                       </div>
                       <Text type="secondary" style={{ display: "block", marginTop: 6, minHeight: 36, fontSize: 13 }}>
-                        {p.description || "Available for quick WhatsApp order"}
+                        {p.description || (isService ? "Book appointment online via WhatsApp" : "Available for quick WhatsApp order")}
                       </Text>
                     </div>
 
@@ -441,19 +487,19 @@ export default function PublicStorefrontPage() {
                           disabled={outOfStock}
                           icon={<PlusOutlined />}
                           style={!outOfStock ? { background: "#25D366", borderColor: "#25D366" } : undefined}
-                          onClick={() => updateQty(p.id, 1, Number(p.stock), Number(p.minOrderQty) || 1)}
+                          onClick={() => updateQty(p.id, 1, effectiveMax, Number(p.minOrderQty) || 1)}
                         >
-                          {Number(p.minOrderQty) > 1 ? `Add (${p.minOrderQty})` : "Add"}
+                          {isService ? "Book" : Number(p.minOrderQty) > 1 ? `Add (${p.minOrderQty})` : "Add"}
                         </Button>
                       ) : (
                         <Space>
-                          <Button icon={<MinusOutlined />} size="small" onClick={() => updateQty(p.id, -1, Number(p.stock), Number(p.minOrderQty) || 1)} />
+                          <Button icon={<MinusOutlined />} size="small" onClick={() => updateQty(p.id, -1, effectiveMax, Number(p.minOrderQty) || 1)} />
                           <Text strong>{qty}</Text>
                           <Button
                             icon={<PlusOutlined />}
                             size="small"
-                            disabled={qty >= Number(p.stock)}
-                            onClick={() => updateQty(p.id, 1, Number(p.stock), Number(p.minOrderQty) || 1)}
+                            disabled={qty >= effectiveMax}
+                            onClick={() => updateQty(p.id, 1, effectiveMax, Number(p.minOrderQty) || 1)}
                           />
                         </Space>
                       )}
@@ -608,12 +654,56 @@ export default function PublicStorefrontPage() {
                 <Input placeholder="e.g. 9876543210" />
               </Form.Item>
 
-              <Form.Item name="deliveryAddress" label="Delivery Address &amp; Pincode">
+              {hasServiceInCart && (
+                <div style={{ padding: 12, background: "#f0fdf4", borderRadius: 8, marginBottom: 14, border: "1px solid #bbf7d0" }}>
+                  <Text strong style={{ display: "block", marginBottom: 8, color: "#15803d" }}>
+                    Schedule Your Appointment / Service Slot
+                  </Text>
+                  <Form.Item
+                    name="bookingDate"
+                    label="Preferred Date"
+                    rules={[{ required: true, message: "Please select appointment date" }]}
+                    style={{ marginBottom: 10 }}
+                  >
+                    <Input
+                      type="date"
+                      min={new Date().toISOString().slice(0, 10)}
+                      onChange={(e) => setSelectedBookingDate(e.target.value)}
+                    />
+                  </Form.Item>
+                  <Form.Item
+                    name="timeSlot"
+                    label="Available Time Slot"
+                    rules={[{ required: true, message: "Please select a time slot" }]}
+                    style={{ marginBottom: 10 }}
+                  >
+                    <Select
+                      placeholder="Choose slot"
+                      options={STORE_TIME_SLOTS.map((s) => ({
+                        value: s,
+                        label: bookedSlots.includes(s) ? `${s} (Already Booked)` : s,
+                        disabled: bookedSlots.includes(s),
+                      }))}
+                    />
+                  </Form.Item>
+                  <Form.Item name="serviceMode" label="Service Preference" initialValue="home_visit" style={{ marginBottom: 0 }}>
+                    <Select
+                      options={[
+                        { value: "home_visit", label: "Home / On-Site Visit" },
+                        { value: "at_store", label: "Visit Store / Clinic" },
+                        { value: "online", label: "Online / Video Call" },
+                      ]}
+                    />
+                  </Form.Item>
+                </div>
+              )}
+
+              <Form.Item name="deliveryAddress" label={hasServiceInCart ? "Service / Visit Address & Pincode" : "Delivery Address & Pincode"}>
                 <Input.TextArea rows={2} placeholder="House/Shop No, Street, Area, City, Pincode..." />
               </Form.Item>
 
-              <Form.Item name="notes" label="Order Note (Optional)">
-                <Input placeholder="Preferred delivery time or special instruction..." />
+              <Form.Item name="notes" label="Special Instructions (Optional)">
+                <Input placeholder="Preferred timing or special note..." />
               </Form.Item>
 
               <Button
@@ -625,7 +715,7 @@ export default function PublicStorefrontPage() {
                 loading={submitting}
                 style={{ background: "#25D366", borderColor: "#25D366", fontWeight: 600 }}
               >
-                Place Order (₹{cartTotal.toLocaleString("en-IN")})
+                {hasServiceInCart ? `Confirm Booking (₹${cartTotal.toLocaleString("en-IN")})` : `Place Order (₹${cartTotal.toLocaleString("en-IN")})`}
               </Button>
             </Form>
           </div>

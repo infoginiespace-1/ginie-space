@@ -1,5 +1,5 @@
 export type UserRole = "admin" | "user" | "staff";
-export type BusinessType = "retail" | "wholesale";
+export type BusinessType = "retail" | "wholesale" | "services";
 export type OrderStatus = "pending" | "confirmed" | "dispatched" | "delivered" | "cancelled";
 export type PaymentStatus = "unpaid" | "partial" | "paid";
 export type LeadStatus = "new" | "contacted" | "converted" | "archived";
@@ -56,6 +56,9 @@ export interface Product {
   category?: string;
   minOrderQty?: number;
   costPrice?: number;
+  itemType?: "product" | "service";
+  duration?: string;
+  serviceMode?: "at_store" | "home_visit" | "online" | "any";
   createdAt: string;
   updatedAt: string;
 }
@@ -83,6 +86,11 @@ export interface Order {
   deliveryCharge?: number;
   couponCode?: string;
   deliveryAddress?: string;
+  bookingDate?: string;
+  timeSlot?: string;
+  assignedStaff?: string;
+  serviceMode?: string;
+  nextRenewalDate?: string;
   createdAt: string;
   updatedAt: string;
 }

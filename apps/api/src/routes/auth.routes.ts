@@ -26,8 +26,8 @@ export function createAuthRouter(
         return;
       }
 
-      if (businessType !== "retail" && businessType !== "wholesale") {
-        res.status(400).json({ error: "Please select either Retail or Wholesale as your business type" });
+      if (!["retail", "wholesale", "services"].includes(String(businessType))) {
+        res.status(400).json({ error: "Please select Retail, Wholesale, or Service Business as your business type" });
         return;
       }
 

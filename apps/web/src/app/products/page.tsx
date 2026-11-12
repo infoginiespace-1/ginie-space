@@ -29,7 +29,9 @@ import {
   CopyOutlined,
   UploadOutlined,
   PictureOutlined,
+  ThunderboltOutlined,
 } from "@ant-design/icons";
+import { Radio } from "antd";
 import { api } from "../../lib/api";
 import { downloadCsv, parseCsv } from "../../lib/csv";
 import { useAuth } from "../../context/AuthContext";
@@ -51,7 +53,28 @@ interface Product {
   category?: string;
   minOrderQty?: number;
   costPrice?: number;
+  itemType?: "product" | "service";
+  duration?: string;
+  serviceMode?: "at_store" | "home_visit" | "online" | "any";
 }
+
+const SERVICE_UNITS = ["session", "visit", "hour", "day", "month", "year", "project"] as const;
+
+const SERVICE_MODE_LABELS: Record<string, string> = {
+  home_visit: "Home Visit",
+  at_store: "At Store / Clinic",
+  online: "Online / Remote",
+  any: "Store or Home Visit",
+};
+
+const TRENDING_PACK_META = [
+  { key: "ac_repair", title: "AC, RO & Appliance Repair", desc: "Split AC Foam-Jet, Gas Refill, RO Service & Annual AMC (4 services)" },
+  { key: "salon", title: "Salon, Spa & Bridal Makeup", desc: "Haircut & Styling, Bridal HD Makeup & Hydra Facial (3 services)" },
+  { key: "clinic", title: "Clinic, Dental & Diagnostics", desc: "Doctor Consult, Dental Scaling & Home Blood Test (3 services)" },
+  { key: "auto", title: "Car & Two-Wheeler Workshop", desc: "Periodic Car Service, Foam Wash & Bike Tune-Up (3 services)" },
+  { key: "agency", title: "Digital Agency & CA/GST Services", desc: "Website Setup, Meta Ads Retainer & Monthly GST Filing (3 services)" },
+  { key: "coaching", title: "Coaching, Fitness & Classes", desc: "1-on-1 Live Session & Monthly Batch Plan (2 services)" },
+];
 
 function isContainerUnit(unit?: string): boolean {
   return CONTAINER_UNITS.includes((unit || "").toLowerCase() as any);
@@ -73,7 +96,7 @@ function parseUnitField(rawUnit?: string): {
     };
   }
   const lower = val.toLowerCase();
-  if (["pcs", "gram", "kg", "pack", "carton", "jar"].includes(lower)) {
+  if (["pcs", "gram", "kg", "pack", "carton", "jar", ...SERVICE_UNITS].includes(lower)) {
     return { unitType: lower, packQty: isContainerUnit(lower) ? 10 : undefined, packSubUnit: "pcs" };
   }
   if (lower === "cartoon") {
@@ -143,15 +166,20 @@ export default function ProductsPage() {
   const [csvModalOpen, setCsvModalOpen] = useState(false);
   const [importingCsv, setImportingCsv] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<"all" | "product" | "service">("all");
+  const [templateModalOpen, setTemplateModalOpen] = useState(false);
+  const [importingPack, setImportingPack] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [form] = Form.useForm();
 
+  const watchedItemType = Form.useWatch("itemType", form) || "product";
   const watchedUnitType = Form.useWatch("unitType", form) || "pcs";
   const watchedPackQty = Form.useWatch("packQty", form);
   const watchedPackSubUnit = Form.useWatch("packSubUnit", form) || "pcs";
   const watchedPrice = Form.useWatch("price", form);
   const watchedStock = Form.useWatch("stock", form);
-  const containerEnabled = isContainerUnit(watchedUnitType);
+  const isServiceForm = watchedItemType === "service";
+  const containerEnabled = !isServiceForm && isContainerUnit(watchedUnitType);
 
   const loadProducts = async () => {
     try {
@@ -210,10 +238,13 @@ export default function ProductsPage() {
         price: Number(values.price) || 0,
         costPrice: values.costPrice !== undefined && values.costPrice !== null ? Number(values.costPrice) : undefined,
         unit: formattedUnit,
-        stock: values.stock !== undefined ? Number(values.stock) : 0,
+        stock: values.itemType === "service" ? 999999 : values.stock !== undefined ? Number(values.stock) : 0,
         imageUrl: imagePreview || "",
-        category: values.category ? String(values.category).trim() : "General",
+        category: values.category ? String(values.category).trim() : values.itemType === "service" ? "Services" : "General",
         minOrderQty: values.minOrderQty ? Math.max(1, Number(values.minOrderQty) || 1) : 1,
+        itemType: values.itemType === "service" ? "service" : "product",
+        duration: values.duration ? String(values.duration).trim() : undefined,
+        serviceMode: values.itemType === "service" ? values.serviceMode || "any" : undefined,
       };
 
       if (editingProduct) {
@@ -296,17 +327,35 @@ export default function ProductsPage() {
     return false;
   };
 
+  const handleImportPack = async (packKey: string) => {
+    try {
+      setImportingPack(packKey);
+      const res = await api.post("/api/products/service-templates", { pack: packKey });
+      message.success(res.data?.message || "Service pack imported!");
+      setTemplateModalOpen(false);
+      loadProducts();
+    } catch (err: any) {
+      message.error(err.message || "Could not import service pack");
+    } finally {
+      setImportingPack(null);
+    }
+  };
+
   const openAddModal = () => {
+    const defaultService = user?.businessType === "services";
     setEditingProduct(null);
     setImagePreview("");
     form.resetFields();
     form.setFieldsValue({
-      unitType: "pcs",
+      itemType: defaultService ? "service" : "product",
+      unitType: defaultService ? "session" : "pcs",
       packQty: undefined,
       packSubUnit: "pcs",
-      stock: 10,
-      category: "General",
+      stock: defaultService ? 999999 : 10,
+      category: defaultService ? "Services" : "General",
       minOrderQty: 1,
+      duration: defaultService ? "60 mins" : undefined,
+      serviceMode: defaultService ? "any" : undefined,
     });
     setModalVisible(true);
   };
@@ -316,6 +365,7 @@ export default function ProductsPage() {
     const parsedUnit = parseUnitField(product.unit);
     setImagePreview(product.imageUrl || "");
     form.setFieldsValue({
+      itemType: product.itemType || "product",
       name: product.name,
       description: product.description,
       price: product.price,
@@ -326,6 +376,8 @@ export default function ProductsPage() {
       category: product.category || "General",
       minOrderQty: product.minOrderQty || 1,
       packSubUnit: parsedUnit.packSubUnit,
+      duration: product.duration || "",
+      serviceMode: product.serviceMode || "any",
     });
     setModalVisible(true);
   };
@@ -371,8 +423,17 @@ export default function ProductsPage() {
           <div>
             <div style={{ fontWeight: 600 }}>
               {name}{" "}
+              {record.itemType === "service" && (
+                <Tag color="geekblue" style={{ fontSize: 11 }}>Service</Tag>
+              )}
               {record.category && record.category !== "General" && (
                 <Tag color="blue" style={{ fontSize: 11 }}>{record.category}</Tag>
+              )}
+              {record.duration && (
+                <Tag color="cyan" style={{ fontSize: 11 }}>{record.duration}</Tag>
+              )}
+              {record.itemType === "service" && record.serviceMode && (
+                <Tag color="purple" style={{ fontSize: 11 }}>{SERVICE_MODE_LABELS[record.serviceMode] || record.serviceMode}</Tag>
               )}
               {Number(record.minOrderQty) > 1 && (
                 <Tag color="purple" style={{ fontSize: 11 }}>MOQ: {record.minOrderQty}</Tag>
@@ -405,14 +466,17 @@ export default function ProductsPage() {
       },
     },
     {
-      title: "Available Stock",
+      title: "Available Stock / Slots",
       dataIndex: "stock",
       key: "stock",
-      render: (stock: number, record: Product) => (
-        <Tag color={stock > 10 ? "green" : stock > 0 ? "orange" : "red"}>
-          {stock > 0 ? `${stock} (${record.unit || "pcs"})` : "Out of stock"}
-        </Tag>
-      ),
+      render: (stock: number, record: Product) =>
+        record.itemType === "service" ? (
+          <Tag color="purple">Service / On Demand</Tag>
+        ) : (
+          <Tag color={stock > 10 ? "green" : stock > 0 ? "orange" : "red"}>
+            {stock > 0 ? `${stock} (${record.unit || "pcs"})` : "Out of stock"}
+          </Tag>
+        ),
     },
     {
       title: "Actions",
@@ -444,6 +508,13 @@ export default function ProductsPage() {
           <Text type="secondary">Manage products, pack/carton/jar quantities, pricing, and JPG images</Text>
         </div>
         <Space wrap>
+          <Button
+            icon={<ThunderboltOutlined />}
+            onClick={() => setTemplateModalOpen(true)}
+            style={{ borderColor: "#7c3aed", color: "#6d28d9" }}
+          >
+            Trending Service Packs
+          </Button>
           <Button icon={<UploadOutlined />} onClick={() => setCsvModalOpen(true)}>
             Import CSV
           </Button>
@@ -505,11 +576,21 @@ export default function ProductsPage() {
       <Card style={{ borderRadius: 12 }}>
         <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
           <Input
-            placeholder="Search products by name or description..."
+            placeholder="Search products or services..."
             allowClear
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{ maxWidth: 300 }}
+          />
+          <Select
+            value={typeFilter}
+            onChange={setTypeFilter}
+            style={{ width: 165 }}
+            options={[
+              { value: "all", label: "All Types (Hybrid)" },
+              { value: "product", label: "Products Only" },
+              { value: "service", label: "Services Only" },
+            ]}
           />
           <Select
             value={categoryFilter}
@@ -526,6 +607,8 @@ export default function ProductsPage() {
         </div>
         <Table
           dataSource={products.filter((p) => {
+            const matchesType =
+              typeFilter === "all" || (p.itemType || "product") === typeFilter;
             const matchesCat = categoryFilter === "all" || (p.category || "General") === categoryFilter;
             const q = searchTerm.trim().toLowerCase();
             const matchesSearch =
@@ -533,7 +616,7 @@ export default function ProductsPage() {
               p.name.toLowerCase().includes(q) ||
               (p.description || "").toLowerCase().includes(q) ||
               (p.category || "").toLowerCase().includes(q);
-            return matchesCat && matchesSearch;
+            return matchesType && matchesCat && matchesSearch;
           })}
           columns={columns}
           rowKey="id"
@@ -558,14 +641,41 @@ export default function ProductsPage() {
           form={form}
           layout="vertical"
           onFinish={handleSaveProduct}
-          initialValues={{ unitType: "pcs", packSubUnit: "pcs", stock: 10 }}
+          initialValues={{ itemType: "product", unitType: "pcs", packSubUnit: "pcs", stock: 10 }}
         >
+          <Form.Item name="itemType" label="Offering Type (Hybrid Mode)">
+            <Radio.Group
+              optionType="button"
+              buttonStyle="solid"
+              onChange={(e) => {
+                if (e.target.value === "service") {
+                  form.setFieldsValue({
+                    unitType: "session",
+                    packQty: undefined,
+                    category: "Services",
+                    serviceMode: "any",
+                    duration: form.getFieldValue("duration") || "60 mins",
+                  });
+                } else {
+                  form.setFieldsValue({
+                    unitType: "pcs",
+                    category: "General",
+                    stock: 10,
+                  });
+                }
+              }}
+            >
+              <Radio.Button value="product">Physical Product</Radio.Button>
+              <Radio.Button value="service">Service / Appointment / AMC</Radio.Button>
+            </Radio.Group>
+          </Form.Item>
+
           <Form.Item
             name="name"
-            label="Item / Product Name"
-            rules={[{ required: true, message: "Please enter item name" }]}
+            label={isServiceForm ? "Service / Package Name" : "Item / Product Name"}
+            rules={[{ required: true, message: "Please enter name" }]}
           >
-            <Input placeholder="e.g. Soan Papdi — Bharat Gold" />
+            <Input placeholder={isServiceForm ? "e.g. Split AC Deep Foam Service" : "e.g. Soan Papdi — Bharat Gold"} />
           </Form.Item>
 
           <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16 }}>
@@ -575,6 +685,14 @@ export default function ProductsPage() {
                 placeholder="Select or type category"
                 options={[
                   { value: "General", label: "General" },
+                  { value: "Services", label: "Services" },
+                  { value: "AC & Appliance Repair", label: "AC & Appliance Repair" },
+                  { value: "Salon & Grooming", label: "Salon & Grooming" },
+                  { value: "Medical Consultation", label: "Medical & Clinic" },
+                  { value: "Car & Bike Care", label: "Car & Bike Care" },
+                  { value: "Digital & Web", label: "Digital & Agency" },
+                  { value: "Coaching & Classes", label: "Coaching & Classes" },
+                  { value: "AMC & Maintenance", label: "AMC & Maintenance" },
                   { value: "Sweets & Snacks", label: "Sweets & Snacks" },
                   { value: "Grocery & FMCG", label: "Grocery & FMCG" },
                   { value: "Clothing & Textile", label: "Clothing & Textile" },
@@ -585,31 +703,31 @@ export default function ProductsPage() {
                 ]}
               />
             </Form.Item>
-            <Form.Item name="minOrderQty" label="Min Order Qty (MOQ)">
+            <Form.Item name="minOrderQty" label="Min Qty (MOQ)">
               <InputNumber style={{ width: "100%" }} min={1} placeholder="1" />
             </Form.Item>
           </div>
 
           <Form.Item name="description" label="Short Description">
-            <Input.TextArea rows={2} placeholder="Flavour, brand, specs, or packaging details..." />
+            <Input.TextArea rows={2} placeholder={isServiceForm ? "What is included in this service or package..." : "Flavour, brand, specs, or packaging details..."} />
           </Form.Item>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
             <Form.Item
               name="price"
-              label="Selling Price (₹)"
+              label={isServiceForm ? "Service Fee (₹)" : "Selling Price (₹)"}
               rules={[{ required: true, message: "Please enter price" }]}
             >
               <InputNumber style={{ width: "100%" }} min={0} placeholder="499" />
             </Form.Item>
 
-            <Form.Item name="costPrice" label="Cost / Buy Rate (₹)">
-              <InputNumber style={{ width: "100%" }} min={0} placeholder="350" />
+            <Form.Item name="costPrice" label={isServiceForm ? "Tech Cost (₹)" : "Cost / Buy Rate (₹)"}>
+              <InputNumber style={{ width: "100%" }} min={0} placeholder="250" />
             </Form.Item>
 
             <Form.Item
               name="unitType"
-              label="Unit"
+              label={isServiceForm ? "Billing Unit" : "Unit"}
               rules={[{ required: true, message: "Select a unit" }]}
             >
               <Select
@@ -620,19 +738,49 @@ export default function ProductsPage() {
                     form.setFieldValue("packQty", 10);
                   }
                 }}
-                options={[
-                  { value: "pcs", label: "Pcs (Pieces)" },
-                  { value: "gram", label: "Gram (g)" },
-                  { value: "kg", label: "Kg (Kilogram)" },
-                  { value: "pack", label: "Pack" },
-                  { value: "carton", label: "Carton (Box)" },
-                  { value: "jar", label: "Jar" },
-                ]}
+                options={
+                  isServiceForm
+                    ? [
+                        { value: "session", label: "Per Session" },
+                        { value: "visit", label: "Per Visit" },
+                        { value: "hour", label: "Per Hour" },
+                        { value: "day", label: "Per Day" },
+                        { value: "month", label: "Per Month" },
+                        { value: "year", label: "Per Year (AMC)" },
+                        { value: "project", label: "Per Project" },
+                      ]
+                    : [
+                        { value: "pcs", label: "Pcs (Pieces)" },
+                        { value: "gram", label: "Gram (g)" },
+                        { value: "kg", label: "Kg (Kilogram)" },
+                        { value: "pack", label: "Pack" },
+                        { value: "carton", label: "Carton (Box)" },
+                        { value: "jar", label: "Jar" },
+                      ]
+                }
               />
             </Form.Item>
           </div>
 
-          {/* Conditional Container Quantity Row (Enabled ONLY for pack, carton, jar) */}
+          {isServiceForm ? (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <Form.Item name="duration" label="Duration / Validity">
+                <Input placeholder="e.g. 60 mins or 12 Months" />
+              </Form.Item>
+              <Form.Item name="serviceMode" label="Delivery Mode">
+                <Select
+                  options={[
+                    { value: "home_visit", label: "Home / On-Site Visit" },
+                    { value: "at_store", label: "At Store / Clinic / Garage" },
+                    { value: "online", label: "Online / Video / Remote" },
+                    { value: "any", label: "Both Home & Store" },
+                  ]}
+                />
+              </Form.Item>
+            </div>
+          ) : (
+            <>
+              {/* Conditional Container Quantity Row (Enabled ONLY for pack, carton, jar) */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
             <Form.Item
               name="packQty"
@@ -691,6 +839,8 @@ export default function ProductsPage() {
           <Form.Item name="stock" label={`Stock Quantity (${watchedUnitType})`}>
             <InputNumber style={{ width: "100%" }} min={0} placeholder="50" />
           </Form.Item>
+          </>
+          )}
 
           {/* Product JPG Image Upload (Max 60 KB) */}
           <Form.Item label="Product Image (JPG only, Max 60 KB)">
@@ -808,6 +958,36 @@ export default function ProductsPage() {
             </Upload>
           </Space>
         </Space>
+      </Modal>
+      <Modal
+        title="1-Click Trending Service Templates"
+        open={templateModalOpen}
+        onCancel={() => setTemplateModalOpen(false)}
+        footer={null}
+        width={620}
+      >
+        <Text type="secondary" style={{ display: "block", marginBottom: 14 }}>
+          Select your industry below to instantly populate ready-to-book Indian services with realistic pricing &amp; durations.
+        </Text>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          {TRENDING_PACK_META.map((pack) => (
+            <Card key={pack.key} size="small" style={{ borderRadius: 10 }}>
+              <div style={{ fontWeight: 600, marginBottom: 4 }}>{pack.title}</div>
+              <Text type="secondary" style={{ fontSize: 12, display: "block", marginBottom: 10 }}>
+                {pack.desc}
+              </Text>
+              <Button
+                type="primary"
+                size="small"
+                loading={importingPack === pack.key}
+                onClick={() => handleImportPack(pack.key)}
+                style={{ background: "#25D366", borderColor: "#25D366" }}
+              >
+                Import Pack
+              </Button>
+            </Card>
+          ))}
+        </div>
       </Modal>
     </AppLayout>
   );

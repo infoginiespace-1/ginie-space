@@ -23,6 +23,7 @@ import {
   Checkbox,
   Progress,
   Popconfirm,
+  Select,
 } from "antd";
 import {
   SaveOutlined,
@@ -80,7 +81,7 @@ async function compressLogoJpg(file: File): Promise<string> {
 }
 
 export default function SettingsPage() {
-  const { user } = useAuth();
+  const { user, updateUserLocal } = useAuth();
   const [form] = Form.useForm();
   const [passwordForm] = Form.useForm();
   const [staffForm] = Form.useForm();
@@ -153,6 +154,7 @@ export default function SettingsPage() {
         const firstCoupon = Array.isArray((parsedSettings as any).coupons) ? (parsedSettings as any).coupons[0] : null;
         form.setFieldsValue({
           name: b.name || "",
+          businessType: res.data?.businessType || user?.businessType || "retail",
           phone: b.phone || "",
           address: b.address || "",
           slug: b.slug || "",
@@ -286,12 +288,16 @@ export default function SettingsPage() {
 
       const res = await api.put("/api/settings/business", {
         name: values.name,
+        businessType: values.businessType,
         phone: values.phone,
         address: values.address,
         slug: values.slug,
         settingsJson,
       });
 
+      if (res.data?.businessType) {
+        updateUserLocal({ businessType: res.data.businessType });
+      }
       setCurrentSlug(res.data?.business?.slug || "");
       message.success("Settings saved successfully!");
     } catch (err: any) {
@@ -339,9 +345,20 @@ export default function SettingsPage() {
           <Card style={{ borderRadius: 12 }}>
             <Form form={form} layout="vertical" onFinish={handleSave} disabled={loading}>
               <Title level={5}>Business Profile</Title>
-              <Form.Item name="name" label="Business Name" rules={[{ required: true, message: "Enter business name" }]}>
-                <Input placeholder="e.g. Ginie Retail Store" />
-              </Form.Item>
+              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 12 }}>
+                <Form.Item name="name" label="Business Name" rules={[{ required: true, message: "Enter business name" }]}>
+                  <Input placeholder="e.g. Ginie Retail Store" />
+                </Form.Item>
+                <Form.Item name="businessType" label="Business Mode" extra="Switch anytime">
+                  <Select
+                    options={[
+                      { value: "retail", label: "Retail Store" },
+                      { value: "wholesale", label: "Wholesale / B2B" },
+                      { value: "services", label: "Service & Bookings" },
+                    ]}
+                  />
+                </Form.Item>
+              </div>
 
               <Form.Item name="phone" label="Store Contact Phone">
                 <Input placeholder="e.g. +91 98765 43210" />

@@ -197,11 +197,11 @@ export function setupSocketServer(
           });
         };
 
-        // 1. Smart Keyword Auto-Responder (Catalog / Price / Order Status) with 45s per-keyword cooldown
+        // 1. Smart Keyword Auto-Responder (Catalog / Services / Booking / Order Status) with 45s per-keyword cooldown
         let handledByKeyword = false;
         if (parsed.smartKeywordBot !== false && incomingLower.length <= 60) {
-          const isCatalogAsk = /\b(catalog|menu|price|rate|items|products|list)\b/.test(incomingLower);
-          const isTrackAsk = /\b(track|order status|status|my order)\b/.test(incomingLower);
+          const isCatalogAsk = /\b(catalog|menu|price|rate|items|products|list|book|appointment|service|services|fees|timing|duration)\b/.test(incomingLower);
+          const isTrackAsk = /\b(track|order status|status|my order|my booking|booking status)\b/.test(incomingLower);
 
           if (isCatalogAsk) {
             const kwKey = `kw_cat:${cooldownKey}`;
@@ -209,11 +209,16 @@ export function setupSocketServer(
               merchantAutoReplyCooldown.set(kwKey, nowMs);
               handledByKeyword = true;
               const prods = await db.products.findMany({ userId: event.userId }).catch(() => []);
-              const inStock = prods.filter((p) => Number(p.stock) > 0).slice(0, 8);
+              const inStock = prods.filter((p) => p.itemType === "service" || Number(p.stock) > 0).slice(0, 8);
               const listStr = inStock.length
-                ? inStock.map((p) => `• *${p.name}* — ₹${Number(p.price).toLocaleString("en-IN")} / ${p.unit || "pcs"}`).join("\n")
-                : "View our latest products online!";
-              const reply = `📋 *${business?.name || "Store"} Price List & Catalog*\n\n${listStr}\n\n🛒 *Full Store & Online Order:* ${storeLink}`;
+                ? inStock
+                    .map(
+                      (p) =>
+                        `• *${p.name}*${p.duration ? ` (${p.duration})` : ""} — ₹${Number(p.price).toLocaleString("en-IN")} / ${p.unit || "pcs"}`
+                    )
+                    .join("\n")
+                : "View our latest offerings online!";
+              const reply = `📋 *${business?.name || "Store"} Price List & Offerings*\n\n${listStr}\n\n🛒 *Full Catalog & Online Booking:* ${storeLink}`;
               await sendBotReply(reply);
             }
           } else if (isTrackAsk) {

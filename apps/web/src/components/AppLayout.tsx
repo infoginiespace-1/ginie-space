@@ -53,7 +53,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       const ords = ordRes.data?.orders || [];
       setPendingOrdersCount(ords.filter((o: any) => o.status === "pending").length);
       const prods = prodRes.data?.products || [];
-      setLowStockItems(prods.filter((p: any) => Number(p.stock) <= 5));
+      setLowStockItems(prods.filter((p: any) => p.itemType !== "service" && Number(p.stock) <= 5));
     });
 
     // Initial fetch of WhatsApp Status
@@ -139,6 +139,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const isServiceBiz = user?.businessType === "services";
+
   const allMenuItems = [
     { key: "/dashboard", area: "dashboard", icon: <DashboardOutlined />, label: "Dashboard" },
     {
@@ -154,12 +156,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       area: "orders",
       icon: <ShoppingOutlined />,
       label: pendingOrdersCount > 0 ? (
-        <Space size={6}><span>Orders &amp; Sales</span><Badge count={pendingOrdersCount} size="small" color="#fa8c16" /></Space>
-      ) : "Orders & Sales",
+        <Space size={6}><span>{isServiceBiz ? "Bookings & Orders" : "Orders & Sales"}</span><Badge count={pendingOrdersCount} size="small" color="#fa8c16" /></Space>
+      ) : isServiceBiz ? "Bookings & Orders" : "Orders & Sales",
     },
     { key: "/leads", area: "leads", icon: <SearchOutlined />, label: "Find New Leads" },
     { key: "/customers", area: "customers", icon: <TeamOutlined />, label: "Customers" },
-    { key: "/products", area: "products", icon: <AppstoreOutlined />, label: "Catalog & Items" },
+    { key: "/products", area: "products", icon: <AppstoreOutlined />, label: isServiceBiz ? "Services & Catalog" : "Catalog & Items" },
     { key: "/settings", area: "settings", icon: <SettingOutlined />, label: "Settings" },
   ];
 
@@ -196,7 +198,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       </div>
       <div>
         <div style={{ fontWeight: 700, fontSize: 16, color: "#1f1f1f", lineHeight: 1.2 }}>GinieSpace</div>
-        <div style={{ fontSize: 11, color: "#8c8c8c" }}>{user?.businessType === "wholesale" ? "Wholesale Hub" : "Retail Hub"}</div>
+        <div style={{ fontSize: 11, color: "#8c8c8c" }}>
+          {user?.businessType === "wholesale"
+            ? "Wholesale Hub"
+            : user?.businessType === "services"
+            ? "Services & Booking Hub"
+            : "Retail Hub"}
+        </div>
       </div>
     </div>
   );

@@ -131,6 +131,29 @@ export function createStorefrontRouter(
     }
   });
 
+  // Public booked time-slots lookup for a specific date (helps avoid double booking)
+  router.get("/:storeId/booked-slots", async (req: Request, res: Response): Promise<void> => {
+    try {
+      const resolved = await resolveStoreOwner(db, String(req.params.storeId || "").trim());
+      if (!resolved) {
+        res.status(404).json({ error: "Storefront not found" });
+        return;
+      }
+      const dateStr = String(req.query.date || "").trim();
+      if (!dateStr) {
+        res.json({ bookedSlots: [] });
+        return;
+      }
+      const orders = await db.orders.findMany({ userId: resolved.storeId });
+      const bookedSlots = orders
+        .filter((o) => o.status !== "cancelled" && String(o.bookingDate || "").trim() === dateStr && o.timeSlot)
+        .map((o) => String(o.timeSlot).trim());
+      res.json({ bookedSlots });
+    } catch {
+      res.status(500).json({ error: "Could not load booked slots" });
+    }
+  });
+
   // Public customer order status lookup by WhatsApp phone & optional Order ID
   router.get("/:storeId/track", async (req: Request, res: Response): Promise<void> => {
     try {
@@ -170,6 +193,10 @@ export function createStorefrontRouter(
           discountAmount: o.discountAmount || 0,
           deliveryCharge: o.deliveryCharge || 0,
           couponCode: o.couponCode || "",
+          bookingDate: o.bookingDate || "",
+          timeSlot: o.timeSlot || "",
+          assignedStaff: o.assignedStaff || "",
+          serviceMode: o.serviceMode || "",
           createdAt: o.createdAt,
         }));
 
@@ -183,7 +210,7 @@ export function createStorefrontRouter(
   router.post("/:storeId/orders", async (req: Request, res: Response): Promise<void> => {
     try {
       const resolved = await resolveStoreOwner(db, String(req.params.storeId || "").trim());
-      const { customerName, customerPhone, items, notes, couponCode, deliveryAddress } = req.body;
+      const { customerName, customerPhone, items, notes, couponCode, deliveryAddress, bookingDate, timeSlot, serviceMode } = req.body;
 
       if (!resolved || !customerName || !customerPhone || !Array.isArray(items) || items.length === 0) {
         res.status(400).json({ error: "Customer name, WhatsApp phone, and at least one item are required" });
@@ -218,7 +245,15 @@ export function createStorefrontRouter(
       }
 
       const productMap = new Map(storeProducts.map((p) => [p.id, p]));
-      const verifiedItems: Array<{ productId: string; name: string; price: number; unit: string; quantity: number }> = [];
+      const verifiedItems: Array<{
+        productId: string;
+        name: string;
+        price: number;
+        unit: string;
+        quantity: number;
+        itemType?: string;
+        duration?: string;
+      }> = [];
       let totalAmount = 0;
 
       for (const reqItem of items) {
@@ -232,6 +267,8 @@ export function createStorefrontRouter(
           price: Number(prod.price) || 0,
           unit: prod.unit || "pcs",
           quantity: qty,
+          itemType: prod.itemType || "product",
+          duration: prod.duration || undefined,
         });
         totalAmount += (Number(prod.price) || 0) * qty;
       }
@@ -297,13 +334,16 @@ export function createStorefrontRouter(
         deliveryCharge,
         couponCode: appliedCoupon || undefined,
         deliveryAddress: deliveryAddress ? String(deliveryAddress).trim() : undefined,
+        bookingDate: bookingDate ? String(bookingDate).trim() : undefined,
+        timeSlot: timeSlot ? String(timeSlot).trim() : undefined,
+        serviceMode: serviceMode ? String(serviceMode).trim() : undefined,
         notes: notes ? `[Online Store] ${notes.trim()}` : "[Online Store Order]",
       });
 
-      // Decrement product stock safely in background
+      // Decrement product stock safely in background (skip for unlimited services)
       for (const vi of verifiedItems) {
         const prod = productMap.get(vi.productId);
-        if (prod && Number(prod.stock) > 0) {
+        if (prod && prod.itemType !== "service" && Number(prod.stock) > 0) {
           const nextStock = Math.max(0, Number(prod.stock) - vi.quantity);
           db.products.update(prod.id, { stock: nextStock }).catch(() => {});
         }
@@ -317,15 +357,26 @@ export function createStorefrontRouter(
 
       // Send rich receipt directly from merchant's own WhatsApp if linked
       if (waManager && waManager.getSessionState(storeId).status === "connected") {
-        const lines = verifiedItems.map((it) => `  • ${it.name} × ${it.quantity} = ₹${(it.price * it.quantity).toLocaleString("en-IN")}`).join("\n");
+        const lines = verifiedItems.map((it) => `  • ${it.name}${it.duration ? ` (${it.duration})` : ""} × ${it.quantity} = ₹${(it.price * it.quantity).toLocaleString("en-IN")}`).join("\n");
+        const isServiceBooking = Boolean(bookingDate || timeSlot || verifiedItems.some((it) => it.itemType === "service"));
+        const modeLabel =
+          serviceMode === "home_visit"
+            ? "Home Visit"
+            : serviceMode === "at_store"
+            ? "At Store / Clinic"
+            : serviceMode === "online"
+            ? "Online / Remote"
+            : serviceMode || "";
         const receipt =
-          `🛍️ *Order Received — ${business?.name || "Our Store"}*\n` +
-          `Order ID: *#${order.id.slice(-6).toUpperCase()}*\n` +
+          `${isServiceBooking ? "🗓️ *Booking Received" : "🛍️ *Order Received"} — ${business?.name || "Our Store"}*\n` +
+          `Ref ID: *#${order.id.slice(-6).toUpperCase()}*\n` +
           `Customer: ${order.customerName}\n` +
-          (deliveryAddress ? `📍 Delivery: ${String(deliveryAddress).trim()}\n` : "") +
+          (bookingDate ? `📅 Date: ${String(bookingDate).trim()}${timeSlot ? ` | ⏰ ${String(timeSlot).trim()}` : ""}\n` : "") +
+          (modeLabel ? `🛠️ Mode: ${modeLabel}\n` : "") +
+          (deliveryAddress ? `📍 Address: ${String(deliveryAddress).trim()}\n` : "") +
           `\n${lines}\n` +
           (discountAmount > 0 ? `🎟️ Discount: -₹${discountAmount}\n` : "") +
-          (deliveryCharge > 0 ? `🚚 Delivery: +₹${deliveryCharge}\n` : "") +
+          (deliveryCharge > 0 ? `🚚 Visit / Delivery Fee: +₹${deliveryCharge}\n` : "") +
           `\n💰 *Payable Total: ₹${totalAmount.toLocaleString("en-IN")}*\n` +
           `Track live status: https://app.ginie.space/shop/${business?.slug || storeId}`;
         waManager.sendMessage({ userId: storeId, recipientPhone: phoneDigits, messageText: receipt }).catch(() => {});

@@ -327,7 +327,7 @@ export class GoogleSheetsDatabase implements IDatabase {
       this.sheets,
       this.spreadsheetId,
       "Products",
-      ["id", "userId", "name", "description", "price", "unit", "stock", "imageUrl", "createdAt", "updatedAt", "category", "minOrderQty", "costPrice"],
+      ["id", "userId", "name", "description", "price", "unit", "stock", "imageUrl", "createdAt", "updatedAt", "category", "minOrderQty", "costPrice", "itemType", "duration", "serviceMode"],
       this.throttler
     );
 
@@ -335,7 +335,7 @@ export class GoogleSheetsDatabase implements IDatabase {
       this.sheets,
       this.spreadsheetId,
       "Orders",
-      ["id", "userId", "customerId", "customerName", "customerPhone", "itemsJson", "totalAmount", "status", "notes", "createdAt", "updatedAt", "paymentStatus", "paidAmount", "discountAmount", "deliveryCharge", "couponCode", "deliveryAddress"],
+      ["id", "userId", "customerId", "customerName", "customerPhone", "itemsJson", "totalAmount", "status", "notes", "createdAt", "updatedAt", "paymentStatus", "paidAmount", "discountAmount", "deliveryCharge", "couponCode", "deliveryAddress", "bookingDate", "timeSlot", "assignedStaff", "serviceMode", "nextRenewalDate"],
       this.throttler
     );
 

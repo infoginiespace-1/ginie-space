@@ -132,7 +132,7 @@ export default function SignupPage() {
                     <ShopOutlined style={{ fontSize: 20, color: "#25D366" }} />
                     <div style={{ textAlign: "left" }}>
                       <div style={{ fontWeight: 600 }}>Retail Business</div>
-                      <div style={{ fontSize: 12, color: "#64748b" }}>Direct to customer store, shop, or service provider</div>
+                      <div style={{ fontSize: 12, color: "#64748b" }}>Direct to customer store, shop, or Kirana</div>
                     </div>
                   </Space>
                 </Radio.Button>
@@ -141,8 +141,18 @@ export default function SignupPage() {
                   <Space direction="horizontal" size="middle">
                     <ShopOutlined style={{ fontSize: 20, color: "#0284c7" }} />
                     <div style={{ textAlign: "left" }}>
-                      <div style={{ fontWeight: 600 }}>Wholesale & B2B</div>
+                      <div style={{ fontWeight: 600 }}>Wholesale &amp; B2B</div>
                       <div style={{ fontSize: 12, color: "#64748b" }}>Manufacturer, supplier, or bulk distributor</div>
+                    </div>
+                  </Space>
+                </Radio.Button>
+
+                <Radio.Button value="services" style={{ width: "100%", height: "auto", padding: "12px 16px", borderRadius: 8 }}>
+                  <Space direction="horizontal" size="middle">
+                    <ShopOutlined style={{ fontSize: 20, color: "#7c3aed" }} />
+                    <div style={{ textAlign: "left" }}>
+                      <div style={{ fontWeight: 600 }}>Service Business &amp; Bookings</div>
+                      <div style={{ fontSize: 12, color: "#64748b" }}>AC/Home Repair, Salon, Clinic, Garage, Coaching &amp; Agency</div>
                     </div>
                   </Space>
                 </Radio.Button>

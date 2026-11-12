@@ -4,13 +4,15 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { api } from "../lib/api";
 import { getSocket, disconnectSocket } from "../lib/socket";
 
+export type BusinessType = "retail" | "wholesale" | "services";
+
 export interface User {
   id: string;
   actorId?: string;
   name: string;
   email: string;
   role: "admin" | "user" | "staff";
-  businessType: "retail" | "wholesale";
+  businessType: BusinessType;
   plan?: "free" | "pro";
   staffPermissions?: string[];
 }
@@ -20,7 +22,8 @@ interface AuthContextType {
   token: string | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  signup: (name: string, email: string, password: string, businessType: "retail" | "wholesale", phone?: string) => Promise<void>;
+  signup: (name: string, email: string, password: string, businessType: BusinessType, phone?: string) => Promise<void>;
+  updateUserLocal: (patch: Partial<User>) => void;
   logout: () => void;
 }
 
@@ -64,7 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     name: string,
     email: string,
     password: string,
-    businessType: "retail" | "wholesale",
+    businessType: BusinessType,
     phone?: string
   ) => {
     const res = await api.post("/api/auth/signup", {
@@ -84,6 +87,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     getSocket();
   };
 
+  const updateUserLocal = (patch: Partial<User>) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, ...patch };
+      try {
+        localStorage.setItem("giniespace_user", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
   const logout = () => {
     localStorage.removeItem("giniespace_token");
     localStorage.removeItem("giniespace_user");
@@ -94,7 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, signup, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, login, signup, updateUserLocal, logout }}>
       {children}
     </AuthContext.Provider>
   );
