@@ -40,7 +40,10 @@ export function createCustomersRouter(db: IDatabase, io: Server): Router {
         return;
       }
 
-      const cleanPhone = phone.replace(/[^0-9+]/g, "");
+      let digits = phone.replace(/[^0-9]/g, "");
+      if (digits.startsWith("0") && digits.length === 11) digits = digits.slice(1);
+      if (digits.length === 10) digits = `91${digits}`;
+      const cleanPhone = `+${digits}`;
 
       const customer = await db.customers.create({
         userId: req.user!.id,
@@ -74,7 +77,12 @@ export function createCustomersRouter(db: IDatabase, io: Server): Router {
       const { name, phone, email, notes, tags } = req.body;
       const updated = await db.customers.update((req.params.id as string), {
         name: name !== undefined ? name.trim() : existing.name,
-        phone: phone !== undefined ? phone.replace(/[^0-9+]/g, "") : existing.phone,
+        phone: phone !== undefined ? (() => {
+        let d = phone.replace(/[^0-9]/g, "");
+        if (d.startsWith("0") && d.length === 11) d = d.slice(1);
+        if (d.length === 10) d = `91${d}`;
+        return `+${d}`;
+      })() : existing.phone,
         email: email !== undefined ? email.trim() : existing.email,
         notes: notes !== undefined ? notes.trim() : existing.notes,
         tags: tags !== undefined ? tags.trim() : existing.tags,
