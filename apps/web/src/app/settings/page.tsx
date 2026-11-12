@@ -48,16 +48,21 @@ export default function SettingsPage() {
     api.get("/api/settings")
       .then((res) => {
         const b = res.data.business || {};
-        let parsedSettings = { autoReply: true, welcomeMessage: "Hello! Welcome to our store." };
+        let parsedSettings: { autoReply: boolean; welcomeMessage: string; upiId?: string } = {
+          autoReply: true,
+          welcomeMessage: "Hello! Welcome to our store.",
+          upiId: "",
+        };
         if (b.settingsJson) {
           try {
-            parsedSettings = JSON.parse(b.settingsJson);
+            parsedSettings = { ...parsedSettings, ...JSON.parse(b.settingsJson) };
           } catch {}
         }
         form.setFieldsValue({
           name: b.name || "",
           phone: b.phone || "",
           address: b.address || "",
+          upiId: parsedSettings.upiId || "",
           autoReply: parsedSettings.autoReply,
           welcomeMessage: parsedSettings.welcomeMessage,
         });
@@ -133,6 +138,7 @@ export default function SettingsPage() {
       const settingsJson = JSON.stringify({
         autoReply: values.autoReply,
         welcomeMessage: values.welcomeMessage,
+        upiId: (values.upiId || "").trim(),
       });
 
       await api.put("/api/settings/business", {
@@ -172,6 +178,14 @@ export default function SettingsPage() {
 
               <Form.Item name="address" label="Store / Office Address">
                 <Input.TextArea rows={2} placeholder="Shop 12, Main Market, MG Road..." />
+              </Form.Item>
+
+              <Form.Item
+                name="upiId"
+                label="Merchant UPI ID (for Bills &amp; Payment Reminders)"
+                extra="Automatically included on WhatsApp Order Bills &amp; Customer Payment Reminders"
+              >
+                <Input placeholder="e.g. yourstore@ybl or 9876543210@paytm" />
               </Form.Item>
 
               <Divider />

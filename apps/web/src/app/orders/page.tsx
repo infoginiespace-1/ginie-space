@@ -41,6 +41,7 @@ export default function OrdersPage() {
   const [form] = Form.useForm();
   const [statusUpdating, setStatusUpdating] = useState<string | null>(null);
   const [sendingBillId, setSendingBillId] = useState<string | null>(null);
+  const [upiId, setUpiId] = useState("");
 
   const handleSendWhatsAppBill = async (order: Order) => {
     try {
@@ -53,7 +54,8 @@ export default function OrdersPage() {
         }
       } catch {}
 
-      const billText = `🧾 *Order Invoice / Bill #${order.id.slice(-6)}*\n\nNamaste *${order.customerName}*,\nAapka order detail neeche diya gaya hai:${itemsSummary}\n\n💰 *Total Amount:* ₹${order.totalAmount}\n📌 *Status:* ${order.status.toUpperCase()}${order.notes ? `\n📝 *Note:* ${order.notes}` : ""}\n📅 *Date:* ${new Date(order.createdAt).toLocaleDateString()}\n\nThank you for your business! 🙏`;
+      const upiLine = upiId ? `\n💳 *Pay via UPI:* ${upiId}` : "";
+      const billText = `🧾 *Order Invoice / Bill #${order.id.slice(-6)}*\n\nNamaste *${order.customerName}*,\nAapka order detail neeche diya gaya hai:${itemsSummary}\n\n💰 *Total Amount:* ₹${order.totalAmount}\n📌 *Status:* ${order.status.toUpperCase()}${order.notes ? `\n📝 *Note:* ${order.notes}` : ""}${upiLine}\n📅 *Date:* ${new Date(order.createdAt).toLocaleDateString()}\n\nThank you for your business! 🙏`;
 
       await api.post("/api/whatsapp/send", {
         recipientPhone: order.customerPhone,
@@ -82,6 +84,17 @@ export default function OrdersPage() {
 
   useEffect(() => {
     loadOrders();
+    api.get("/api/settings")
+      .then((res) => {
+        const sj = res.data?.business?.settingsJson;
+        if (sj) {
+          try {
+            const parsed = JSON.parse(sj);
+            if (parsed.upiId) setUpiId(parsed.upiId);
+          } catch {}
+        }
+      })
+      .catch(() => {});
 
     const socket = getSocket();
     if (socket) {

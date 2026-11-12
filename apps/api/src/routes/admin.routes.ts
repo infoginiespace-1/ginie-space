@@ -1,7 +1,9 @@
 import { Router, Request, Response } from "express";
+import { randomUUID } from "crypto";
 import { IDatabase } from "@giniespace/sheets-db";
 import { WhatsAppSessionManager } from "@giniespace/whatsapp-engine";
 import { SYSTEM_SUPPORT_SESSION_ID, SYSTEM_SUPPORT_PHONE, NotificationService } from "../services/notification.service";
+import { normalizePhoneDigits } from "../utils/phone";
 
 export function createAdminRouter(
   db: IDatabase,
@@ -66,6 +68,23 @@ export function createAdminRouter(
         return;
       }
 
+      const digits = normalizePhoneDigits(recipientPhone);
+      if (digits) {
+        try {
+          await db.messages.create({
+            userId: SYSTEM_SUPPORT_SESSION_ID,
+            contactPhone: digits,
+            contactName: `+${digits}`,
+            text: messageText.trim(),
+            fromMe: "true",
+            messageId: `support_${randomUUID()}`,
+            timestamp: new Date().toISOString(),
+          });
+        } catch (saveErr) {
+          console.error("[Admin] Failed to save outgoing support message:", saveErr);
+        }
+      }
+
       res.json({ message: `Test message sent successfully to ${recipientPhone}` });
     } catch (err: any) {
       res.status(500).json({ error: err.message || "Failed to send test message" });
@@ -107,6 +126,19 @@ export function createAdminRouter(
       res.json({ message: "Notification rules updated successfully", rules });
     } catch {
       res.status(500).json({ error: "Failed to save notification rules" });
+    }
+  });
+
+  // 6. Get Support WhatsApp Inquiries / Messages History
+  router.get("/whatsapp/messages", async (_req: Request, res: Response): Promise<void> => {
+    try {
+      const messages = await db.messages.findMany({ userId: SYSTEM_SUPPORT_SESSION_ID });
+      const sorted = [...messages].sort(
+        (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      );
+      res.json({ messages: sorted });
+    } catch {
+      res.status(500).json({ error: "Failed to load support messages" });
     }
   });
 

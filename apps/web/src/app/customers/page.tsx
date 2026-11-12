@@ -10,11 +10,12 @@ import {
   Modal,
   Form,
   Input,
+  InputNumber,
   Typography,
   message,
   Popconfirm,
 } from "antd";
-import { PlusOutlined, MessageOutlined, DeleteOutlined, SyncOutlined } from "@ant-design/icons";
+import { PlusOutlined, MessageOutlined, DeleteOutlined, SyncOutlined, DollarOutlined } from "@ant-design/icons";
 import { api } from "../../lib/api";
 import { useRouter } from "next/navigation";
 
@@ -35,13 +36,32 @@ export default function CustomersPage() {
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [form] = Form.useForm();
+  const [upiId, setUpiId] = useState("");
+  const [businessName, setBusinessName] = useState("Our Store");
+  const [reminderTarget, setReminderTarget] = useState<Customer | null>(null);
+  const [reminderAmount, setReminderAmount] = useState<number | null>(null);
+  const [reminderNote, setReminderNote] = useState("");
+  const [sendingReminder, setSendingReminder] = useState(false);
   const router = useRouter();
 
   const loadCustomers = async () => {
     try {
       setLoading(true);
-      const res = await api.get("/api/customers");
-      setCustomers(res.data.customers || []);
+      const [custRes, setRes] = await Promise.all([
+        api.get("/api/customers"),
+        api.get("/api/settings").catch(() => ({ data: { business: null } })),
+      ]);
+      setCustomers(custRes.data.customers || []);
+      const b = setRes.data?.business;
+      if (b) {
+        if (b.name) setBusinessName(b.name);
+        if (b.settingsJson) {
+          try {
+            const parsed = JSON.parse(b.settingsJson);
+            if (parsed.upiId) setUpiId(parsed.upiId);
+          } catch {}
+        }
+      }
     } catch {
       message.error("Could not load customers");
     } finally {
@@ -91,7 +111,7 @@ export default function CustomersPage() {
       title: "Phone (WhatsApp)",
       dataIndex: "phone",
       key: "phone",
-      render: (phone: string) => <Text strong>+{phone}</Text>,
+      render: (phone: string) => <Text strong>{phone ? `+${String(phone).replace(/^\+/, "")}` : "-"}</Text>,
     },
     {
       title: "Email",
@@ -114,10 +134,21 @@ export default function CustomersPage() {
             type="primary"
             icon={<MessageOutlined />}
             size="small"
-            onClick={() => router.push("/inbox")}
+            onClick={() => router.push(`/inbox?phone=${encodeURIComponent(record.phone || "")}`)}
             style={{ background: "#25D366", borderColor: "#25D366" }}
           >
             Chat
+          </Button>
+          <Button
+            icon={<DollarOutlined />}
+            size="small"
+            onClick={() => {
+              setReminderTarget(record);
+              setReminderAmount(null);
+              setReminderNote("");
+            }}
+          >
+            Remind
           </Button>
           <Popconfirm
             title="Remove customer?"
@@ -212,6 +243,67 @@ export default function CustomersPage() {
             </Button>
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal
+        title={`Send Payment Reminder — ${reminderTarget?.name || ""}`}
+        open={Boolean(reminderTarget)}
+        onCancel={() => setReminderTarget(null)}
+        confirmLoading={sendingReminder}
+        okText="Send Reminder on WhatsApp"
+        onOk={async () => {
+          if (!reminderTarget) return;
+          setSendingReminder(true);
+          try {
+            const amtLine = reminderAmount ? `\n💰 *Pending Balance:* ₹${reminderAmount.toLocaleString("en-IN")}` : "";
+            const noteLine = reminderNote.trim() ? `\n📝 *Ref / Note:* ${reminderNote.trim()}` : "";
+            const upiLine = upiId ? `\n💳 *Pay via UPI:* ${upiId}` : "";
+            const msgText =
+              `🙏 *Payment Reminder — ${businessName}*\n\n` +
+              `Namaste *${reminderTarget.name}*,\n` +
+              `Aapka payment balance clear karne ke liye ek gentle reminder hai.${amtLine}${noteLine}${upiLine}\n\n` +
+              `Payment karne ke baad screenshot share kar dein. Dhanyavaad!`;
+
+            await api.post("/api/whatsapp/send", {
+              recipientPhone: reminderTarget.phone,
+              messageText: msgText,
+              contactName: reminderTarget.name,
+            });
+            message.success(`Payment reminder sent to ${reminderTarget.name}!`);
+            setReminderTarget(null);
+          } catch (err: any) {
+            message.error(err.message || "Could not send reminder. Ensure WhatsApp is connected.");
+          } finally {
+            setSendingReminder(false);
+          }
+        }}
+      >
+        <Space direction="vertical" style={{ width: "100%" }} size={12}>
+          <div>
+            <Text type="secondary">Pending Amount (₹) — Optional:</Text>
+            <InputNumber
+              style={{ width: "100%", marginTop: 4 }}
+              min={1}
+              placeholder="e.g. 1500"
+              value={reminderAmount ?? undefined}
+              onChange={(val) => setReminderAmount(val)}
+            />
+          </div>
+          <div>
+            <Text type="secondary">Reference / Invoice Note — Optional:</Text>
+            <Input
+              style={{ marginTop: 4 }}
+              placeholder="e.g. Invoice #1042"
+              value={reminderNote}
+              onChange={(e) => setReminderNote(e.target.value)}
+            />
+          </div>
+          {upiId ? (
+            <Text type="success">Merchant UPI ID ({upiId}) will be attached automatically.</Text>
+          ) : (
+            <Text type="warning">Tip: Set your UPI ID in Settings to auto-attach payment link.</Text>
+          )}
+        </Space>
       </Modal>
     </AppLayout>
   );

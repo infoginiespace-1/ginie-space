@@ -15,6 +15,8 @@ import {
   Rate,
   message,
   Tooltip,
+  Modal,
+  Progress,
 } from "antd";
 import {
   SearchOutlined,
@@ -24,6 +26,7 @@ import {
   GlobalOutlined,
   EnvironmentOutlined,
   StarOutlined,
+  WhatsAppOutlined,
 } from "@ant-design/icons";
 import { api } from "../../lib/api";
 import { getSocket } from "../../lib/socket";
@@ -61,6 +64,13 @@ export default function LeadsPage() {
   const [loadingSaved, setLoadingSaved] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [convertingId, setConvertingId] = useState<string | null>(null);
+  const [selectedLeadKeys, setSelectedLeadKeys] = useState<React.Key[]>([]);
+  const [campaignModalOpen, setCampaignModalOpen] = useState(false);
+  const [campaignTemplate, setCampaignTemplate] = useState(
+    "Namaste {name} ji! Hum wholesale suppliers hain aur best B2B rates par stock supply karte hain. Kya aapko hamara latest price catalog WhatsApp par chahiye?"
+  );
+  const [sendingCampaign, setSendingCampaign] = useState(false);
+  const [campaignProgress, setCampaignProgress] = useState({ sent: 0, failed: 0, total: 0 });
 
   const loadSavedLeads = async () => {
     try {
@@ -235,7 +245,8 @@ export default function LeadsPage() {
       title: "Phone",
       dataIndex: "phone",
       key: "phone",
-      render: (phone: string) => phone ? `+${phone}` : "-",
+      render: (phone: string) =>
+        phone && phone !== "#ERROR!" ? `+${String(phone).replace(/^\+/, "")}` : "-",
     },
     {
       title: "Status",
@@ -347,18 +358,141 @@ export default function LeadsPage() {
             label: `Saved Leads (${savedLeads.length})`,
             children: (
               <Card style={{ borderRadius: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 8 }}>
+                  <Text type="secondary">
+                    Select saved leads with valid phone numbers to send personalized WhatsApp outreach (3s safe delay between messages).
+                  </Text>
+                  <Button
+                    type="primary"
+                    icon={<WhatsAppOutlined />}
+                    disabled={selectedLeadKeys.length === 0}
+                    style={
+                      selectedLeadKeys.length > 0
+                        ? { background: "#25D366", borderColor: "#25D366" }
+                        : undefined
+                    }
+                    onClick={() => {
+                      setCampaignProgress({ sent: 0, failed: 0, total: selectedLeadKeys.length });
+                      setCampaignModalOpen(true);
+                    }}
+                  >
+                    Bulk WhatsApp Campaign ({selectedLeadKeys.length})
+                  </Button>
+                </div>
                 <Table
                   dataSource={savedLeads}
                   columns={savedColumns}
                   rowKey="id"
                   loading={loadingSaved}
                   pagination={{ pageSize: 10 }}
+                  rowSelection={{
+                    selectedRowKeys: selectedLeadKeys,
+                    onChange: (keys) => setSelectedLeadKeys(keys),
+                    getCheckboxProps: (record: SavedLead) => ({
+                      disabled: !record.phone || record.phone === "#ERROR!",
+                    }),
+                  }}
                 />
               </Card>
             ),
           },
         ]}
       />
+
+      <Modal
+        title={`Bulk WhatsApp Lead Campaign (${selectedLeadKeys.length} selected)`}
+        open={campaignModalOpen}
+        onCancel={() => {
+          if (!sendingCampaign) setCampaignModalOpen(false);
+        }}
+        closable={!sendingCampaign}
+        maskClosable={!sendingCampaign}
+        footer={[
+          <Button
+            key="cancel"
+            disabled={sendingCampaign}
+            onClick={() => setCampaignModalOpen(false)}
+          >
+            Close
+          </Button>,
+          <Button
+            key="send"
+            type="primary"
+            icon={<WhatsAppOutlined />}
+            loading={sendingCampaign}
+            style={{ background: "#25D366", borderColor: "#25D366" }}
+            onClick={async () => {
+              const targets = savedLeads.filter(
+                (l) => selectedLeadKeys.includes(l.id) && l.phone && l.phone !== "#ERROR!"
+              );
+              if (targets.length === 0) {
+                message.warning("No valid phone numbers selected");
+                return;
+              }
+              setSendingCampaign(true);
+              setCampaignProgress({ sent: 0, failed: 0, total: targets.length });
+              let sentCount = 0;
+              let failedCount = 0;
+
+              for (let i = 0; i < targets.length; i++) {
+                const lead = targets[i];
+                const personalized = campaignTemplate.replace(/\{name\}/gi, lead.name);
+                try {
+                  await api.post("/api/whatsapp/send", {
+                    recipientPhone: lead.phone,
+                    messageText: personalized,
+                    contactName: lead.name,
+                  });
+                  if (lead.status === "new") {
+                    await api.put(`/api/leads/${lead.id}/status`, { status: "contacted" }).catch(() => {});
+                  }
+                  sentCount++;
+                } catch {
+                  failedCount++;
+                }
+                setCampaignProgress({ sent: sentCount, failed: failedCount, total: targets.length });
+                if (i < targets.length - 1) {
+                  await new Promise((r) => setTimeout(r, 3000));
+                }
+              }
+
+              setSendingCampaign(false);
+              loadSavedLeads();
+              setSelectedLeadKeys([]);
+              if (failedCount === 0) {
+                message.success(`Campaign completed! Sent to ${sentCount} leads.`);
+              } else {
+                message.warning(`Sent: ${sentCount}, Failed: ${failedCount}. Check WhatsApp connection.`);
+              }
+            }}
+          >
+            Start Safe Send (3s Delay)
+          </Button>,
+        ]}
+      >
+        <Space direction="vertical" style={{ width: "100%" }} size={12}>
+          <Text type="secondary">
+            Use <Text code>{"{name}"}</Text> to auto-insert the business name in each message:
+          </Text>
+          <Input.TextArea
+            rows={4}
+            value={campaignTemplate}
+            onChange={(e) => setCampaignTemplate(e.target.value)}
+            disabled={sendingCampaign}
+          />
+          {campaignProgress.total > 0 && (sendingCampaign || campaignProgress.sent + campaignProgress.failed > 0) && (
+            <div>
+              <Progress
+                percent={Math.round(((campaignProgress.sent + campaignProgress.failed) / campaignProgress.total) * 100)}
+                status={sendingCampaign ? "active" : campaignProgress.failed > 0 ? "exception" : "success"}
+              />
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                Sent: {campaignProgress.sent} | Failed: {campaignProgress.failed} | Total: {campaignProgress.total}
+              </Text>
+            </div>
+          )}
+        </Space>
+      </Modal>
     </AppLayout>
   );
 }

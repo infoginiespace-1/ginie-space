@@ -125,7 +125,12 @@ export default function InboxPage() {
 
       setConversations(new Map(map));
       const keys = Array.from(map.keys());
-      if (keys.length > 0 && !activeKey) {
+      const phoneParam =
+        typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("phone") : null;
+      const requestedKey = phoneParam ? normalizePhoneKey(phoneParam) : "";
+      if (requestedKey && map.has(requestedKey)) {
+        setActiveKey(requestedKey);
+      } else if (keys.length > 0 && !activeKey) {
         setActiveKey(keys[0]);
       }
     });

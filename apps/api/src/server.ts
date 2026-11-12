@@ -135,7 +135,7 @@ async function bootstrap() {
   app.use("/api/orders", auth, createOrdersRouter(db, io, waManager, notificationService));
   app.use("/api/leads", auth, createLeadsRouter(db, placesClient, io, notificationService));
   app.use("/api/whatsapp", auth, createWhatsAppRouter(waManager, db));
-  app.use("/api/settings", auth, createSettingsRouter(db));
+  app.use("/api/settings", auth, createSettingsRouter(db, notificationService));
   app.use("/api/admin", auth, requireAdmin, createAdminRouter(db, waManager, notificationService));
 
   server.listen(config.port, () => {

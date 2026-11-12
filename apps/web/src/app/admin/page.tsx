@@ -34,6 +34,7 @@ import {
   PhoneOutlined,
   SafetyCertificateOutlined,
   BellOutlined,
+  MessageOutlined,
 } from "@ant-design/icons";
 import { api } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
@@ -80,6 +81,25 @@ export default function AdminPage() {
   });
   const [savingRules, setSavingRules] = useState(false);
 
+  // Support Queries / Messages State
+  const [supportMessages, setSupportMessages] = useState<any[]>([]);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [replyTargetPhone, setReplyTargetPhone] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const [sendingReply, setSendingReply] = useState(false);
+
+  const loadSupportMessages = async () => {
+    try {
+      setLoadingMessages(true);
+      const res = await api.get("/api/admin/whatsapp/messages");
+      setSupportMessages(res.data?.messages || []);
+    } catch {
+      // ignore initial error
+    } finally {
+      setLoadingMessages(false);
+    }
+  };
+
   useEffect(() => {
     if (user && user.role !== "admin") {
       router.replace("/inbox");
@@ -109,6 +129,9 @@ export default function AdminPage() {
       })
       .catch(() => {});
 
+    // 3b. Load Support WhatsApp Messages
+    loadSupportMessages();
+
     // 4. Real-time WebSocket Listeners
     const socket = getSocket();
     if (socket) {
@@ -127,12 +150,32 @@ export default function AdminPage() {
         setSupportStatus("connecting");
         setQrModalVisible(true);
       });
+
+      socket.on("admin:whatsapp:message", (event: any) => {
+        setSupportMessages((prev) => {
+          const id = event.messageId || `live_${Date.now()}`;
+          if (prev.some((m) => m.messageId === id || m.id === id)) return prev;
+          return [
+            {
+              id,
+              messageId: id,
+              contactPhone: event.contactPhone || "",
+              contactName: event.senderName || event.contactPhone || "",
+              text: event.messageText || "",
+              fromMe: String(Boolean(event.fromMe)),
+              timestamp: event.timestamp || new Date().toISOString(),
+            },
+            ...prev,
+          ];
+        });
+      });
     }
 
     return () => {
       if (socket) {
         socket.off("admin:whatsapp:status");
         socket.off("admin:whatsapp:qr");
+        socket.off("admin:whatsapp:message");
       }
     };
   }, [user, router]);
@@ -531,8 +574,127 @@ export default function AdminPage() {
               </div>
             ),
           },
+          {
+            key: "support-queries",
+            label: (
+              <span>
+                <MessageOutlined /> Support Queries ({supportMessages.length})
+              </span>
+            ),
+            children: (
+              <Card
+                title="Incoming User Queries & Support Replies (+91 9279259690)"
+                extra={
+                  <Button icon={<SyncOutlined />} onClick={loadSupportMessages} loading={loadingMessages}>
+                    Refresh
+                  </Button>
+                }
+                style={{ borderRadius: 12 }}
+              >
+                <Table
+                  dataSource={supportMessages}
+                  rowKey="id"
+                  loading={loadingMessages}
+                  pagination={{ pageSize: 10 }}
+                  locale={{ emptyText: "No support queries received yet on +91 9279259690." }}
+                  columns={[
+                    {
+                      title: "Contact",
+                      dataIndex: "contactPhone",
+                      key: "contactPhone",
+                      render: (phone: string, record: any) => (
+                        <div>
+                          <div style={{ fontWeight: 600 }}>{record.contactName || `+${phone}`}</div>
+                          <Text type="secondary" style={{ fontSize: 12 }}>+{String(phone || "").replace(/^\+/, "")}</Text>
+                        </div>
+                      ),
+                    },
+                    {
+                      title: "Type",
+                      dataIndex: "fromMe",
+                      key: "fromMe",
+                      render: (fromMe: string | boolean) => {
+                        const isOut = fromMe === "true" || fromMe === true;
+                        return <Tag color={isOut ? "green" : "blue"}>{isOut ? "SUPPORT REPLY" : "USER QUERY"}</Tag>;
+                      },
+                    },
+                    {
+                      title: "Message",
+                      dataIndex: "text",
+                      key: "text",
+                      render: (txt: string) => <div style={{ maxWidth: 420, whiteSpace: "pre-wrap" }}>{txt}</div>,
+                    },
+                    {
+                      title: "Time",
+                      dataIndex: "timestamp",
+                      key: "timestamp",
+                      render: (ts: string) => (
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                          {ts ? new Date(ts).toLocaleString() : "-"}
+                        </Text>
+                      ),
+                    },
+                    {
+                      title: "Action",
+                      key: "action",
+                      render: (_: any, record: any) => (
+                        <Button
+                          size="small"
+                          type="primary"
+                          icon={<SendOutlined />}
+                          style={{ background: "#25D366", borderColor: "#25D366" }}
+                          onClick={() => {
+                            setReplyTargetPhone(record.contactPhone);
+                            setReplyText("");
+                          }}
+                        >
+                          Reply
+                        </Button>
+                      ),
+                    },
+                  ]}
+                />
+              </Card>
+            ),
+          },
         ]}
       />
+
+      <Modal
+        title={`Reply via Official Support (+${replyTargetPhone || ""})`}
+        open={Boolean(replyTargetPhone)}
+        onCancel={() => setReplyTargetPhone(null)}
+        confirmLoading={sendingReply}
+        okText="Send Support Reply"
+        onOk={async () => {
+          if (!replyTargetPhone || !replyText.trim()) {
+            message.warning("Please enter reply message");
+            return;
+          }
+          setSendingReply(true);
+          try {
+            await api.post("/api/admin/whatsapp/send-test", {
+              recipientPhone: replyTargetPhone,
+              messageText: replyText.trim(),
+            });
+            message.success(`Reply sent to +${replyTargetPhone}`);
+            setReplyTargetPhone(null);
+            setReplyText("");
+            loadSupportMessages();
+          } catch (err: any) {
+            message.error(err.message || "Failed to send support reply");
+          } finally {
+            setSendingReply(false);
+          }
+        }}
+      >
+        <Input.TextArea
+          rows={4}
+          placeholder="Type your official GinieSpace support response..."
+          value={replyText}
+          onChange={(e) => setReplyText(e.target.value)}
+        />
+      </Modal>
 
       {/* QR Code Modal for Official Support WhatsApp */}
       <Modal

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Layout, Menu, Button, Modal, Badge, Tag, Space, Typography, Spin, message } from "antd";
 import {
+  DashboardOutlined,
   MessageOutlined,
   ShoppingOutlined,
   SearchOutlined,
@@ -102,6 +103,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   };
 
   const menuItems = [
+    { key: "/dashboard", icon: <DashboardOutlined />, label: "Dashboard" },
     { key: "/inbox", icon: <MessageOutlined />, label: "Live Inbox" },
     { key: "/orders", icon: <ShoppingOutlined />, label: "Orders & Sales" },
     { key: "/leads", icon: <SearchOutlined />, label: "Find New Leads" },
