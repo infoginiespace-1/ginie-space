@@ -4,6 +4,8 @@ import { GooglePlacesClient } from "@giniespace/places-client";
 import { Server } from "socket.io";
 import { NotificationService } from "../services/notification.service";
 import { toE164 } from "../utils/phone";
+import { requireOwnerOrAdmin } from "../middleware/auth";
+import { FREE_PLAN_LIMITS, getEffectivePlan } from "../utils/plan";
 
 export function createLeadsRouter(
   db: IDatabase,
@@ -55,10 +57,21 @@ export function createLeadsRouter(
 
   router.post("/save", async (req: Request, res: Response): Promise<void> => {
     try {
-      const { placeId, name, phone, address, website, rating, ratingCount, category, notes } = req.body;
+      const { placeId, name, phone, address, website, rating, ratingCount, category, notes, followUpDate } = req.body;
 
       if (!name) {
         res.status(400).json({ error: "Lead name is required" });
+        return;
+      }
+
+      const [plan, existingLeads] = await Promise.all([
+        getEffectivePlan(db, req.user),
+        db.leads.findMany({ userId: req.user!.id }),
+      ]);
+      if (plan === "free" && existingLeads.length >= FREE_PLAN_LIMITS.maxLeads) {
+        res.status(403).json({
+          error: `Free plan allows saving up to ${FREE_PLAN_LIMITS.maxLeads} leads. Upgrade to Pro for unlimited CRM leads!`,
+        });
         return;
       }
 
@@ -74,6 +87,7 @@ export function createLeadsRouter(
         category: category ? category.trim() : "General",
         status: "new",
         notes: notes ? notes.trim() : undefined,
+        followUpDate: followUpDate ? String(followUpDate).trim() : undefined,
       });
 
       io.to(`user:${req.user!.id}`).emit("lead:saved", lead);
@@ -169,7 +183,33 @@ export function createLeadsRouter(
     }
   });
 
-  router.delete("/:id", async (req: Request, res: Response): Promise<void> => {
+  router.put("/:id", async (req: Request, res: Response): Promise<void> => {
+    try {
+      const existing = await db.leads.findById((req.params.id as string));
+      if (!existing) {
+        res.status(404).json({ error: "Lead not found" });
+        return;
+      }
+      if (req.user?.role !== "admin" && existing.userId !== req.user!.id) {
+        res.status(403).json({ error: "Access denied" });
+        return;
+      }
+      const { notes, followUpDate, status } = req.body;
+      const validStatuses: LeadStatus[] = ["new", "contacted", "converted", "archived"];
+      const nextStatus = status && validStatuses.includes(status) ? (status as LeadStatus) : existing.status;
+
+      const updated = await db.leads.update(existing.id, {
+        notes: notes !== undefined ? String(notes).trim() : existing.notes,
+        followUpDate: followUpDate !== undefined ? String(followUpDate).trim() : existing.followUpDate,
+        status: nextStatus,
+      });
+      res.json({ lead: updated, message: "Lead updated" });
+    } catch {
+      res.status(500).json({ error: "Could not update lead" });
+    }
+  });
+
+  router.delete("/:id", requireOwnerOrAdmin, async (req: Request, res: Response): Promise<void> => {
     try {
       const existing = await db.leads.findById((req.params.id as string));
       if (!existing) {

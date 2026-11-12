@@ -48,6 +48,7 @@ interface Order {
   discountAmount?: number;
   deliveryCharge?: number;
   couponCode?: string;
+  deliveryAddress?: string;
   notes?: string;
   createdAt: string;
 }
@@ -265,6 +266,7 @@ export default function OrdersPage() {
         paidAmount,
         discountAmount: Number(values.discountAmount) || 0,
         deliveryCharge: Number(values.deliveryCharge) || 0,
+        deliveryAddress: values.deliveryAddress || "",
       });
       message.success("Order created successfully!");
       setCreateModalVisible(false);
@@ -803,6 +805,10 @@ export default function OrdersPage() {
             </Form.Item>
           </div>
 
+          <Form.Item name="deliveryAddress" label="Delivery Address &amp; Pincode (Optional)">
+            <Input placeholder="Shop/House No, Area, City, Pincode..." />
+          </Form.Item>
+
           <Form.Item name="notes" label="Order Details / Notes">
             <Input.TextArea rows={2} placeholder="e.g. delivery before Monday" />
           </Form.Item>
@@ -890,7 +896,10 @@ export default function OrdersPage() {
             </div>
             <Divider />
             <div style={{ marginBottom: 12 }}>
-              <Text strong>Customer:</Text> {invoiceOrder.customerName} (+{invoiceOrder.customerPhone.replace(/^\+/, "")})
+              <div><Text strong>Customer:</Text> {invoiceOrder.customerName} (+{invoiceOrder.customerPhone.replace(/^\+/, "")})</div>
+              {invoiceOrder.deliveryAddress && (
+                <div><Text strong>Delivery Address:</Text> {invoiceOrder.deliveryAddress}</div>
+              )}
             </div>
             {(() => {
               let parsedItems: any[] = [];

@@ -1,9 +1,37 @@
 import { Router, Request, Response } from "express";
-import { IDatabase } from "@giniespace/sheets-db";
-import { generateQrDataUrl } from "@giniespace/whatsapp-engine";
+import { IDatabase, BusinessProfile } from "@giniespace/sheets-db";
+import { generateQrDataUrl, WhatsAppSessionManager } from "@giniespace/whatsapp-engine";
 import { Server } from "socket.io";
 import { NotificationService } from "../services/notification.service";
 import { normalizePhoneDigits, toE164 } from "../utils/phone";
+
+async function resolveStoreOwner(
+  db: IDatabase,
+  storeIdOrSlug: string
+): Promise<{ storeId: string; business: BusinessProfile | null } | null> {
+  const clean = String(storeIdOrSlug || "").trim();
+  if (!clean) return null;
+
+  let business = await db.businesses.findOne({ userId: clean }).catch(() => null);
+  if (business) {
+    return { storeId: business.userId, business };
+  }
+
+  // Fallback check custom slug
+  const allBusinesses = await db.businesses.findMany().catch(() => []);
+  const bySlug = allBusinesses.find(
+    (b) => b.slug && b.slug.toLowerCase() === clean.toLowerCase()
+  );
+  if (bySlug) {
+    return { storeId: bySlug.userId, business: bySlug };
+  }
+
+  const owner = await db.users.findById(clean).catch(() => null);
+  if (owner) {
+    return { storeId: owner.id, business: null };
+  }
+  return null;
+}
 
 function buildUpiUri(params: {
   pa: string;
@@ -23,7 +51,8 @@ function buildUpiUri(params: {
 export function createStorefrontRouter(
   db: IDatabase,
   io: Server,
-  notificationService?: NotificationService
+  notificationService?: NotificationService,
+  waManager?: WhatsAppSessionManager
 ): Router {
   const router = Router();
 
@@ -47,27 +76,32 @@ export function createStorefrontRouter(
     }
   });
 
-  // Public Storefront catalog fetch by merchant userId
+  // Public Storefront catalog fetch by merchant userId OR custom slug
   router.get("/:storeId", async (req: Request, res: Response): Promise<void> => {
     try {
-      const storeId = String(req.params.storeId || "").trim();
-      if (!storeId) {
-        res.status(400).json({ error: "Store ID is required" });
+      const storeIdParam = String(req.params.storeId || "").trim();
+      const resolved = await resolveStoreOwner(db, storeIdParam);
+      if (!resolved) {
+        res.status(404).json({ error: "Storefront not found" });
         return;
       }
+      const { storeId, business } = resolved;
 
-      const [business, owner, products] = await Promise.all([
-        db.businesses.findOne({ userId: storeId }),
+      const [owner, products] = await Promise.all([
         db.users.findById(storeId),
         db.products.findMany({ userId: storeId }),
       ]);
 
-      if (!business && !owner) {
-        res.status(404).json({ error: "Storefront not found" });
-        return;
-      }
-
-      let parsedSettings: { upiId?: string; gstin?: string; gstRate?: number; deliveryFee?: number; coupons?: Array<{ code: string; discountPercent: number }> } = {};
+      let parsedSettings: {
+        upiId?: string;
+        gstin?: string;
+        gstRate?: number;
+        deliveryFee?: number;
+        coupons?: Array<{ code: string; discountPercent: number }>;
+        logoUrl?: string;
+        isOpen?: boolean;
+        closedMessage?: string;
+      } = {};
       if (business?.settingsJson) {
         try {
           parsedSettings = JSON.parse(business.settingsJson);
@@ -77,6 +111,7 @@ export function createStorefrontRouter(
       res.json({
         store: {
           id: storeId,
+          slug: business?.slug || "",
           name: business?.name || owner?.name || "GinieSpace Store",
           phone: business?.phone || "",
           address: business?.address || "",
@@ -85,6 +120,9 @@ export function createStorefrontRouter(
           gstin: parsedSettings.gstin || "",
           deliveryFee: Number(parsedSettings.deliveryFee) || 0,
           coupons: Array.isArray(parsedSettings.coupons) ? parsedSettings.coupons : [],
+          logoUrl: parsedSettings.logoUrl || "",
+          isOpen: parsedSettings.isOpen !== false,
+          closedMessage: parsedSettings.closedMessage || "Store is currently closed for orders. Please check back later.",
         },
         products,
       });
@@ -96,7 +134,12 @@ export function createStorefrontRouter(
   // Public customer order status lookup by WhatsApp phone & optional Order ID
   router.get("/:storeId/track", async (req: Request, res: Response): Promise<void> => {
     try {
-      const storeId = String(req.params.storeId || "").trim();
+      const resolved = await resolveStoreOwner(db, String(req.params.storeId || "").trim());
+      if (!resolved) {
+        res.status(404).json({ error: "Storefront not found" });
+        return;
+      }
+      const storeId = resolved.storeId;
       const phoneRaw = String(req.query.phone || "").trim();
       const orderIdQuery = String(req.query.orderId || "").trim().toLowerCase().replace(/^#/, "");
 
@@ -139,13 +182,14 @@ export function createStorefrontRouter(
   // Public Storefront customer order submission
   router.post("/:storeId/orders", async (req: Request, res: Response): Promise<void> => {
     try {
-      const storeId = String(req.params.storeId || "").trim();
-      const { customerName, customerPhone, items, notes, couponCode } = req.body;
+      const resolved = await resolveStoreOwner(db, String(req.params.storeId || "").trim());
+      const { customerName, customerPhone, items, notes, couponCode, deliveryAddress } = req.body;
 
-      if (!storeId || !customerName || !customerPhone || !Array.isArray(items) || items.length === 0) {
+      if (!resolved || !customerName || !customerPhone || !Array.isArray(items) || items.length === 0) {
         res.status(400).json({ error: "Customer name, WhatsApp phone, and at least one item are required" });
         return;
       }
+      const { storeId, business } = resolved;
 
       const phoneDigits = normalizePhoneDigits(customerPhone);
       if (!phoneDigits || phoneDigits.length < 10) {
@@ -153,8 +197,17 @@ export function createStorefrontRouter(
         return;
       }
 
-      const [business, storeProducts, existingCustomers] = await Promise.all([
-        db.businesses.findOne({ userId: storeId }),
+      if (business?.settingsJson) {
+        try {
+          const sjCheck = JSON.parse(business.settingsJson);
+          if (sjCheck.isOpen === false) {
+            res.status(400).json({ error: sjCheck.closedMessage || "Store is currently closed and not accepting orders right now." });
+            return;
+          }
+        } catch {}
+      }
+
+      const [storeProducts, existingCustomers] = await Promise.all([
         db.products.findMany({ userId: storeId }),
         db.customers.findMany({ userId: storeId }),
       ]);
@@ -243,6 +296,7 @@ export function createStorefrontRouter(
         discountAmount,
         deliveryCharge,
         couponCode: appliedCoupon || undefined,
+        deliveryAddress: deliveryAddress ? String(deliveryAddress).trim() : undefined,
         notes: notes ? `[Online Store] ${notes.trim()}` : "[Online Store Order]",
       });
 
@@ -259,6 +313,22 @@ export function createStorefrontRouter(
 
       if (notificationService && order.customerPhone) {
         notificationService.notifyOrderPlaced(order, order.customerPhone).catch(() => {});
+      }
+
+      // Send rich receipt directly from merchant's own WhatsApp if linked
+      if (waManager && waManager.getSessionState(storeId).status === "connected") {
+        const lines = verifiedItems.map((it) => `  • ${it.name} × ${it.quantity} = ₹${(it.price * it.quantity).toLocaleString("en-IN")}`).join("\n");
+        const receipt =
+          `🛍️ *Order Received — ${business?.name || "Our Store"}*\n` +
+          `Order ID: *#${order.id.slice(-6).toUpperCase()}*\n` +
+          `Customer: ${order.customerName}\n` +
+          (deliveryAddress ? `📍 Delivery: ${String(deliveryAddress).trim()}\n` : "") +
+          `\n${lines}\n` +
+          (discountAmount > 0 ? `🎟️ Discount: -₹${discountAmount}\n` : "") +
+          (deliveryCharge > 0 ? `🚚 Delivery: +₹${deliveryCharge}\n` : "") +
+          `\n💰 *Payable Total: ₹${totalAmount.toLocaleString("en-IN")}*\n` +
+          `Track live status: https://app.ginie.space/shop/${business?.slug || storeId}`;
+        waManager.sendMessage({ userId: storeId, recipientPhone: phoneDigits, messageText: receipt }).catch(() => {});
       }
 
       let upiUri: string | undefined;

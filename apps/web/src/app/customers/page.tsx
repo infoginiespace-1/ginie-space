@@ -19,6 +19,10 @@ import {
   Alert,
   Select,
   Progress,
+  Drawer,
+  Statistic,
+  Row,
+  Col,
 } from "antd";
 import {
   PlusOutlined,
@@ -31,6 +35,8 @@ import {
   EditOutlined,
   UploadOutlined,
   WhatsAppOutlined,
+  AccountBookOutlined,
+  CopyOutlined,
 } from "@ant-design/icons";
 import { api } from "../../lib/api";
 import { downloadCsv, parseCsv } from "../../lib/csv";
@@ -98,6 +104,27 @@ export default function CustomersPage() {
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [csvModalOpen, setCsvModalOpen] = useState(false);
   const [importingCsv, setImportingCsv] = useState(false);
+  const [ledgerOpen, setLedgerOpen] = useState(false);
+  const [ledgerLoading, setLedgerLoading] = useState(false);
+  const [ledgerData, setLedgerData] = useState<{
+    customer: Customer;
+    orders: any[];
+    summary: { totalOrders: number; totalSpent: number; totalPaid: number; pendingDue: number };
+  } | null>(null);
+
+  const openCustomerLedger = async (cust: Customer) => {
+    setLedgerOpen(true);
+    setLedgerLoading(true);
+    try {
+      const res = await api.get(`/api/customers/${cust.id}/ledger`);
+      setLedgerData(res.data);
+    } catch {
+      message.error("Could not load customer Khata ledger");
+      setLedgerOpen(false);
+    } finally {
+      setLedgerLoading(false);
+    }
+  };
 
   const normalizePhone = (p?: string) => String(p || "").replace(/[^0-9]/g, "").slice(-10);
 
@@ -245,8 +272,10 @@ export default function CustomersPage() {
       key: "name",
       render: (name: string, record: Customer) => (
         <div>
-          <div style={{ fontWeight: 600 }}>{name}</div>
-          {record.tags && <Text type="secondary" style={{ fontSize: 11 }}>{record.tags}</Text>}
+          <a onClick={() => openCustomerLedger(record)} style={{ fontWeight: 600, color: "#15803d" }}>
+            {name}
+          </a>
+          {record.tags && <div><Text type="secondary" style={{ fontSize: 11 }}>{record.tags}</Text></div>}
         </div>
       ),
     },
@@ -293,6 +322,13 @@ export default function CustomersPage() {
             style={{ background: "#25D366", borderColor: "#25D366" }}
           >
             Chat
+          </Button>
+          <Button
+            icon={<AccountBookOutlined />}
+            size="small"
+            onClick={() => openCustomerLedger(record)}
+          >
+            Ledger
           </Button>
           <Button
             icon={<EditOutlined />}
@@ -691,6 +727,131 @@ export default function CustomersPage() {
           )}
         </Space>
       </Modal>
+
+      <Drawer
+        title={
+          <Space>
+            <AccountBookOutlined style={{ color: "#15803d" }} />
+            <span>Khata Ledger — {ledgerData?.customer?.name || "Customer"}</span>
+          </Space>
+        }
+        open={ledgerOpen}
+        onClose={() => setLedgerOpen(false)}
+        width={620}
+      >
+        {ledgerLoading || !ledgerData ? (
+          <Card loading style={{ border: 0 }} />
+        ) : (
+          <Space direction="vertical" style={{ width: "100%" }} size={16}>
+            <Row gutter={[12, 12]}>
+              <Col span={6}>
+                <Card size="small">
+                  <Statistic title="Orders" value={ledgerData.summary.totalOrders} />
+                </Card>
+              </Col>
+              <Col span={6}>
+                <Card size="small">
+                  <Statistic title="Total Billed" value={ledgerData.summary.totalSpent} prefix="₹" />
+                </Card>
+              </Col>
+              <Col span={6}>
+                <Card size="small">
+                  <Statistic title="Paid" value={ledgerData.summary.totalPaid} prefix="₹" valueStyle={{ color: "#16a34a" }} />
+                </Card>
+              </Col>
+              <Col span={6}>
+                <Card size="small">
+                  <Statistic
+                    title="Pending Due"
+                    value={ledgerData.summary.pendingDue}
+                    prefix="₹"
+                    valueStyle={{ color: ledgerData.summary.pendingDue > 0 ? "#ef4444" : "#16a34a" }}
+                  />
+                </Card>
+              </Col>
+            </Row>
+
+            <Space wrap>
+              <Button
+                icon={<CopyOutlined />}
+                onClick={() => {
+                  const text =
+                    `Khata Statement — ${businessName}\nCustomer: ${ledgerData.customer.name} (${ledgerData.customer.phone})\n` +
+                    `Total Billed: ₹${ledgerData.summary.totalSpent} | Paid: ₹${ledgerData.summary.totalPaid} | Pending Due: ₹${ledgerData.summary.pendingDue}`;
+                  navigator.clipboard?.writeText(text);
+                  message.success("Khata statement copied!");
+                }}
+              >
+                Copy Khata Summary
+              </Button>
+              {ledgerData.summary.pendingDue > 0 && (
+                <Button
+                  type="primary"
+                  icon={<WhatsAppOutlined />}
+                  style={{ background: "#25D366", borderColor: "#25D366" }}
+                  onClick={() => {
+                    setReminderTarget(ledgerData.customer);
+                    setReminderAmount(ledgerData.summary.pendingDue);
+                    setReminderNote("Complete Khata Balance");
+                  }}
+                >
+                  Send ₹{ledgerData.summary.pendingDue.toLocaleString("en-IN")} Due Reminder
+                </Button>
+              )}
+            </Space>
+
+            <Table
+              dataSource={ledgerData.orders}
+              rowKey="id"
+              size="small"
+              pagination={{ pageSize: 6 }}
+              locale={{ emptyText: "No orders recorded yet for this customer." }}
+              columns={[
+                {
+                  title: "Order",
+                  dataIndex: "id",
+                  key: "id",
+                  render: (id: string, o: any) => (
+                    <div>
+                      <Text strong>#{String(id || "").slice(-6).toUpperCase()}</Text>
+                      <div style={{ fontSize: 11, color: "#8c8c8c" }}>{String(o.createdAt || "").slice(0, 10)}</div>
+                    </div>
+                  ),
+                },
+                {
+                  title: "Total",
+                  dataIndex: "totalAmount",
+                  key: "totalAmount",
+                  render: (v: number) => `₹${Number(v || 0).toLocaleString("en-IN")}`,
+                },
+                {
+                  title: "Payment",
+                  key: "payment",
+                  render: (_: any, o: any) => {
+                    const tot = Number(o.totalAmount) || 0;
+                    const paid = o.paymentStatus === "paid" ? tot : Math.min(tot, Number(o.paidAmount) || 0);
+                    const rem = Math.max(0, tot - paid);
+                    return (
+                      <div>
+                        <Tag color={o.paymentStatus === "paid" ? "green" : o.paymentStatus === "partial" ? "orange" : "red"}>
+                          {(o.paymentStatus || "unpaid").toUpperCase()}
+                        </Tag>
+                        {rem > 0 && <div style={{ fontSize: 11, color: "#ef4444" }}>Due: ₹{rem.toLocaleString("en-IN")}</div>}
+                      </div>
+                    );
+                  },
+                },
+                {
+                  title: "Status",
+                  dataIndex: "status",
+                  key: "status",
+                  render: (s: string) => <Tag>{String(s || "pending").toUpperCase()}</Tag>,
+                },
+              ]}
+            />
+          </Space>
+        )}
+      </Drawer>
     </AppLayout>
   );
 }

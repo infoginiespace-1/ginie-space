@@ -303,7 +303,7 @@ export class GoogleSheetsDatabase implements IDatabase {
       this.sheets,
       this.spreadsheetId,
       "Users",
-      ["id", "email", "passwordHash", "name", "role", "businessType", "createdAt", "updatedAt", "status", "plan"],
+      ["id", "email", "passwordHash", "name", "role", "businessType", "createdAt", "updatedAt", "status", "plan", "ownerId", "staffPermissions"],
       this.throttler
     );
 
@@ -311,7 +311,7 @@ export class GoogleSheetsDatabase implements IDatabase {
       this.sheets,
       this.spreadsheetId,
       "Businesses",
-      ["id", "userId", "name", "phone", "address", "settingsJson", "createdAt", "updatedAt"],
+      ["id", "userId", "name", "phone", "address", "settingsJson", "createdAt", "updatedAt", "slug"],
       this.throttler
     );
 
@@ -327,7 +327,7 @@ export class GoogleSheetsDatabase implements IDatabase {
       this.sheets,
       this.spreadsheetId,
       "Products",
-      ["id", "userId", "name", "description", "price", "unit", "stock", "imageUrl", "createdAt", "updatedAt", "category", "minOrderQty"],
+      ["id", "userId", "name", "description", "price", "unit", "stock", "imageUrl", "createdAt", "updatedAt", "category", "minOrderQty", "costPrice"],
       this.throttler
     );
 
@@ -335,7 +335,7 @@ export class GoogleSheetsDatabase implements IDatabase {
       this.sheets,
       this.spreadsheetId,
       "Orders",
-      ["id", "userId", "customerId", "customerName", "customerPhone", "itemsJson", "totalAmount", "status", "notes", "createdAt", "updatedAt", "paymentStatus", "paidAmount", "discountAmount", "deliveryCharge", "couponCode"],
+      ["id", "userId", "customerId", "customerName", "customerPhone", "itemsJson", "totalAmount", "status", "notes", "createdAt", "updatedAt", "paymentStatus", "paidAmount", "discountAmount", "deliveryCharge", "couponCode", "deliveryAddress"],
       this.throttler
     );
 
@@ -343,7 +343,7 @@ export class GoogleSheetsDatabase implements IDatabase {
       this.sheets,
       this.spreadsheetId,
       "Leads",
-      ["id", "userId", "placeId", "name", "phone", "address", "website", "rating", "ratingCount", "category", "status", "notes", "createdAt", "updatedAt"],
+      ["id", "userId", "placeId", "name", "phone", "address", "website", "rating", "ratingCount", "category", "status", "notes", "createdAt", "updatedAt", "followUpDate"],
       this.throttler
     );
 

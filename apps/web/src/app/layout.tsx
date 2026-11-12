@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { AntdRegistry } from "@ant-design/nextjs-registry";
 import { ConfigProvider } from "antd";
 import { AuthProvider } from "../context/AuthContext";
@@ -7,6 +7,15 @@ import React from "react";
 export const metadata: Metadata = {
   title: "GinieSpace | WhatsApp Automated Business Platform",
   description: "Automate your sales, orders, and customer discovery directly through WhatsApp.",
+  manifest: "/manifest.json",
+  icons: {
+    icon: "/icon.svg",
+    apple: "/icon.svg",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#25D366",
 };
 
 export default function RootLayout({

@@ -18,6 +18,7 @@ import { createSettingsRouter } from "./routes/settings.routes";
 import { createAdminRouter } from "./routes/admin.routes";
 import { createStorefrontRouter } from "./routes/storefront.routes";
 import { NotificationService } from "./services/notification.service";
+import { startDailyReportScheduler } from "./services/scheduler.service";
 
 async function bootstrap() {
   const config = loadConfig();
@@ -128,7 +129,7 @@ async function bootstrap() {
 
   // Auth Routes & Public Storefront (Public)
   app.use("/api/auth", createAuthRouter(db, config.jwtSecret, notificationService));
-  app.use("/api/storefront", createStorefrontRouter(db, io, notificationService));
+  app.use("/api/storefront", createStorefrontRouter(db, io, notificationService, waManager));
 
   // Protected Business Routes
   const auth = authMiddleware(config.jwtSecret);
@@ -139,6 +140,9 @@ async function bootstrap() {
   app.use("/api/whatsapp", auth, createWhatsAppRouter(waManager, db));
   app.use("/api/settings", auth, createSettingsRouter(db, notificationService));
   app.use("/api/admin", auth, requireAdmin, createAdminRouter(db, waManager, notificationService));
+
+  // Automated Nightly Business Summary Scheduler
+  startDailyReportScheduler(db, waManager, notificationService);
 
   server.listen(config.port, () => {
     console.log("GinieSpace API service active on port " + config.port);

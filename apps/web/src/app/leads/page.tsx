@@ -31,10 +31,12 @@ import {
   WhatsAppOutlined,
   DownloadOutlined,
   DeleteOutlined,
+  CalendarOutlined,
 } from "@ant-design/icons";
 import { api } from "../../lib/api";
 import { downloadCsv } from "../../lib/csv";
 import { getSocket } from "../../lib/socket";
+import { useAuth } from "../../context/AuthContext";
 
 const { Title, Text } = Typography;
 
@@ -59,9 +61,12 @@ interface SavedLead {
   rating?: number;
   category: string;
   status: "new" | "contacted" | "converted" | "archived";
+  followUpDate?: string;
+  notes?: string;
 }
 
 export default function LeadsPage() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("discover");
   const [searching, setSearching] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -73,6 +78,10 @@ export default function LeadsPage() {
   const [loadingSaved, setLoadingSaved] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [convertingId, setConvertingId] = useState<string | null>(null);
+  const [followUpTarget, setFollowUpTarget] = useState<SavedLead | null>(null);
+  const [followUpDateVal, setFollowUpDateVal] = useState("");
+  const [followUpNoteVal, setFollowUpNoteVal] = useState("");
+  const [savingFollowUp, setSavingFollowUp] = useState(false);
   const [selectedLeadKeys, setSelectedLeadKeys] = useState<React.Key[]>([]);
   const [campaignModalOpen, setCampaignModalOpen] = useState(false);
   const [campaignTemplate, setCampaignTemplate] = useState(
@@ -294,24 +303,73 @@ export default function LeadsPage() {
         phone && phone !== "#ERROR!" ? `+${String(phone).replace(/^\+/, "")}` : "-",
     },
     {
-      title: "Status",
+      title: "Status & Follow-Up",
       dataIndex: "status",
       key: "status",
-      render: (status: string) => {
+      render: (status: string, record: SavedLead) => {
         const colors: Record<string, string> = {
           new: "blue",
           contacted: "orange",
           converted: "green",
           archived: "default",
         };
-        return <Tag color={colors[status]}>{status.toUpperCase()}</Tag>;
+        const todayStr = new Date().toISOString().slice(0, 10);
+        const isDue = record.followUpDate && record.followUpDate <= todayStr && status !== "converted";
+        return (
+          <Space direction="vertical" size={2}>
+            <Tag color={colors[status]}>{status.toUpperCase()}</Tag>
+            {record.followUpDate && (
+              <Tag color={isDue ? "red" : "cyan"} icon={<CalendarOutlined />} style={{ fontSize: 11 }}>
+                {record.followUpDate}
+              </Tag>
+            )}
+          </Space>
+        );
       },
     },
     {
       title: "Actions",
       key: "convert",
       render: (_: any, record: SavedLead) => (
-        <Space>
+        <Space wrap>
+          {record.phone && record.phone !== "#ERROR!" && (
+            <Button
+              size="small"
+              icon={<WhatsAppOutlined />}
+              style={{ color: "#16a34a", borderColor: "#25D366" }}
+              onClick={async () => {
+                const intro = `Namaste ${record.name} ji! Hum best wholesale/retail rates par regular supply karte hain. Hamara live product catalog dekhein: https://app.ginie.space/shop/${user?.id || ""}`;
+                try {
+                  await api.post("/api/whatsapp/send", {
+                    recipientPhone: record.phone,
+                    messageText: intro,
+                    contactName: record.name,
+                  });
+                  if (record.status === "new") {
+                    await api.put(`/api/leads/${record.id}/status`, { status: "contacted" }).catch(() => {});
+                  }
+                  message.success(`Intro pitch sent to ${record.name}!`);
+                  loadSavedLeads();
+                } catch {
+                  const cleanDigits = String(record.phone).replace(/[^0-9]/g, "");
+                  window.open(`https://wa.me/${cleanDigits}?text=${encodeURIComponent(intro)}`, "_blank");
+                }
+              }}
+            >
+              Pitch
+            </Button>
+          )}
+          <Button
+            size="small"
+            icon={<CalendarOutlined />}
+            onClick={() => {
+              setFollowUpTarget(record);
+              setFollowUpDateVal(record.followUpDate || new Date().toISOString().slice(0, 10));
+              setFollowUpNoteVal(record.notes || "");
+            }}
+          >
+            Follow-Up
+          </Button>
           {record.status === "converted" ? (
             <Tag color="success">Converted</Tag>
           ) : (
@@ -429,9 +487,10 @@ export default function LeadsPage() {
                     <Select
                       value={savedStatusFilter}
                       onChange={setSavedStatusFilter}
-                      style={{ width: 150 }}
+                      style={{ width: 170 }}
                       options={[
                         { value: "all", label: "All Statuses" },
+                        { value: "followup_due", label: "Follow-Up Due" },
                         { value: "new", label: "New" },
                         { value: "contacted", label: "Contacted" },
                         { value: "converted", label: "Converted" },
@@ -440,15 +499,22 @@ export default function LeadsPage() {
                     />
                     <Button
                       icon={<DownloadOutlined />}
-                      onClick={() =>
+                      onClick={() => {
+                        const todayStr = new Date().toISOString().slice(0, 10);
                         downloadCsv(
                           "giniespace-leads.csv",
-                          ["ID", "Name", "Phone", "Address", "Website", "Rating", "Category", "Status"],
+                          ["ID", "Name", "Phone", "Address", "Website", "Rating", "Category", "Status", "FollowUpDate", "Notes"],
                           savedLeads
-                            .filter((l) => savedStatusFilter === "all" || l.status === savedStatusFilter)
-                            .map((l) => [l.id, l.name, l.phone, l.address, l.website, l.rating, l.category, l.status])
-                        )
-                      }
+                            .filter((l) =>
+                              savedStatusFilter === "all"
+                                ? true
+                                : savedStatusFilter === "followup_due"
+                                ? Boolean(l.followUpDate && l.followUpDate <= todayStr && l.status !== "converted")
+                                : l.status === savedStatusFilter
+                            )
+                            .map((l) => [l.id, l.name, l.phone, l.address, l.website, l.rating, l.category, l.status, l.followUpDate, l.notes])
+                        );
+                      }}
                     >
                       Export CSV
                     </Button>
@@ -471,7 +537,14 @@ export default function LeadsPage() {
                   </Space>
                 </div>
                 <Table
-                  dataSource={savedLeads.filter((l) => savedStatusFilter === "all" || l.status === savedStatusFilter)}
+                  dataSource={savedLeads.filter((l) => {
+                    const todayStr = new Date().toISOString().slice(0, 10);
+                    if (savedStatusFilter === "all") return true;
+                    if (savedStatusFilter === "followup_due") {
+                      return Boolean(l.followUpDate && l.followUpDate <= todayStr && l.status !== "converted");
+                    }
+                    return l.status === savedStatusFilter;
+                  })}
                   columns={savedColumns}
                   rowKey="id"
                   loading={loadingSaved}
@@ -582,6 +655,53 @@ export default function LeadsPage() {
               </Text>
             </div>
           )}
+        </Space>
+      </Modal>
+
+      <Modal
+        title={`Schedule Follow-Up — ${followUpTarget?.name || ""}`}
+        open={Boolean(followUpTarget)}
+        onCancel={() => setFollowUpTarget(null)}
+        confirmLoading={savingFollowUp}
+        okText="Save Follow-Up"
+        onOk={async () => {
+          if (!followUpTarget) return;
+          setSavingFollowUp(true);
+          try {
+            await api.put(`/api/leads/${followUpTarget.id}`, {
+              followUpDate: followUpDateVal,
+              notes: followUpNoteVal,
+            });
+            message.success("Lead follow-up updated!");
+            setFollowUpTarget(null);
+            loadSavedLeads();
+          } catch {
+            message.error("Could not save follow-up");
+          } finally {
+            setSavingFollowUp(false);
+          }
+        }}
+      >
+        <Space direction="vertical" style={{ width: "100%" }} size={12}>
+          <div>
+            <Text type="secondary">Next Follow-Up Date:</Text>
+            <Input
+              type="date"
+              style={{ marginTop: 4 }}
+              value={followUpDateVal}
+              onChange={(e) => setFollowUpDateVal(e.target.value)}
+            />
+          </div>
+          <div>
+            <Text type="secondary">Call / Pitch Notes:</Text>
+            <Input.TextArea
+              rows={3}
+              style={{ marginTop: 4 }}
+              placeholder="Interested in 50kg wholesale trial..."
+              value={followUpNoteVal}
+              onChange={(e) => setFollowUpNoteVal(e.target.value)}
+            />
+          </div>
         </Space>
       </Modal>
     </AppLayout>

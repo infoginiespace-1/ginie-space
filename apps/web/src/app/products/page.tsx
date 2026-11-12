@@ -50,6 +50,7 @@ interface Product {
   imageUrl?: string;
   category?: string;
   minOrderQty?: number;
+  costPrice?: number;
 }
 
 function isContainerUnit(unit?: string): boolean {
@@ -207,6 +208,7 @@ export default function ProductsPage() {
         name: values.name,
         description: values.description || "",
         price: Number(values.price) || 0,
+        costPrice: values.costPrice !== undefined && values.costPrice !== null ? Number(values.costPrice) : undefined,
         unit: formattedUnit,
         stock: values.stock !== undefined ? Number(values.stock) : 0,
         imageUrl: imagePreview || "",
@@ -317,6 +319,7 @@ export default function ProductsPage() {
       name: product.name,
       description: product.description,
       price: product.price,
+      costPrice: product.costPrice,
       stock: product.stock,
       unitType: parsedUnit.unitType,
       packQty: parsedUnit.packQty,
@@ -381,12 +384,25 @@ export default function ProductsPage() {
       ),
     },
     {
-      title: "Price / Unit",
+      title: "Price / Margin",
       dataIndex: "price",
       key: "price",
-      render: (price: number, record: Product) => (
-        <Text strong>₹{Number(price || 0).toLocaleString()} / {record.unit || "pcs"}</Text>
-      ),
+      render: (price: number, record: Product) => {
+        const sell = Number(price || 0);
+        const cost = Number(record.costPrice || 0);
+        const profit = cost > 0 ? sell - cost : 0;
+        const marginPct = cost > 0 && sell > 0 ? Math.round((profit / sell) * 100) : 0;
+        return (
+          <div>
+            <Text strong>₹{sell.toLocaleString()} / {record.unit || "pcs"}</Text>
+            {cost > 0 && (
+              <div style={{ fontSize: 11, color: profit >= 0 ? "#16a34a" : "#ef4444" }}>
+                Cost: ₹{cost.toLocaleString()} • {profit >= 0 ? `+₹${profit.toLocaleString()} (${marginPct}%)` : `-₹${Math.abs(profit).toLocaleString()}`}
+              </div>
+            )}
+          </div>
+        );
+      },
     },
     {
       title: "Available Stock",
@@ -436,8 +452,8 @@ export default function ProductsPage() {
             onClick={() =>
               downloadCsv(
                 "giniespace-catalog.csv",
-                ["ID", "Name", "Description", "Price", "Unit", "Stock"],
-                products.map((p) => [p.id, p.name, p.description, p.price, p.unit, p.stock])
+                ["ID", "Name", "Category", "Description", "Price", "CostPrice", "Unit", "Stock", "MinOrderQty"],
+                products.map((p) => [p.id, p.name, p.category || "General", p.description, p.price, p.costPrice ?? "", p.unit, p.stock, p.minOrderQty || 1])
               )
             }
           >
@@ -578,13 +594,17 @@ export default function ProductsPage() {
             <Input.TextArea rows={2} placeholder="Flavour, brand, specs, or packaging details..." />
           </Form.Item>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
             <Form.Item
               name="price"
-              label="Price (₹)"
+              label="Selling Price (₹)"
               rules={[{ required: true, message: "Please enter price" }]}
             >
               <InputNumber style={{ width: "100%" }} min={0} placeholder="499" />
+            </Form.Item>
+
+            <Form.Item name="costPrice" label="Cost / Buy Rate (₹)">
+              <InputNumber style={{ width: "100%" }} min={0} placeholder="350" />
             </Form.Item>
 
             <Form.Item

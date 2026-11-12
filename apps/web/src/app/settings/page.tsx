@@ -18,6 +18,11 @@ import {
   Alert,
   Row,
   Col,
+  Upload,
+  Table,
+  Checkbox,
+  Progress,
+  Popconfirm,
 } from "antd";
 import {
   SaveOutlined,
@@ -29,6 +34,11 @@ import {
   ShopOutlined,
   CopyOutlined,
   LockOutlined,
+  UploadOutlined,
+  TeamOutlined,
+  DeleteOutlined,
+  UserAddOutlined,
+  CrownOutlined,
 } from "@ant-design/icons";
 import { api } from "../../lib/api";
 import { getSocket } from "../../lib/socket";
@@ -36,14 +46,57 @@ import { useAuth } from "../../context/AuthContext";
 
 const { Title, Text, Paragraph } = Typography;
 
+async function compressLogoJpg(file: File): Promise<string> {
+  const raw: string = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Could not read logo"));
+    reader.readAsDataURL(file);
+  });
+  if (raw.length <= 45000) return raw;
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const maxDim = 320;
+      let { width, height } = img;
+      if (width > maxDim || height > maxDim) {
+        const s = Math.min(maxDim / width, maxDim / height);
+        width = Math.round(width * s);
+        height = Math.round(height * s);
+      }
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return reject(new Error("Canvas unavailable"));
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, width, height);
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL("image/jpeg", 0.72));
+    };
+    img.onerror = () => reject(new Error("Invalid JPG file"));
+    img.src = raw;
+  });
+}
+
 export default function SettingsPage() {
   const { user } = useAuth();
   const [form] = Form.useForm();
   const [passwordForm] = Form.useForm();
+  const [staffForm] = Form.useForm();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
   const savedQuickRepliesRef = React.useRef<Array<{ label: string; text: string }> | undefined>(undefined);
+  const [logoPreview, setLogoPreview] = useState<string>("");
+  const [currentSlug, setCurrentSlug] = useState<string>("");
+  const [planUsage, setPlanUsage] = useState<{
+    plan: "free" | "pro";
+    usage: { productsCount: number; leadsCount: number; staffCount: number };
+    limits: { maxProducts: number; maxLeads: number; maxStaff: number; allowBulkBroadcast: boolean };
+  } | null>(null);
+  const [staffList, setStaffList] = useState<any[]>([]);
+  const [creatingStaff, setCreatingStaff] = useState(false);
 
   // Merchant WhatsApp Connection State
   const [waStatus, setWaStatus] = useState<"disconnected" | "connecting" | "connected">("disconnected");
@@ -56,6 +109,7 @@ export default function SettingsPage() {
     api.get("/api/settings")
       .then((res) => {
         const b = res.data.business || {};
+        setCurrentSlug(b.slug || "");
         let parsedSettings: {
           autoReply: boolean;
           welcomeMessage: string;
@@ -66,6 +120,11 @@ export default function SettingsPage() {
           couponCode?: string;
           couponPercent?: number;
           quickReplies?: Array<{ label: string; text: string }>;
+          logoUrl?: string;
+          isOpen?: boolean;
+          closedMessage?: string;
+          smartKeywordBot?: boolean;
+          dailySummaryEnabled?: boolean;
         } = {
           autoReply: true,
           welcomeMessage: "Hello! Welcome to our store.",
@@ -75,6 +134,10 @@ export default function SettingsPage() {
           deliveryFee: 0,
           couponCode: "",
           couponPercent: 0,
+          isOpen: true,
+          closedMessage: "Our store is currently closed. We will respond as soon as we reopen!",
+          smartKeywordBot: true,
+          dailySummaryEnabled: false,
         };
         if (b.settingsJson) {
           try {
@@ -84,23 +147,36 @@ export default function SettingsPage() {
         if (parsedSettings.quickReplies) {
           savedQuickRepliesRef.current = parsedSettings.quickReplies;
         }
+        if (parsedSettings.logoUrl) {
+          setLogoPreview(parsedSettings.logoUrl);
+        }
         const firstCoupon = Array.isArray((parsedSettings as any).coupons) ? (parsedSettings as any).coupons[0] : null;
         form.setFieldsValue({
           name: b.name || "",
           phone: b.phone || "",
           address: b.address || "",
+          slug: b.slug || "",
           upiId: parsedSettings.upiId || "",
           gstin: parsedSettings.gstin || "",
           gstRate: parsedSettings.gstRate || 0,
           deliveryFee: parsedSettings.deliveryFee || 0,
           couponCode: firstCoupon?.code || "",
           couponPercent: firstCoupon?.discountPercent || 0,
+          isOpen: parsedSettings.isOpen !== false,
+          closedMessage: parsedSettings.closedMessage,
           autoReply: parsedSettings.autoReply,
+          smartKeywordBot: parsedSettings.smartKeywordBot !== false,
+          dailySummaryEnabled: Boolean(parsedSettings.dailySummaryEnabled),
           welcomeMessage: parsedSettings.welcomeMessage,
         });
       })
       .catch(() => message.error("Could not load settings"))
       .finally(() => setLoading(false));
+
+    api.get("/api/settings/plan-usage").then((r) => setPlanUsage(r.data)).catch(() => {});
+    if (user?.role !== "staff") {
+      api.get("/api/settings/staff").then((r) => setStaffList(r.data?.staff || [])).catch(() => {});
+    }
 
     api.get("/api/whatsapp/status")
       .then((res) => {
@@ -194,6 +270,12 @@ export default function SettingsPage() {
       const settingsJson = JSON.stringify({
         autoReply: values.autoReply,
         welcomeMessage: values.welcomeMessage,
+        smartKeywordBot: values.smartKeywordBot !== false,
+        dailySummaryEnabled: Boolean(values.dailySummaryEnabled),
+        dailySummaryHour: 21,
+        isOpen: values.isOpen !== false,
+        closedMessage: (values.closedMessage || "").trim(),
+        logoUrl: logoPreview || "",
         upiId: (values.upiId || "").trim(),
         gstin: (values.gstin || "").trim().toUpperCase(),
         gstRate: Number(values.gstRate) || 0,
@@ -202,18 +284,46 @@ export default function SettingsPage() {
         quickReplies: savedQuickRepliesRef.current,
       });
 
-      await api.put("/api/settings/business", {
+      const res = await api.put("/api/settings/business", {
         name: values.name,
         phone: values.phone,
         address: values.address,
+        slug: values.slug,
         settingsJson,
       });
 
+      setCurrentSlug(res.data?.business?.slug || "");
       message.success("Settings saved successfully!");
     } catch (err: any) {
       message.error(err.message || "Failed to update settings");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleCreateStaff = async (values: any) => {
+    setCreatingStaff(true);
+    try {
+      const res = await api.post("/api/settings/staff", values);
+      setStaffList((prev) => [res.data.staff, ...prev]);
+      staffForm.resetFields();
+      message.success("Staff member added!");
+      api.get("/api/settings/plan-usage").then((r) => setPlanUsage(r.data)).catch(() => {});
+    } catch (err: any) {
+      message.error(err.message || "Could not create staff account");
+    } finally {
+      setCreatingStaff(false);
+    }
+  };
+
+  const handleDeleteStaff = async (staffId: string) => {
+    try {
+      await api.delete(`/api/settings/staff/${staffId}`);
+      setStaffList((prev) => prev.filter((s) => s.id !== staffId));
+      message.success("Staff account removed");
+      api.get("/api/settings/plan-usage").then((r) => setPlanUsage(r.data)).catch(() => {});
+    } catch (err: any) {
+      message.error(err.message || "Could not delete staff member");
     }
   };
 
@@ -273,17 +383,17 @@ export default function SettingsPage() {
 
               {user?.id && (
                 <Card size="small" style={{ marginBottom: 16, background: "#f0fdf4", borderColor: "#bbf7d0" }}>
-                  <Space direction="vertical" size={4} style={{ width: "100%" }}>
+                  <Space direction="vertical" size={6} style={{ width: "100%" }}>
                     <Text strong style={{ color: "#15803d" }}>
                       <ShopOutlined /> Your Public Digital Storefront Link
                     </Text>
                     <Space wrap>
-                      <Text code>{`https://app.ginie.space/shop/${user.id}`}</Text>
+                      <Text code>{`https://app.ginie.space/shop/${currentSlug || user.id}`}</Text>
                       <Button
                         size="small"
                         icon={<CopyOutlined />}
                         onClick={() => {
-                          const url = `${window.location.origin}/shop/${user.id}`;
+                          const url = `${window.location.origin}/shop/${currentSlug || user.id}`;
                           navigator.clipboard?.writeText(url);
                           message.success("Storefront link copied!");
                         }}
@@ -295,16 +405,77 @@ export default function SettingsPage() {
                 </Card>
               )}
 
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <Form.Item name="slug" label="Custom Store URL Slug (Optional)" extra="e.g. bharat-gold -> /shop/bharat-gold">
+                  <Input placeholder="my-store-name" />
+                </Form.Item>
+
+                <Form.Item label="Store Logo (JPG max 60 KB)">
+                  <Space>
+                    {logoPreview && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={logoPreview} alt="Logo" style={{ width: 38, height: 38, borderRadius: 8, objectFit: "cover", border: "1px solid #d9d9d9" }} />
+                    )}
+                    <Upload
+                      accept=".jpg,.jpeg,image/jpeg"
+                      showUploadList={false}
+                      beforeUpload={async (file) => {
+                        if (file.size > 60 * 1024) {
+                          message.error("Logo JPG size must be under 60 KB");
+                          return Upload.LIST_IGNORE;
+                        }
+                        try {
+                          const compressed = await compressLogoJpg(file);
+                          setLogoPreview(compressed);
+                          message.success("Store logo ready!");
+                        } catch (e: any) {
+                          message.error(e.message || "Invalid JPG");
+                        }
+                        return false;
+                      }}
+                    >
+                      <Button icon={<UploadOutlined />}>{logoPreview ? "Change Logo" : "Upload Logo"}</Button>
+                    </Upload>
+                    {logoPreview && <Button danger size="small" onClick={() => setLogoPreview("")}>Clear</Button>}
+                  </Space>
+                </Form.Item>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 12 }}>
+                <Form.Item name="isOpen" label="Store Open for Orders" valuePropName="checked">
+                  <Switch checkedChildren="OPEN" unCheckedChildren="CLOSED" />
+                </Form.Item>
+                <Form.Item name="closedMessage" label="Closed / Away Notice">
+                  <Input placeholder="Store is closed right now. Opening tomorrow at 9 AM!" />
+                </Form.Item>
+              </div>
+
               <Divider />
 
-              <Title level={5}>WhatsApp Automation</Title>
-              <Form.Item
-                name="autoReply"
-                label="Enable Automated Welcome Message"
-                valuePropName="checked"
-              >
-                <Switch />
-              </Form.Item>
+              <Title level={5}>WhatsApp Automation &amp; Reports</Title>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+                <Form.Item
+                  name="autoReply"
+                  label="Welcome Greeting"
+                  valuePropName="checked"
+                >
+                  <Switch />
+                </Form.Item>
+                <Form.Item
+                  name="smartKeywordBot"
+                  label="Catalog / Order Status Bot"
+                  valuePropName="checked"
+                >
+                  <Switch />
+                </Form.Item>
+                <Form.Item
+                  name="dailySummaryEnabled"
+                  label="Nightly 9 PM Report"
+                  valuePropName="checked"
+                >
+                  <Switch />
+                </Form.Item>
+              </div>
 
               <Form.Item
                 name="welcomeMessage"
@@ -430,10 +601,129 @@ export default function SettingsPage() {
             showIcon
             message="GinieSpace Official Support Helpline"
             description="Platform alerts, system notifications, aur support queries ke liye official helpline number +91 9279259690 hai."
-            style={{ borderRadius: 12 }}
+            style={{ borderRadius: 12, marginBottom: 20 }}
           />
+
+          {planUsage && (
+            <Card
+              title={
+                <Space>
+                  <CrownOutlined style={{ color: planUsage.plan === "pro" ? "#d97706" : "#64748b" }} />
+                  <span>Workspace Plan &amp; Quotas</span>
+                  <Tag color={planUsage.plan === "pro" ? "gold" : "blue"}>{planUsage.plan.toUpperCase()}</Tag>
+                </Space>
+              }
+              style={{ borderRadius: 12, marginBottom: 20 }}
+            >
+              <Space direction="vertical" style={{ width: "100%" }} size={10}>
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+                    <span>Catalog Items</span>
+                    <span>{planUsage.usage.productsCount} / {planUsage.plan === "pro" ? "Unlimited" : planUsage.limits.maxProducts}</span>
+                  </div>
+                  {planUsage.plan === "free" && (
+                    <Progress percent={Math.min(100, Math.round((planUsage.usage.productsCount / planUsage.limits.maxProducts) * 100))} size="small" />
+                  )}
+                </div>
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+                    <span>Saved B2B Leads</span>
+                    <span>{planUsage.usage.leadsCount} / {planUsage.plan === "pro" ? "Unlimited" : planUsage.limits.maxLeads}</span>
+                  </div>
+                  {planUsage.plan === "free" && (
+                    <Progress percent={Math.min(100, Math.round((planUsage.usage.leadsCount / planUsage.limits.maxLeads) * 100))} size="small" />
+                  )}
+                </div>
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+                    <span>Team Staff Accounts</span>
+                    <span>{planUsage.usage.staffCount} / {planUsage.limits.maxStaff}</span>
+                  </div>
+                </div>
+                {planUsage.plan === "free" && (
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    Need unlimited products, leads &amp; 10 staff seats? Contact Support (+91 9279259690) to upgrade to <strong>PRO</strong>!
+                  </Text>
+                )}
+              </Space>
+            </Card>
+          )}
         </Col>
       </Row>
+
+      {user?.role !== "staff" && (
+        <Card
+          title={
+            <Space>
+              <TeamOutlined style={{ color: "#0284c7" }} />
+              <span>Team &amp; Staff Accounts</span>
+            </Space>
+          }
+          style={{ borderRadius: 12, marginTop: 20 }}
+        >
+          <Row gutter={[20, 20]}>
+            <Col xs={24} lg={10}>
+              <Form form={staffForm} layout="vertical" onFinish={handleCreateStaff} initialValues={{ staffPermissions: ["orders", "inbox", "customers"] }}>
+                <Form.Item name="name" label="Staff Name" rules={[{ required: true }]}>
+                  <Input placeholder="e.g. Raju (Billing / Delivery)" />
+                </Form.Item>
+                <Form.Item name="email" label="Staff Login Email" rules={[{ required: true, type: "email" }]}>
+                  <Input placeholder="raju@mystore.com" />
+                </Form.Item>
+                <Form.Item name="password" label="Staff Password" rules={[{ required: true, min: 6 }]}>
+                  <Input.Password placeholder="Min 6 characters" />
+                </Form.Item>
+                <Form.Item name="staffPermissions" label="Allowed Sections">
+                  <Checkbox.Group
+                    options={[
+                      { label: "Orders", value: "orders" },
+                      { label: "Live Inbox", value: "inbox" },
+                      { label: "Customers", value: "customers" },
+                      { label: "Catalog", value: "products" },
+                      { label: "Leads", value: "leads" },
+                    ]}
+                  />
+                </Form.Item>
+                <Button type="primary" htmlType="submit" icon={<UserAddOutlined />} loading={creatingStaff}>
+                  Create Staff Login
+                </Button>
+              </Form>
+            </Col>
+            <Col xs={24} lg={14}>
+              <Table
+                dataSource={staffList}
+                rowKey="id"
+                size="small"
+                pagination={false}
+                locale={{ emptyText: "No staff members added yet." }}
+                columns={[
+                  { title: "Name", dataIndex: "name", key: "name" },
+                  { title: "Email", dataIndex: "email", key: "email" },
+                  {
+                    title: "Permissions",
+                    dataIndex: "staffPermissions",
+                    key: "perms",
+                    render: (p: string) =>
+                      String(p || "")
+                        .split(",")
+                        .filter(Boolean)
+                        .map((x) => <Tag key={x}>{x}</Tag>),
+                  },
+                  {
+                    title: "Action",
+                    key: "act",
+                    render: (_: any, r: any) => (
+                      <Popconfirm title="Remove staff access?" onConfirm={() => handleDeleteStaff(r.id)}>
+                        <Button size="small" danger icon={<DeleteOutlined />} />
+                      </Popconfirm>
+                    ),
+                  },
+                ]}
+              />
+            </Col>
+          </Row>
+        </Card>
+      )}
 
       <Modal
         title="Link Your Store WhatsApp"

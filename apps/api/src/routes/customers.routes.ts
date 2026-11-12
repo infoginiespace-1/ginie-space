@@ -1,6 +1,8 @@
 import { Router, Request, Response } from "express";
 import { IDatabase } from "@giniespace/sheets-db";
 import { Server } from "socket.io";
+import { requireOwnerOrAdmin } from "../middleware/auth";
+import { normalizePhoneDigits } from "../utils/phone";
 
 export function createCustomersRouter(db: IDatabase, io: Server): Router {
   const router = Router();
@@ -29,6 +31,55 @@ export function createCustomersRouter(db: IDatabase, io: Server): Router {
       res.json({ customer });
     } catch {
       res.status(500).json({ error: "Could not load customer" });
+    }
+  });
+
+  router.get("/:id/ledger", async (req: Request, res: Response): Promise<void> => {
+    try {
+      const customer = await db.customers.findById((req.params.id as string));
+      if (!customer) {
+        res.status(404).json({ error: "Customer not found" });
+        return;
+      }
+      if (req.user?.role !== "admin" && customer.userId !== req.user!.id) {
+        res.status(403).json({ error: "Access denied" });
+        return;
+      }
+
+      const custDigits = normalizePhoneDigits(customer.phone || "").slice(-10);
+      const allOrders = await db.orders.findMany({ userId: customer.userId });
+      const matchingOrders = allOrders
+        .filter((o) => {
+          if (o.customerId === customer.id) return true;
+          const ordDigits = normalizePhoneDigits(o.customerPhone || "").slice(-10);
+          return Boolean(custDigits && ordDigits && ordDigits === custDigits);
+        })
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+      let totalSpent = 0;
+      let totalPaid = 0;
+      let pendingDue = 0;
+      for (const ord of matchingOrders) {
+        if (ord.status === "cancelled") continue;
+        const tot = Number(ord.totalAmount) || 0;
+        const paid = ord.paymentStatus === "paid" ? tot : Math.min(tot, Number(ord.paidAmount) || 0);
+        totalSpent += tot;
+        totalPaid += paid;
+        pendingDue += Math.max(0, tot - paid);
+      }
+
+      res.json({
+        customer,
+        orders: matchingOrders,
+        summary: {
+          totalOrders: matchingOrders.length,
+          totalSpent,
+          totalPaid,
+          pendingDue,
+        },
+      });
+    } catch {
+      res.status(500).json({ error: "Could not load customer ledger" });
     }
   });
 
@@ -96,7 +147,7 @@ export function createCustomersRouter(db: IDatabase, io: Server): Router {
     }
   });
 
-  router.delete("/:id", async (req: Request, res: Response): Promise<void> => {
+  router.delete("/:id", requireOwnerOrAdmin, async (req: Request, res: Response): Promise<void> => {
     try {
       const existing = await db.customers.findById((req.params.id as string));
       if (!existing) {

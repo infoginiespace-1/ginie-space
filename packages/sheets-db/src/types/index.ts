@@ -1,4 +1,4 @@
-export type UserRole = "admin" | "user";
+export type UserRole = "admin" | "user" | "staff";
 export type BusinessType = "retail" | "wholesale";
 export type OrderStatus = "pending" | "confirmed" | "dispatched" | "delivered" | "cancelled";
 export type PaymentStatus = "unpaid" | "partial" | "paid";
@@ -14,6 +14,8 @@ export interface User {
   businessType: BusinessType;
   status?: "active" | "suspended";
   plan?: "free" | "pro";
+  ownerId?: string;
+  staffPermissions?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -25,6 +27,7 @@ export interface BusinessProfile {
   phone: string;
   address: string;
   settingsJson: string;
+  slug?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -52,6 +55,7 @@ export interface Product {
   imageUrl?: string;
   category?: string;
   minOrderQty?: number;
+  costPrice?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -78,6 +82,7 @@ export interface Order {
   discountAmount?: number;
   deliveryCharge?: number;
   couponCode?: string;
+  deliveryAddress?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -95,6 +100,7 @@ export interface Lead {
   category: string;
   status: LeadStatus;
   notes?: string;
+  followUpDate?: string;
   createdAt: string;
   updatedAt: string;
 }

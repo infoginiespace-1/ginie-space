@@ -1,6 +1,8 @@
 import { Router, Request, Response } from "express";
 import { IDatabase } from "@giniespace/sheets-db";
 import { Server } from "socket.io";
+import { requireOwnerOrAdmin } from "../middleware/auth";
+import { FREE_PLAN_LIMITS, getEffectivePlan } from "../utils/plan";
 
 const MAX_IMAGE_BYTES = 60 * 1024; // 60 KB strict max
 const MAX_SHEETS_CELL_CHARS = 49500; // Google Sheets single-cell safety cap
@@ -64,7 +66,7 @@ export function createProductsRouter(db: IDatabase, io: Server): Router {
 
   router.post("/", async (req: Request, res: Response): Promise<void> => {
     try {
-      const { name, description, price, unit, stock, imageUrl, category, minOrderQty } = req.body;
+      const { name, description, price, unit, stock, imageUrl, category, minOrderQty, costPrice } = req.body;
       const imageErr = validateProductImageUrl(imageUrl);
       if (imageErr) {
         res.status(400).json({ error: imageErr });
@@ -72,6 +74,17 @@ export function createProductsRouter(db: IDatabase, io: Server): Router {
       }
       if (!name || price === undefined) {
         res.status(400).json({ error: "Item name and price are required" });
+        return;
+      }
+
+      const [plan, existingProducts] = await Promise.all([
+        getEffectivePlan(db, req.user),
+        db.products.findMany({ userId: req.user!.id }),
+      ]);
+      if (plan === "free" && existingProducts.length >= FREE_PLAN_LIMITS.maxProducts) {
+        res.status(403).json({
+          error: `Free plan allows up to ${FREE_PLAN_LIMITS.maxProducts} products. Upgrade to Pro for unlimited catalog items!`,
+        });
         return;
       }
 
@@ -85,6 +98,7 @@ export function createProductsRouter(db: IDatabase, io: Server): Router {
         imageUrl: imageUrl ? imageUrl.trim() : undefined,
         category: category ? String(category).trim() : "General",
         minOrderQty: minOrderQty !== undefined ? Math.max(1, Number(minOrderQty) || 1) : 1,
+        costPrice: costPrice !== undefined && costPrice !== "" ? Math.max(0, Number(costPrice) || 0) : undefined,
       });
 
       io.to(`user:${req.user!.id}`).emit("product:created", product);
@@ -107,7 +121,7 @@ export function createProductsRouter(db: IDatabase, io: Server): Router {
         return;
       }
 
-      const { name, description, price, unit, stock, imageUrl, category, minOrderQty } = req.body;
+      const { name, description, price, unit, stock, imageUrl, category, minOrderQty, costPrice } = req.body;
       const imageErr = validateProductImageUrl(imageUrl);
       if (imageErr) {
         res.status(400).json({ error: imageErr });
@@ -122,6 +136,7 @@ export function createProductsRouter(db: IDatabase, io: Server): Router {
         imageUrl: imageUrl !== undefined ? imageUrl.trim() : existing.imageUrl,
         category: category !== undefined ? String(category).trim() : existing.category,
         minOrderQty: minOrderQty !== undefined ? Math.max(1, Number(minOrderQty) || 1) : existing.minOrderQty,
+        costPrice: costPrice !== undefined ? (costPrice === "" || costPrice === null ? undefined : Math.max(0, Number(costPrice) || 0)) : existing.costPrice,
       });
 
       io.to(`user:${existing.userId}`).emit("product:updated", updated);
@@ -132,7 +147,7 @@ export function createProductsRouter(db: IDatabase, io: Server): Router {
     }
   });
 
-  router.delete("/:id", async (req: Request, res: Response): Promise<void> => {
+  router.delete("/:id", requireOwnerOrAdmin, async (req: Request, res: Response): Promise<void> => {
     try {
       const existing = await db.products.findById((req.params.id as string));
       if (!existing) {

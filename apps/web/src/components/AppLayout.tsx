@@ -139,10 +139,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const menuItems = [
-    { key: "/dashboard", icon: <DashboardOutlined />, label: "Dashboard" },
+  const allMenuItems = [
+    { key: "/dashboard", area: "dashboard", icon: <DashboardOutlined />, label: "Dashboard" },
     {
       key: "/inbox",
+      area: "inbox",
       icon: <MessageOutlined />,
       label: unreadChatsCount > 0 ? (
         <Space size={6}><span>Live Inbox</span><Badge count={unreadChatsCount} size="small" /></Space>
@@ -150,16 +151,26 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     },
     {
       key: "/orders",
+      area: "orders",
       icon: <ShoppingOutlined />,
       label: pendingOrdersCount > 0 ? (
         <Space size={6}><span>Orders &amp; Sales</span><Badge count={pendingOrdersCount} size="small" color="#fa8c16" /></Space>
       ) : "Orders & Sales",
     },
-    { key: "/leads", icon: <SearchOutlined />, label: "Find New Leads" },
-    { key: "/customers", icon: <TeamOutlined />, label: "Customers" },
-    { key: "/products", icon: <AppstoreOutlined />, label: "Catalog & Items" },
-    { key: "/settings", icon: <SettingOutlined />, label: "Settings" },
+    { key: "/leads", area: "leads", icon: <SearchOutlined />, label: "Find New Leads" },
+    { key: "/customers", area: "customers", icon: <TeamOutlined />, label: "Customers" },
+    { key: "/products", area: "products", icon: <AppstoreOutlined />, label: "Catalog & Items" },
+    { key: "/settings", area: "settings", icon: <SettingOutlined />, label: "Settings" },
   ];
+
+  const menuItems = allMenuItems
+    .filter((item) => {
+      if (user?.role !== "staff") return true;
+      if (item.area === "dashboard") return true;
+      if (item.area === "settings") return false;
+      return (user.staffPermissions || []).includes(item.area);
+    })
+    .map(({ area: _area, ...rest }) => rest);
 
   if (user?.role === "admin") {
     menuItems.push({ key: "/admin", icon: <SafetyCertificateOutlined />, label: "Admin Panel" });
@@ -328,11 +339,16 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               </Badge>
             </Popover>
             {!isMobile && (
-              <Space direction="horizontal">
+              <Space direction="horizontal" size={4}>
                 <Text strong>{user?.name}</Text>
-                <Tag color={user?.role === "admin" ? "purple" : "blue"}>
-                  {user?.role === "admin" ? "Admin" : "Business"}
+                <Tag color={user?.role === "admin" ? "purple" : user?.role === "staff" ? "cyan" : "blue"}>
+                  {user?.role === "admin" ? "Admin" : user?.role === "staff" ? "Staff" : "Business"}
                 </Tag>
+                {user?.role !== "admin" && (
+                  <Tag color={user?.plan === "pro" ? "gold" : "default"}>
+                    {user?.plan === "pro" ? "PRO" : "FREE"}
+                  </Tag>
+                )}
               </Space>
             )}
             <Button size={isMobile ? "small" : "middle"} icon={<LogoutOutlined />} onClick={logout}>

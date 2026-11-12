@@ -4,6 +4,7 @@ import { Server } from "socket.io";
 import { WhatsAppSessionManager } from "@giniespace/whatsapp-engine";
 import { NotificationService } from "../services/notification.service";
 import { normalizePhoneDigits, toE164 } from "../utils/phone";
+import { requireOwnerOrAdmin } from "../middleware/auth";
 
 export function createOrdersRouter(
   db: IDatabase,
@@ -42,7 +43,7 @@ export function createOrdersRouter(
 
   router.post("/", async (req: Request, res: Response): Promise<void> => {
     try {
-      const { customerId, customerName, customerPhone, items, totalAmount, notes, paymentStatus, paidAmount, discountAmount, deliveryCharge, couponCode } = req.body;
+      const { customerId, customerName, customerPhone, items, totalAmount, notes, paymentStatus, paidAmount, discountAmount, deliveryCharge, couponCode, deliveryAddress } = req.body;
 
       if (!customerName || !customerPhone) {
         res.status(400).json({ error: "Customer name and phone number are required" });
@@ -137,6 +138,7 @@ export function createOrdersRouter(
         discountAmount: cleanDiscount,
         deliveryCharge: cleanDelivery,
         couponCode: couponCode ? String(couponCode).trim().toUpperCase() : undefined,
+        deliveryAddress: deliveryAddress ? String(deliveryAddress).trim() : undefined,
       });
 
       io.to(`user:${req.user!.id}`).emit("order:created", order);
@@ -274,7 +276,7 @@ export function createOrdersRouter(
     }
   });
 
-  router.delete("/:id", async (req: Request, res: Response): Promise<void> => {
+  router.delete("/:id", requireOwnerOrAdmin, async (req: Request, res: Response): Promise<void> => {
     try {
       const existing = await db.orders.findById((req.params.id as string));
       if (!existing) {

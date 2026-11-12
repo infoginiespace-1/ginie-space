@@ -21,6 +21,7 @@ import {
   Divider,
   Select,
   Modal,
+  Alert,
 } from "antd";
 import {
   ShopOutlined,
@@ -39,6 +40,7 @@ const { Title, Text } = Typography;
 
 interface StoreInfo {
   id: string;
+  slug?: string;
   name: string;
   phone?: string;
   address?: string;
@@ -46,6 +48,9 @@ interface StoreInfo {
   upiId?: string;
   deliveryFee?: number;
   coupons?: Array<{ code: string; discountPercent: number }>;
+  logoUrl?: string;
+  isOpen?: boolean;
+  closedMessage?: string;
 }
 
 interface StoreProduct {
@@ -169,6 +174,7 @@ export default function PublicStorefrontPage() {
       const res = await api.post(`/api/storefront/${storeId}/orders`, {
         customerName: values.customerName,
         customerPhone: values.customerPhone,
+        deliveryAddress: values.deliveryAddress,
         items: cartItems,
         notes: values.notes,
         couponCode: appliedCoupon?.code,
@@ -246,25 +252,41 @@ export default function PublicStorefrontPage() {
           }}
         >
           <Space>
-            <div
-              style={{
-                width: 42,
-                height: 42,
-                borderRadius: 10,
-                background: "#25D366",
-                color: "#fff",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 20,
-              }}
-            >
-              <ShopOutlined />
-            </div>
+            {store.logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={store.logoUrl}
+                alt={store.name}
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 10,
+                  objectFit: "cover",
+                  border: "1px solid #e2e8f0",
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: 42,
+                  height: 42,
+                  borderRadius: 10,
+                  background: "#25D366",
+                  color: "#fff",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 20,
+                }}
+              >
+                <ShopOutlined />
+              </div>
+            )}
             <div>
               <Space size="small">
                 <Title level={4} style={{ margin: 0 }}>{store.name}</Title>
                 <Tag color="green">{store.businessType === "wholesale" ? "Wholesale" : "Retail"}</Tag>
+                {store.isOpen === false && <Tag color="red">CLOSED</Tag>}
               </Space>
               <div style={{ fontSize: 12, color: "#64748b" }}>
                 {store.phone && <span style={{ marginRight: 12 }}><PhoneOutlined /> {store.phone}</span>}
@@ -304,6 +326,15 @@ export default function PublicStorefrontPage() {
 
       {/* Product Catalog */}
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "24px 20px" }}>
+        {store.isOpen === false && (
+          <Alert
+            type="error"
+            showIcon
+            style={{ marginBottom: 16, borderRadius: 10 }}
+            message="Store is Currently Closed"
+            description={store.closedMessage || "This store is temporarily closed and not accepting new orders right now."}
+          />
+        )}
         <div style={{ marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
           <Input
             prefix={<SearchOutlined style={{ color: "#94a3b8" }} />}
@@ -577,8 +608,12 @@ export default function PublicStorefrontPage() {
                 <Input placeholder="e.g. 9876543210" />
               </Form.Item>
 
-              <Form.Item name="notes" label="Delivery Address / Note">
-                <Input.TextArea rows={2} placeholder="House/Shop no, landmark, preferred delivery time..." />
+              <Form.Item name="deliveryAddress" label="Delivery Address &amp; Pincode">
+                <Input.TextArea rows={2} placeholder="House/Shop No, Street, Area, City, Pincode..." />
+              </Form.Item>
+
+              <Form.Item name="notes" label="Order Note (Optional)">
+                <Input placeholder="Preferred delivery time or special instruction..." />
               </Form.Item>
 
               <Button
@@ -586,6 +621,7 @@ export default function PublicStorefrontPage() {
                 htmlType="submit"
                 size="large"
                 block
+                disabled={store.isOpen === false}
                 loading={submitting}
                 style={{ background: "#25D366", borderColor: "#25D366", fontWeight: 600 }}
               >

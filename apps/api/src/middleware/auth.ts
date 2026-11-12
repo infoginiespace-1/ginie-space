@@ -4,10 +4,13 @@ import { UserRole, BusinessType } from "@giniespace/sheets-db";
 
 export interface AuthenticatedUser {
   id: string;
+  actorId?: string;
   email: string;
   role: UserRole;
   businessType: BusinessType;
   name: string;
+  plan?: "free" | "pro";
+  staffPermissions?: string[];
 }
 
 declare global {
@@ -43,4 +46,31 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction): v
     return;
   }
   next();
+}
+
+export function requireOwnerOrAdmin(req: Request, res: Response, next: NextFunction): void {
+  if (!req.user || req.user.role === "staff") {
+    res.status(403).json({ error: "Only the business owner can modify this setting or remove records" });
+    return;
+  }
+  next();
+}
+
+export function requireStaffArea(area: string) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      res.status(401).json({ error: "Please log in to continue" });
+      return;
+    }
+    if (req.user.role === "admin" || req.user.role === "user") {
+      next();
+      return;
+    }
+    const perms = req.user.staffPermissions || [];
+    if (!perms.includes(area)) {
+      res.status(403).json({ error: `Staff account does not have access to ${area}` });
+      return;
+    }
+    next();
+  };
 }

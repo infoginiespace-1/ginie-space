@@ -6,10 +6,13 @@ import { getSocket, disconnectSocket } from "../lib/socket";
 
 export interface User {
   id: string;
+  actorId?: string;
   name: string;
   email: string;
-  role: "admin" | "user";
+  role: "admin" | "user" | "staff";
   businessType: "retail" | "wholesale";
+  plan?: "free" | "pro";
+  staffPermissions?: string[];
 }
 
 interface AuthContextType {

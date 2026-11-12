@@ -68,6 +68,7 @@ export function createAuthRouter(
         name: newUser.name,
         role: newUser.role,
         businessType: newUser.businessType,
+        plan: newUser.role === "admin" ? "pro" : "free",
       };
 
       const token = jwt.sign(payload, jwtSecret, { expiresIn: "30d" });
@@ -126,6 +127,7 @@ export function createAuthRouter(
           name: user?.name || "GinieSpace Admin",
           role: "admin",
           businessType: user?.businessType || "retail",
+          plan: "pro",
         };
 
         const token = jwt.sign(payload, jwtSecret, { expiresIn: "30d" });
@@ -155,12 +157,35 @@ export function createAuthRouter(
         return;
       }
 
+      let workspaceId = user.id;
+      let plan: "free" | "pro" = user.plan === "pro" ? "pro" : "free";
+      let staffPermissions: string[] | undefined;
+
+      if (user.role === "staff" && user.ownerId) {
+        workspaceId = user.ownerId;
+        const owner = await db.users.findById(user.ownerId).catch(() => null);
+        if (owner?.status === "suspended") {
+          res.status(403).json({ error: "The business owner's account is currently suspended." });
+          return;
+        }
+        plan = owner?.plan === "pro" ? "pro" : "free";
+        staffPermissions = (user.staffPermissions || "orders,inbox,customers")
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+      } else if (user.role === "admin") {
+        plan = "pro";
+      }
+
       const payload: AuthenticatedUser = {
-        id: user.id,
+        id: workspaceId,
+        actorId: user.role === "staff" ? user.id : undefined,
         email: user.email,
         name: user.name,
         role: user.role,
         businessType: user.businessType,
+        plan,
+        staffPermissions,
       };
 
       const token = jwt.sign(payload, jwtSecret, { expiresIn: "30d" });
@@ -204,11 +229,14 @@ export function createAuthRouter(
 
       res.json({
         user: {
-          id: user?.id || userPayload.id,
-          name: user?.name || userPayload.name,
-          email: user?.email || userPayload.email,
+          id: userPayload.id,
+          actorId: userPayload.actorId,
+          name: userPayload.role === "staff" ? userPayload.name : (user?.name || userPayload.name),
+          email: userPayload.role === "staff" ? userPayload.email : (user?.email || userPayload.email),
           role: userPayload.role || "admin",
           businessType: user?.businessType || userPayload.businessType || "retail",
+          plan: (user?.role === "admin" || userPayload.role === "admin" || user?.plan === "pro") ? "pro" : "free",
+          staffPermissions: userPayload.staffPermissions,
           createdAt: user?.createdAt || new Date().toISOString(),
         },
         business: business || {

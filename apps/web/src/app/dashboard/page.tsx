@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { AppLayout } from "../../components/AppLayout";
 import { api } from "../../lib/api";
+import { downloadCsv } from "../../lib/csv";
 import {
   Card,
   Row,
@@ -16,6 +17,7 @@ import {
   Alert,
   Modal,
   Input,
+  Select,
   message,
   Progress,
   Tooltip,
@@ -31,6 +33,8 @@ import {
   ClockCircleOutlined,
   BarChartOutlined,
   TrophyOutlined,
+  DownloadOutlined,
+  RiseOutlined,
 } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 
@@ -48,6 +52,10 @@ export default function DashboardPage() {
   const [summaryModalOpen, setSummaryModalOpen] = useState(false);
   const [summaryPhone, setSummaryPhone] = useState("");
   const [sendingSummary, setSendingSummary] = useState(false);
+  const [dateRange, setDateRange] = useState<"all" | "today" | "7d" | "30d" | "custom">("all");
+  const [customStart, setCustomStart] = useState("");
+  const [customEnd, setCustomEnd] = useState("");
+  const [gstRate, setGstRate] = useState(0);
 
   useEffect(() => {
     loadDashboardData();
@@ -72,6 +80,12 @@ export default function DashboardPage() {
         setBusinessName(setRes.data.business.name || "My Business");
         setBusinessPhone(setRes.data.business.phone || "");
         setSummaryPhone(setRes.data.business.phone || "");
+        if (setRes.data.business.settingsJson) {
+          try {
+            const parsedSettings = JSON.parse(setRes.data.business.settingsJson);
+            setGstRate(Number(parsedSettings.gstRate) || 0);
+          } catch {}
+        }
       }
     } catch {
       message.error("Failed to load dashboard data");
@@ -81,16 +95,97 @@ export default function DashboardPage() {
   };
 
   const todayPrefix = new Date().toISOString().slice(0, 10);
+  const filteredOrders = orders.filter((o) => {
+    const createdDate = String(o.createdAt || "").slice(0, 10);
+    if (!createdDate || dateRange === "all") return true;
+    if (dateRange === "today") return createdDate === todayPrefix;
+    if (dateRange === "7d") {
+      const cutoff = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10);
+      return createdDate >= cutoff;
+    }
+    if (dateRange === "30d") {
+      const cutoff = new Date(Date.now() - 29 * 86400000).toISOString().slice(0, 10);
+      return createdDate >= cutoff;
+    }
+    if (dateRange === "custom") {
+      if (customStart && createdDate < customStart) return false;
+      if (customEnd && createdDate > customEnd) return false;
+      return true;
+    }
+    return true;
+  });
+
   const todayOrders = orders.filter((o) => (o.createdAt || "").startsWith(todayPrefix));
   const todayRevenue = todayOrders.reduce((sum, o) => sum + (Number(o.totalAmount) || 0), 0);
-  const totalRevenue = orders.reduce((sum, o) => sum + (Number(o.totalAmount) || 0), 0);
-  const pendingOrders = orders.filter((o) => o.status === "pending");
+  const totalRevenue = filteredOrders.filter((o) => o.status !== "cancelled").reduce((sum, o) => sum + (Number(o.totalAmount) || 0), 0);
+  const pendingOrders = filteredOrders.filter((o) => o.status === "pending");
   const lowStockProducts = products.filter((p) => Number(p.stock) <= 5);
-  const recentOrders = [...orders]
+  const recentOrders = [...filteredOrders]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 6);
 
-  const nonCancelledOrders = orders.filter((o) => o.status !== "cancelled");
+  const nonCancelledOrders = filteredOrders.filter((o) => o.status !== "cancelled");
+
+  // Profit & Margin Estimation from catalog product costPrice
+  const costById = new Map<string, number>();
+  const costByName = new Map<string, number>();
+  for (const p of products) {
+    if (p.costPrice !== undefined && Number(p.costPrice) > 0) {
+      costById.set(p.id, Number(p.costPrice));
+      costByName.set(String(p.name || "").trim().toLowerCase(), Number(p.costPrice));
+    }
+  }
+
+  let estimatedProfit = 0;
+  let revenueWithCost = 0;
+  for (const ord of nonCancelledOrders) {
+    try {
+      const items = JSON.parse(ord.itemsJson || "[]");
+      if (Array.isArray(items)) {
+        for (const it of items) {
+          const qty = Number(it.quantity) || 1;
+          const sellPrice = Number(it.price) || 0;
+          const cost =
+            costById.get(String(it.productId || "")) ??
+            costByName.get(String(it.name || "").trim().toLowerCase());
+          if (cost !== undefined && cost > 0) {
+            revenueWithCost += sellPrice * qty;
+            estimatedProfit += (sellPrice - cost) * qty;
+          }
+        }
+      }
+    } catch {}
+  }
+  const profitMarginPct = revenueWithCost > 0 ? Math.round((estimatedProfit / revenueWithCost) * 100) : 0;
+
+  const handleExportSalesReport = () => {
+    downloadCsv(
+      `giniespace-sales-gst-report-${dateRange}.csv`,
+      ["Order ID", "Date", "Customer", "Phone", "Status", "Payment", "Subtotal", "Discount", "Delivery", "GST Est (₹)", "Total (₹)", "Paid (₹)", "Due (₹)"],
+      filteredOrders.map((o) => {
+        const tot = Number(o.totalAmount) || 0;
+        const paid = o.paymentStatus === "paid" ? tot : Math.min(tot, Number(o.paidAmount) || 0);
+        const due = Math.max(0, tot - paid);
+        const gstEst = gstRate > 0 ? Number(((tot * gstRate) / (100 + gstRate)).toFixed(2)) : 0;
+        return [
+          `#${String(o.id || "").slice(-6).toUpperCase()}`,
+          String(o.createdAt || "").slice(0, 10),
+          o.customerName,
+          o.customerPhone,
+          o.status,
+          o.paymentStatus || "unpaid",
+          tot + (Number(o.discountAmount) || 0) - (Number(o.deliveryCharge) || 0),
+          Number(o.discountAmount) || 0,
+          Number(o.deliveryCharge) || 0,
+          gstEst,
+          tot,
+          paid,
+          due,
+        ];
+      })
+    );
+    message.success("Sales & GST report downloaded!");
+  };
 
   // Top Selling Products leaderboard from itemized orders
   const productTotals = new Map<string, { name: string; qty: number; revenue: number }>();
@@ -204,7 +299,28 @@ export default function DashboardPage() {
           <Text type="secondary">Real-time overview of sales, pending orders, low stock &amp; leads</Text>
         </div>
 
-        <Space>
+        <Space wrap>
+          <Select
+            value={dateRange}
+            onChange={(v) => setDateRange(v)}
+            style={{ width: 150 }}
+            options={[
+              { value: "all", label: "All Time" },
+              { value: "today", label: "Today" },
+              { value: "7d", label: "Last 7 Days" },
+              { value: "30d", label: "Last 30 Days" },
+              { value: "custom", label: "Custom Dates" },
+            ]}
+          />
+          {dateRange === "custom" && (
+            <>
+              <Input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} style={{ width: 145 }} />
+              <Input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} style={{ width: 145 }} />
+            </>
+          )}
+          <Button icon={<DownloadOutlined />} onClick={handleExportSalesReport}>
+            Sales &amp; GST CSV
+          </Button>
           <Button icon={<ReloadOutlined />} onClick={loadDashboardData} loading={loading}>
             Refresh
           </Button>
@@ -242,7 +358,7 @@ export default function DashboardPage() {
         <Col xs={24} sm={12} lg={6}>
           <Card loading={loading} style={{ borderRadius: 12 }}>
             <Statistic
-              title="Total Revenue"
+              title={dateRange === "all" ? "Total Revenue" : "Filtered Revenue"}
               value={totalRevenue}
               prefix="₹"
               valueStyle={{ color: "#16a34a", fontWeight: 700 }}
@@ -256,13 +372,14 @@ export default function DashboardPage() {
         <Col xs={24} sm={12} lg={6}>
           <Card loading={loading} style={{ borderRadius: 12 }}>
             <Statistic
-              title="Pending Orders"
-              value={pendingOrders.length}
-              prefix={<ClockCircleOutlined />}
-              valueStyle={{ color: pendingOrders.length > 0 ? "#d97706" : "#16a34a", fontWeight: 700 }}
+              title="Est. Gross Profit"
+              value={estimatedProfit}
+              prefix={<RiseOutlined />}
+              suffix={profitMarginPct > 0 ? <Tag color="green" style={{ marginLeft: 4 }}>{profitMarginPct}%</Tag> : undefined}
+              valueStyle={{ color: estimatedProfit >= 0 ? "#0f766e" : "#ef4444", fontWeight: 700 }}
             />
             <Text type="secondary" style={{ fontSize: 12 }}>
-              Out of {orders.length} total orders
+              {revenueWithCost > 0 ? "Based on item Cost Price" : "Add Cost Price in Catalog to track margin"}
             </Text>
           </Card>
         </Col>
@@ -270,38 +387,33 @@ export default function DashboardPage() {
         <Col xs={24} sm={12} lg={6}>
           <Card loading={loading} style={{ borderRadius: 12 }}>
             <Statistic
-              title="Active Customers"
-              value={customers.length}
-              prefix={<TeamOutlined />}
-              valueStyle={{ color: "#2563eb", fontWeight: 700 }}
+              title="Pending Orders"
+              value={pendingOrders.length}
+              prefix={<ClockCircleOutlined />}
+              valueStyle={{ color: pendingOrders.length > 0 ? "#d97706" : "#16a34a", fontWeight: 700 }}
             />
-            <Button
-              type="link"
-              size="small"
-              style={{ padding: 0, marginTop: 4 }}
-              onClick={() => router.push("/customers")}
-            >
-              View Customers <ArrowRightOutlined />
-            </Button>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              Out of {filteredOrders.length} filtered orders
+            </Text>
           </Card>
         </Col>
 
         <Col xs={24} sm={12} lg={6}>
           <Card loading={loading} style={{ borderRadius: 12 }}>
             <Statistic
-              title="Saved B2B Leads"
-              value={leads.length}
-              prefix={<SearchOutlined />}
-              valueStyle={{ color: "#7c3aed", fontWeight: 700 }}
+              title="Customers &amp; Leads"
+              value={`${customers.length} / ${leads.length}`}
+              prefix={<TeamOutlined />}
+              valueStyle={{ color: "#2563eb", fontWeight: 700 }}
             />
-            <Button
-              type="link"
-              size="small"
-              style={{ padding: 0, marginTop: 4 }}
-              onClick={() => router.push("/leads")}
-            >
-              Launch Campaign <ArrowRightOutlined />
-            </Button>
+            <Space size={8} style={{ marginTop: 4 }}>
+              <Button type="link" size="small" style={{ padding: 0 }} onClick={() => router.push("/customers")}>
+                Customers
+              </Button>
+              <Button type="link" size="small" style={{ padding: 0 }} onClick={() => router.push("/leads")}>
+                Leads <ArrowRightOutlined />
+              </Button>
+            </Space>
           </Card>
         </Col>
       </Row>

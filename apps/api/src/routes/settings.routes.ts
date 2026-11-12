@@ -1,8 +1,10 @@
 import { Router, Request, Response } from "express";
+import bcrypt from "bcryptjs";
 import { IDatabase } from "@giniespace/sheets-db";
-import { requireAdmin } from "../middleware/auth";
+import { requireAdmin, requireOwnerOrAdmin } from "../middleware/auth";
 import { NotificationService } from "../services/notification.service";
 import { normalizePhoneDigits } from "../utils/phone";
+import { FREE_PLAN_LIMITS, getEffectivePlan } from "../utils/plan";
 
 export function createSettingsRouter(
   db: IDatabase,
@@ -19,9 +21,29 @@ export function createSettingsRouter(
     }
   });
 
-  router.put("/business", async (req: Request, res: Response): Promise<void> => {
+  router.put("/business", requireOwnerOrAdmin, async (req: Request, res: Response): Promise<void> => {
     try {
-      const { name, phone, address, settingsJson } = req.body;
+      const { name, phone, address, settingsJson, slug } = req.body;
+      let cleanSlug: string | undefined;
+      if (slug !== undefined) {
+        const trimmedSlug = String(slug).trim().toLowerCase().replace(/[^a-z0-9-]/g, "");
+        if (trimmedSlug && trimmedSlug.length < 3) {
+          res.status(400).json({ error: "Store custom link slug must be at least 3 characters (letters, numbers, hyphens)" });
+          return;
+        }
+        if (trimmedSlug) {
+          const allBusinesses = await db.businesses.findMany().catch(() => []);
+          const conflict = allBusinesses.find(
+            (b) => b.slug && b.slug.toLowerCase() === trimmedSlug && b.userId !== req.user!.id
+          );
+          if (conflict) {
+            res.status(400).json({ error: "This custom storefront slug is already taken by another store" });
+            return;
+          }
+        }
+        cleanSlug = trimmedSlug;
+      }
+
       let business = await db.businesses.findOne({ userId: req.user!.id });
 
       if (business) {
@@ -29,6 +51,7 @@ export function createSettingsRouter(
           name: name !== undefined ? name.trim() : business.name,
           phone: phone !== undefined ? phone.trim() : business.phone,
           address: address !== undefined ? address.trim() : business.address,
+          slug: cleanSlug !== undefined ? cleanSlug : business.slug,
           settingsJson: settingsJson !== undefined ? (typeof settingsJson === "string" ? settingsJson : JSON.stringify(settingsJson)) : business.settingsJson,
         });
       } else {
@@ -37,6 +60,7 @@ export function createSettingsRouter(
           name: name ? name.trim() : "My Business",
           phone: phone ? phone.trim() : "",
           address: address ? address.trim() : "",
+          slug: cleanSlug,
           settingsJson: settingsJson ? (typeof settingsJson === "string" ? settingsJson : JSON.stringify(settingsJson)) : "{}",
         });
       }
@@ -44,6 +68,137 @@ export function createSettingsRouter(
       res.json({ business, message: "Settings saved successfully" });
     } catch {
       res.status(500).json({ error: "Could not save settings" });
+    }
+  });
+
+  // Plan & Quotas Usage Endpoint
+  router.get("/plan-usage", async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = req.user!.id;
+      const [plan, products, leads, allUsers] = await Promise.all([
+        getEffectivePlan(db, req.user),
+        db.products.findMany({ userId }),
+        db.leads.findMany({ userId }),
+        db.users.findMany({ ownerId: userId }).catch(() => []),
+      ]);
+
+      const limits =
+        plan === "pro"
+          ? { maxProducts: 10000, maxLeads: 10000, maxStaff: 10, allowBulkBroadcast: true }
+          : { ...FREE_PLAN_LIMITS, allowBulkBroadcast: false };
+
+      res.json({
+        plan,
+        usage: {
+          productsCount: products.length,
+          leadsCount: leads.length,
+          staffCount: allUsers.length,
+        },
+        limits,
+      });
+    } catch {
+      res.status(500).json({ error: "Could not load plan usage" });
+    }
+  });
+
+  // Team / Staff Multi-User Management
+  router.get("/staff", requireOwnerOrAdmin, async (req: Request, res: Response): Promise<void> => {
+    try {
+      const staff = await db.users.findMany({ ownerId: req.user!.id });
+      res.json({
+        staff: staff.map((s) => ({
+          id: s.id,
+          name: s.name,
+          email: s.email,
+          status: s.status || "active",
+          staffPermissions: s.staffPermissions || "orders,inbox,customers",
+          createdAt: s.createdAt,
+        })),
+      });
+    } catch {
+      res.status(500).json({ error: "Could not load team staff accounts" });
+    }
+  });
+
+  router.post("/staff", requireOwnerOrAdmin, async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { name, email, password, staffPermissions } = req.body;
+      if (!name || !email || !password) {
+        res.status(400).json({ error: "Staff name, email, and password are required" });
+        return;
+      }
+      if (String(password).length < 6) {
+        res.status(400).json({ error: "Staff password must be at least 6 characters" });
+        return;
+      }
+
+      const [plan, existingStaff] = await Promise.all([
+        getEffectivePlan(db, req.user),
+        db.users.findMany({ ownerId: req.user!.id }),
+      ]);
+      const maxStaff = plan === "pro" ? 10 : FREE_PLAN_LIMITS.maxStaff;
+      if (existingStaff.length >= maxStaff) {
+        res.status(403).json({
+          error: `${plan === "pro" ? "Pro" : "Free"} plan supports up to ${maxStaff} staff account(s).`,
+        });
+        return;
+      }
+
+      const cleanEmail = String(email).toLowerCase().trim();
+      const dup = await db.users.findOne({ email: cleanEmail }).catch(() => null);
+      if (dup) {
+        res.status(400).json({ error: "An account with this email already exists" });
+        return;
+      }
+
+      const passwordHash = await bcrypt.hash(String(password), 10);
+      const perms = Array.isArray(staffPermissions)
+        ? staffPermissions.join(",")
+        : String(staffPermissions || "orders,inbox,customers");
+
+      const created = await db.users.create({
+        email: cleanEmail,
+        passwordHash,
+        name: String(name).trim(),
+        role: "staff",
+        businessType: req.user!.businessType,
+        ownerId: req.user!.id,
+        staffPermissions: perms,
+        status: "active",
+        plan,
+      });
+
+      res.status(201).json({
+        staff: {
+          id: created.id,
+          name: created.name,
+          email: created.email,
+          status: created.status,
+          staffPermissions: created.staffPermissions,
+          createdAt: created.createdAt,
+        },
+        message: "Staff account created successfully",
+      });
+    } catch {
+      res.status(500).json({ error: "Could not create staff account" });
+    }
+  });
+
+  router.delete("/staff/:staffId", requireOwnerOrAdmin, async (req: Request, res: Response): Promise<void> => {
+    try {
+      const target = await db.users.findById(String(req.params.staffId));
+      if (!target || target.role !== "staff") {
+        res.status(404).json({ error: "Staff member not found" });
+        return;
+      }
+      if (req.user?.role !== "admin" && target.ownerId !== req.user!.id) {
+        res.status(403).json({ error: "Access denied" });
+        return;
+      }
+      await db.users.delete(target.id);
+      res.json({ message: "Staff account removed" });
+    } catch {
+      res.status(500).json({ error: "Could not remove staff account" });
     }
   });
 
