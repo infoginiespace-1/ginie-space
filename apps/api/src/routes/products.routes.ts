@@ -64,7 +64,7 @@ export function createProductsRouter(db: IDatabase, io: Server): Router {
 
   router.post("/", async (req: Request, res: Response): Promise<void> => {
     try {
-      const { name, description, price, unit, stock, imageUrl } = req.body;
+      const { name, description, price, unit, stock, imageUrl, category, minOrderQty } = req.body;
       const imageErr = validateProductImageUrl(imageUrl);
       if (imageErr) {
         res.status(400).json({ error: imageErr });
@@ -83,6 +83,8 @@ export function createProductsRouter(db: IDatabase, io: Server): Router {
         unit: unit ? unit.trim() : "pcs",
         stock: stock !== undefined ? Number(stock) : 0,
         imageUrl: imageUrl ? imageUrl.trim() : undefined,
+        category: category ? String(category).trim() : "General",
+        minOrderQty: minOrderQty !== undefined ? Math.max(1, Number(minOrderQty) || 1) : 1,
       });
 
       io.to(`user:${req.user!.id}`).emit("product:created", product);
@@ -105,7 +107,7 @@ export function createProductsRouter(db: IDatabase, io: Server): Router {
         return;
       }
 
-      const { name, description, price, unit, stock, imageUrl } = req.body;
+      const { name, description, price, unit, stock, imageUrl, category, minOrderQty } = req.body;
       const imageErr = validateProductImageUrl(imageUrl);
       if (imageErr) {
         res.status(400).json({ error: imageErr });
@@ -118,6 +120,8 @@ export function createProductsRouter(db: IDatabase, io: Server): Router {
         unit: unit !== undefined ? unit.trim() : existing.unit,
         stock: stock !== undefined ? Number(stock) : existing.stock,
         imageUrl: imageUrl !== undefined ? imageUrl.trim() : existing.imageUrl,
+        category: category !== undefined ? String(category).trim() : existing.category,
+        minOrderQty: minOrderQty !== undefined ? Math.max(1, Number(minOrderQty) || 1) : existing.minOrderQty,
       });
 
       io.to(`user:${existing.userId}`).emit("product:updated", updated);

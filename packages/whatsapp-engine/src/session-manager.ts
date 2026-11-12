@@ -222,22 +222,26 @@ export class WhatsAppSessionManager extends EventEmitter {
     }
 
     const defaultJid = `${digits}@s.whatsapp.net`;
+    let payload: any = { text: req.messageText };
+    if (req.mediaDataUrl && req.mediaDataUrl.startsWith("data:image/")) {
+      const commaIdx = req.mediaDataUrl.indexOf(",");
+      if (commaIdx !== -1) {
+        const imgBuffer = Buffer.from(req.mediaDataUrl.slice(commaIdx + 1), "base64");
+        payload = { image: imgBuffer, caption: req.messageText };
+      }
+    }
 
     try {
       const results = await sock.onWhatsApp(digits);
       if (results && results.length > 0 && results[0].exists) {
-        const sent = await sock.sendMessage(results[0].jid, {
-          text: req.messageText,
-        });
+        const sent = await sock.sendMessage(results[0].jid, payload);
         return sent || null;
       }
     } catch (err: any) {
       console.warn(`[WhatsAppManager] onWhatsApp query warning: ${err.message}`);
     }
 
-    const result = await sock.sendMessage(defaultJid, {
-      text: req.messageText,
-    });
+    const result = await sock.sendMessage(defaultJid, payload);
 
     return result || null;
   }

@@ -15,7 +15,7 @@ export function createLeadsRouter(
 
   router.post("/discover", async (req: Request, res: Response): Promise<void> => {
     try {
-      const { query, area, pincode, city, state, country, pageSize } = req.body;
+      const { query, area, pincode, city, state, country, pageSize, pageToken } = req.body;
 
       if (!query && !area && !pincode && !city) {
         res.status(400).json({ error: "Please enter at least a category, area, city, or pincode to search" });
@@ -30,6 +30,7 @@ export function createLeadsRouter(
         state,
         country,
         pageSize: pageSize ? Number(pageSize) : 20,
+        pageToken: pageToken ? String(pageToken) : undefined,
       });
 
       res.json({
@@ -165,6 +166,25 @@ export function createLeadsRouter(
       res.json({ lead: updated, message: `Lead marked as ${status}` });
     } catch {
       res.status(500).json({ error: "Could not update lead status" });
+    }
+  });
+
+  router.delete("/:id", async (req: Request, res: Response): Promise<void> => {
+    try {
+      const existing = await db.leads.findById((req.params.id as string));
+      if (!existing) {
+        res.status(404).json({ error: "Lead not found" });
+        return;
+      }
+      if (req.user?.role !== "admin" && existing.userId !== req.user!.id) {
+        res.status(403).json({ error: "Access denied" });
+        return;
+      }
+      await db.leads.delete((req.params.id as string));
+      io.to(`user:${existing.userId}`).emit("lead:deleted", { id: (req.params.id as string) });
+      res.json({ message: "Lead deleted successfully" });
+    } catch {
+      res.status(500).json({ error: "Could not delete lead" });
     }
   });
 

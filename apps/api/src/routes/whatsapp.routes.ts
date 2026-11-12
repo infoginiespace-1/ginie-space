@@ -48,16 +48,17 @@ export function createWhatsAppRouter(
 
   router.post("/send", async (req: Request, res: Response): Promise<void> => {
     try {
-      const { recipientPhone, messageText, contactName } = req.body;
-      if (!recipientPhone || !messageText) {
-        res.status(400).json({ error: "Recipient phone number and message text are required" });
+      const { recipientPhone, messageText, contactName, mediaDataUrl } = req.body;
+      if (!recipientPhone || (!messageText && !mediaDataUrl)) {
+        res.status(400).json({ error: "Recipient phone number and message text or media are required" });
         return;
       }
 
       const sentInfo = await waManager.sendMessage({
         userId: req.user!.id,
         recipientPhone: recipientPhone.trim(),
-        messageText: messageText.trim(),
+        messageText: (messageText || "").trim(),
+        mediaDataUrl: typeof mediaDataUrl === "string" ? mediaDataUrl.trim() : undefined,
       });
 
       const now = new Date().toISOString();
@@ -67,7 +68,7 @@ export function createWhatsAppRouter(
         userId: req.user!.id,
         contactPhone: contactDigits,
         contactName: contactName ? String(contactName).trim() : "",
-        text: messageText.trim(),
+        text: mediaDataUrl ? `[Photo] ${(messageText || "").trim()}` : (messageText || "").trim(),
         fromMe: "true",
         messageId: sentInfo?.key?.id || Date.now().toString(),
         timestamp: now,

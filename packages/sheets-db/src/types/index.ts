@@ -12,6 +12,8 @@ export interface User {
   name: string;
   role: UserRole;
   businessType: BusinessType;
+  status?: "active" | "suspended";
+  plan?: "free" | "pro";
   createdAt: string;
   updatedAt: string;
 }
@@ -48,6 +50,8 @@ export interface Product {
   unit: string;
   stock: number;
   imageUrl?: string;
+  category?: string;
+  minOrderQty?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -71,6 +75,9 @@ export interface Order {
   notes?: string;
   paymentStatus?: PaymentStatus;
   paidAmount?: number;
+  discountAmount?: number;
+  deliveryCharge?: number;
+  couponCode?: string;
   createdAt: string;
   updatedAt: string;
 }

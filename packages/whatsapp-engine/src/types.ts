@@ -23,6 +23,7 @@ export interface OutboundMessageRequest {
   userId: string;
   recipientPhone: string;
   messageText: string;
+  mediaDataUrl?: string;
 }
 
 export interface AuthStateProvider {

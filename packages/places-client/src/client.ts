@@ -41,12 +41,17 @@ export class GooglePlacesClient {
     ].join(",");
 
     try {
+      const body: Record<string, any> = {
+        textQuery,
+        pageSize: Math.min(criteria.pageSize || 20, 20),
+      };
+      if (criteria.pageToken) {
+        body.pageToken = criteria.pageToken;
+      }
+
       const response = await axios.post(
         this.endpoint,
-        {
-          textQuery,
-          pageSize: Math.min(criteria.pageSize || 20, 20),
-        },
+        body,
         {
           headers: {
             "Content-Type": "application/json",

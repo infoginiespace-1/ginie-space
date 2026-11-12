@@ -67,7 +67,7 @@ export function createStorefrontRouter(
         return;
       }
 
-      let parsedSettings: { upiId?: string; gstin?: string; gstRate?: number } = {};
+      let parsedSettings: { upiId?: string; gstin?: string; gstRate?: number; deliveryFee?: number; coupons?: Array<{ code: string; discountPercent: number }> } = {};
       if (business?.settingsJson) {
         try {
           parsedSettings = JSON.parse(business.settingsJson);
@@ -83,6 +83,8 @@ export function createStorefrontRouter(
           businessType: owner?.businessType || "retail",
           upiId: parsedSettings.upiId || "",
           gstin: parsedSettings.gstin || "",
+          deliveryFee: Number(parsedSettings.deliveryFee) || 0,
+          coupons: Array.isArray(parsedSettings.coupons) ? parsedSettings.coupons : [],
         },
         products,
       });
@@ -91,11 +93,54 @@ export function createStorefrontRouter(
     }
   });
 
+  // Public customer order status lookup by WhatsApp phone & optional Order ID
+  router.get("/:storeId/track", async (req: Request, res: Response): Promise<void> => {
+    try {
+      const storeId = String(req.params.storeId || "").trim();
+      const phoneRaw = String(req.query.phone || "").trim();
+      const orderIdQuery = String(req.query.orderId || "").trim().toLowerCase().replace(/^#/, "");
+
+      const phoneDigits = normalizePhoneDigits(phoneRaw);
+      if (!storeId || !phoneDigits || phoneDigits.length < 10) {
+        res.status(400).json({ error: "Please enter a valid 10-digit WhatsApp mobile number" });
+        return;
+      }
+
+      const orders = await db.orders.findMany({ userId: storeId });
+      const matching = orders
+        .filter((o) => {
+          const orderDigits = normalizePhoneDigits(o.customerPhone || "");
+          const phoneMatches = orderDigits.slice(-10) === phoneDigits.slice(-10);
+          if (!phoneMatches) return false;
+          if (!orderIdQuery) return true;
+          return o.id.toLowerCase().endsWith(orderIdQuery) || o.id.toLowerCase() === orderIdQuery;
+        })
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .map((o) => ({
+          id: o.id,
+          customerName: o.customerName,
+          itemsJson: o.itemsJson,
+          totalAmount: o.totalAmount,
+          status: o.status,
+          paymentStatus: o.paymentStatus || "unpaid",
+          paidAmount: o.paidAmount || 0,
+          discountAmount: o.discountAmount || 0,
+          deliveryCharge: o.deliveryCharge || 0,
+          couponCode: o.couponCode || "",
+          createdAt: o.createdAt,
+        }));
+
+      res.json({ orders: matching });
+    } catch {
+      res.status(500).json({ error: "Could not track orders right now" });
+    }
+  });
+
   // Public Storefront customer order submission
   router.post("/:storeId/orders", async (req: Request, res: Response): Promise<void> => {
     try {
       const storeId = String(req.params.storeId || "").trim();
-      const { customerName, customerPhone, items, notes } = req.body;
+      const { customerName, customerPhone, items, notes, couponCode } = req.body;
 
       if (!storeId || !customerName || !customerPhone || !Array.isArray(items) || items.length === 0) {
         res.status(400).json({ error: "Customer name, WhatsApp phone, and at least one item are required" });
@@ -124,9 +169,10 @@ export function createStorefrontRouter(
       let totalAmount = 0;
 
       for (const reqItem of items) {
-        const qty = Math.max(1, Math.floor(Number(reqItem.quantity) || 0));
         const prod = productMap.get(String(reqItem.productId || ""));
         if (!prod) continue;
+        const minQty = Math.max(1, Number(prod.minOrderQty) || 1);
+        const qty = Math.max(minQty, Math.floor(Number(reqItem.quantity) || 0));
         verifiedItems.push({
           productId: prod.id,
           name: prod.name,
@@ -141,6 +187,29 @@ export function createStorefrontRouter(
         res.status(400).json({ error: "No valid catalog items selected" });
         return;
       }
+
+      let deliveryCharge = 0;
+      let discountAmount = 0;
+      let appliedCoupon = "";
+      if (business?.settingsJson) {
+        try {
+          const sj = JSON.parse(business.settingsJson);
+          deliveryCharge = Math.max(0, Number(sj.deliveryFee) || 0);
+          if (couponCode && Array.isArray(sj.coupons)) {
+            const cleanCode = String(couponCode).trim().toUpperCase();
+            const matchedCoupon = sj.coupons.find(
+              (c: any) => String(c.code || "").trim().toUpperCase() === cleanCode
+            );
+            if (matchedCoupon && Number(matchedCoupon.discountPercent) > 0) {
+              const pct = Math.min(90, Math.max(0, Number(matchedCoupon.discountPercent)));
+              discountAmount = Math.round((totalAmount * pct) / 100);
+              appliedCoupon = cleanCode;
+            }
+          }
+        } catch {}
+      }
+
+      totalAmount = Math.max(0, totalAmount - discountAmount + deliveryCharge);
 
       // Auto-register customer if not already in store's directory
       const e164Phone = toE164(phoneDigits);
@@ -171,6 +240,9 @@ export function createStorefrontRouter(
         status: "pending",
         paymentStatus: "unpaid",
         paidAmount: 0,
+        discountAmount,
+        deliveryCharge,
+        couponCode: appliedCoupon || undefined,
         notes: notes ? `[Online Store] ${notes.trim()}` : "[Online Store Order]",
       });
 

@@ -43,6 +43,7 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
+  const savedQuickRepliesRef = React.useRef<Array<{ label: string; text: string }> | undefined>(undefined);
 
   // Merchant WhatsApp Connection State
   const [waStatus, setWaStatus] = useState<"disconnected" | "connecting" | "connected">("disconnected");
@@ -55,18 +56,35 @@ export default function SettingsPage() {
     api.get("/api/settings")
       .then((res) => {
         const b = res.data.business || {};
-        let parsedSettings: { autoReply: boolean; welcomeMessage: string; upiId?: string; gstin?: string; gstRate?: number } = {
+        let parsedSettings: {
+          autoReply: boolean;
+          welcomeMessage: string;
+          upiId?: string;
+          gstin?: string;
+          gstRate?: number;
+          deliveryFee?: number;
+          couponCode?: string;
+          couponPercent?: number;
+          quickReplies?: Array<{ label: string; text: string }>;
+        } = {
           autoReply: true,
           welcomeMessage: "Hello! Welcome to our store.",
           upiId: "",
           gstin: "",
           gstRate: 0,
+          deliveryFee: 0,
+          couponCode: "",
+          couponPercent: 0,
         };
         if (b.settingsJson) {
           try {
             parsedSettings = { ...parsedSettings, ...JSON.parse(b.settingsJson) };
           } catch {}
         }
+        if (parsedSettings.quickReplies) {
+          savedQuickRepliesRef.current = parsedSettings.quickReplies;
+        }
+        const firstCoupon = Array.isArray((parsedSettings as any).coupons) ? (parsedSettings as any).coupons[0] : null;
         form.setFieldsValue({
           name: b.name || "",
           phone: b.phone || "",
@@ -74,6 +92,9 @@ export default function SettingsPage() {
           upiId: parsedSettings.upiId || "",
           gstin: parsedSettings.gstin || "",
           gstRate: parsedSettings.gstRate || 0,
+          deliveryFee: parsedSettings.deliveryFee || 0,
+          couponCode: firstCoupon?.code || "",
+          couponPercent: firstCoupon?.discountPercent || 0,
           autoReply: parsedSettings.autoReply,
           welcomeMessage: parsedSettings.welcomeMessage,
         });
@@ -166,12 +187,19 @@ export default function SettingsPage() {
   const handleSave = async (values: any) => {
     try {
       setSaving(true);
+      const cleanCoupon = String(values.couponCode || "").trim().toUpperCase();
+      const pct = Math.min(90, Math.max(0, Number(values.couponPercent) || 0));
+      const coupons = cleanCoupon && pct > 0 ? [{ code: cleanCoupon, discountPercent: pct }] : [];
+
       const settingsJson = JSON.stringify({
         autoReply: values.autoReply,
         welcomeMessage: values.welcomeMessage,
         upiId: (values.upiId || "").trim(),
         gstin: (values.gstin || "").trim().toUpperCase(),
         gstRate: Number(values.gstRate) || 0,
+        deliveryFee: Math.max(0, Number(values.deliveryFee) || 0),
+        coupons,
+        quickReplies: savedQuickRepliesRef.current,
       });
 
       await api.put("/api/settings/business", {
@@ -228,6 +256,18 @@ export default function SettingsPage() {
 
                 <Form.Item name="gstRate" label="Default GST %">
                   <Input type="number" min={0} max={28} placeholder="0 or 18" />
+                </Form.Item>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+                <Form.Item name="deliveryFee" label="Storefront Delivery Fee (₹)">
+                  <Input type="number" min={0} placeholder="0" />
+                </Form.Item>
+                <Form.Item name="couponCode" label="Storefront Coupon Code">
+                  <Input placeholder="e.g. WELCOME10" />
+                </Form.Item>
+                <Form.Item name="couponPercent" label="Coupon Discount %">
+                  <Input type="number" min={0} max={90} placeholder="10" />
                 </Form.Item>
               </div>
 

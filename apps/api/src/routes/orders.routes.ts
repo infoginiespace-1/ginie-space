@@ -42,7 +42,7 @@ export function createOrdersRouter(
 
   router.post("/", async (req: Request, res: Response): Promise<void> => {
     try {
-      const { customerId, customerName, customerPhone, items, totalAmount, notes, paymentStatus, paidAmount } = req.body;
+      const { customerId, customerName, customerPhone, items, totalAmount, notes, paymentStatus, paidAmount, discountAmount, deliveryCharge, couponCode } = req.body;
 
       if (!customerName || !customerPhone) {
         res.status(400).json({ error: "Customer name and phone number are required" });
@@ -56,6 +56,8 @@ export function createOrdersRouter(
       }
 
       let resolvedItems: any[] = parsedItems;
+      const cleanDiscount = Math.max(0, Number(discountAmount) || 0);
+      const cleanDelivery = Math.max(0, Number(deliveryCharge) || 0);
       let resolvedTotal = Number(totalAmount) || 0;
 
       // Verify itemized products, compute total if not manually provided, and decrement stock
@@ -85,7 +87,7 @@ export function createOrdersRouter(
         });
 
         if (totalAmount === undefined || Number(totalAmount) <= 0) {
-          resolvedTotal = computedItemsTotal;
+          resolvedTotal = Math.max(0, computedItemsTotal - cleanDiscount + cleanDelivery);
         }
       }
 
@@ -132,6 +134,9 @@ export function createOrdersRouter(
         notes: notes ? notes.trim() : undefined,
         paymentStatus: resolvedPayStatus,
         paidAmount: resolvedPaidAmount,
+        discountAmount: cleanDiscount,
+        deliveryCharge: cleanDelivery,
+        couponCode: couponCode ? String(couponCode).trim().toUpperCase() : undefined,
       });
 
       io.to(`user:${req.user!.id}`).emit("order:created", order);
@@ -169,6 +174,32 @@ export function createOrdersRouter(
       const updated = await db.orders.update((req.params.id as string), {
         status: status as OrderStatus,
       });
+
+      // Automatically restock inventory when cancelling a non-cancelled itemized order (and re-deduct if un-cancelling)
+      const becomingCancelled = existing.status !== "cancelled" && status === "cancelled";
+      const unCancelling = existing.status === "cancelled" && status !== "cancelled";
+      if (becomingCancelled || unCancelling) {
+        try {
+          const ordItems = JSON.parse(existing.itemsJson || "[]");
+          if (Array.isArray(ordItems) && ordItems.length > 0) {
+            const userProducts = await db.products.findMany({ userId: existing.userId });
+            const prodMap = new Map(userProducts.map((p) => [p.id, p]));
+            for (const item of ordItems) {
+              const prod = item.productId ? prodMap.get(String(item.productId)) : undefined;
+              const qty = Math.max(1, Number(item.quantity) || 1);
+              if (prod) {
+                const nextStock = becomingCancelled
+                  ? Number(prod.stock || 0) + qty
+                  : Math.max(0, Number(prod.stock || 0) - qty);
+                const updatedProd = await db.products.update(prod.id, { stock: nextStock }).catch(() => null);
+                if (updatedProd) {
+                  io.to(`user:${existing.userId}`).emit("product:updated", updatedProd);
+                }
+              }
+            }
+          }
+        } catch {}
+      }
 
       io.to(`user:${existing.userId}`).emit("order:updated", updated);
       io.to(`user:${existing.userId}`).emit("order:status_changed", {

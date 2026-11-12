@@ -48,6 +48,8 @@ interface Product {
   unit: string;
   stock: number;
   imageUrl?: string;
+  category?: string;
+  minOrderQty?: number;
 }
 
 function isContainerUnit(unit?: string): boolean {
@@ -139,6 +141,8 @@ export default function ProductsPage() {
   const [imagePreview, setImagePreview] = useState<string>("");
   const [csvModalOpen, setCsvModalOpen] = useState(false);
   const [importingCsv, setImportingCsv] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [searchTerm, setSearchTerm] = useState<string>("");
   const [form] = Form.useForm();
 
   const watchedUnitType = Form.useWatch("unitType", form) || "pcs";
@@ -206,6 +210,8 @@ export default function ProductsPage() {
         unit: formattedUnit,
         stock: values.stock !== undefined ? Number(values.stock) : 0,
         imageUrl: imagePreview || "",
+        category: values.category ? String(values.category).trim() : "General",
+        minOrderQty: values.minOrderQty ? Math.max(1, Number(values.minOrderQty) || 1) : 1,
       };
 
       if (editingProduct) {
@@ -252,6 +258,8 @@ export default function ProductsPage() {
       const priceIdx = header.findIndex((h) => h.includes("price") || h.includes("rate"));
       const unitIdx = header.findIndex((h) => h.includes("unit"));
       const stockIdx = header.findIndex((h) => h.includes("stock") || h.includes("qty"));
+      const catIdx = header.findIndex((h) => h.includes("cat"));
+      const moqIdx = header.findIndex((h) => h.includes("moq") || h.includes("min"));
 
       if (nameIdx === -1 || priceIdx === -1) {
         message.error("CSV header must include 'Name' and 'Price' columns");
@@ -269,6 +277,8 @@ export default function ProductsPage() {
           price,
           unit: unitIdx >= 0 && cols[unitIdx]?.trim() ? cols[unitIdx].trim() : "pcs",
           stock: stockIdx >= 0 && !Number.isNaN(Number(cols[stockIdx])) ? Number(cols[stockIdx]) : 10,
+          category: catIdx >= 0 && cols[catIdx]?.trim() ? cols[catIdx].trim() : "General",
+          minOrderQty: moqIdx >= 0 && Number(cols[moqIdx]) > 1 ? Number(cols[moqIdx]) : 1,
         });
         imported++;
       }
@@ -293,6 +303,8 @@ export default function ProductsPage() {
       packQty: undefined,
       packSubUnit: "pcs",
       stock: 10,
+      category: "General",
+      minOrderQty: 1,
     });
     setModalVisible(true);
   };
@@ -308,6 +320,8 @@ export default function ProductsPage() {
       stock: product.stock,
       unitType: parsedUnit.unitType,
       packQty: parsedUnit.packQty,
+      category: product.category || "General",
+      minOrderQty: product.minOrderQty || 1,
       packSubUnit: parsedUnit.packSubUnit,
     });
     setModalVisible(true);
@@ -352,7 +366,15 @@ export default function ProductsPage() {
             </div>
           )}
           <div>
-            <div style={{ fontWeight: 600 }}>{name}</div>
+            <div style={{ fontWeight: 600 }}>
+              {name}{" "}
+              {record.category && record.category !== "General" && (
+                <Tag color="blue" style={{ fontSize: 11 }}>{record.category}</Tag>
+              )}
+              {Number(record.minOrderQty) > 1 && (
+                <Tag color="purple" style={{ fontSize: 11 }}>MOQ: {record.minOrderQty}</Tag>
+              )}
+            </div>
             <Text type="secondary" style={{ fontSize: 12 }}>{record.description || "No description"}</Text>
           </div>
         </div>
@@ -465,8 +487,38 @@ export default function ProductsPage() {
       )}
 
       <Card style={{ borderRadius: 12 }}>
+        <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+          <Input
+            placeholder="Search products by name or description..."
+            allowClear
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{ maxWidth: 300 }}
+          />
+          <Select
+            value={categoryFilter}
+            onChange={setCategoryFilter}
+            style={{ width: 190 }}
+            options={[
+              { value: "all", label: "All Categories" },
+              ...Array.from(new Set(products.map((p) => p.category || "General"))).map((cat) => ({
+                value: cat,
+                label: cat,
+              })),
+            ]}
+          />
+        </div>
         <Table
-          dataSource={products}
+          dataSource={products.filter((p) => {
+            const matchesCat = categoryFilter === "all" || (p.category || "General") === categoryFilter;
+            const q = searchTerm.trim().toLowerCase();
+            const matchesSearch =
+              !q ||
+              p.name.toLowerCase().includes(q) ||
+              (p.description || "").toLowerCase().includes(q) ||
+              (p.category || "").toLowerCase().includes(q);
+            return matchesCat && matchesSearch;
+          })}
           columns={columns}
           rowKey="id"
           loading={loading}
@@ -499,6 +551,28 @@ export default function ProductsPage() {
           >
             <Input placeholder="e.g. Soan Papdi — Bharat Gold" />
           </Form.Item>
+
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16 }}>
+            <Form.Item name="category" label="Category">
+              <Select
+                showSearch
+                placeholder="Select or type category"
+                options={[
+                  { value: "General", label: "General" },
+                  { value: "Sweets & Snacks", label: "Sweets & Snacks" },
+                  { value: "Grocery & FMCG", label: "Grocery & FMCG" },
+                  { value: "Clothing & Textile", label: "Clothing & Textile" },
+                  { value: "Hardware & Tools", label: "Hardware & Tools" },
+                  { value: "Electronics", label: "Electronics" },
+                  { value: "Dairy & Bakery", label: "Dairy & Bakery" },
+                  { value: "Wholesale Bulk", label: "Wholesale Bulk" },
+                ]}
+              />
+            </Form.Item>
+            <Form.Item name="minOrderQty" label="Min Order Qty (MOQ)">
+              <InputNumber style={{ width: "100%" }} min={1} placeholder="1" />
+            </Form.Item>
+          </div>
 
           <Form.Item name="description" label="Short Description">
             <Input.TextArea rows={2} placeholder="Flavour, brand, specs, or packaging details..." />

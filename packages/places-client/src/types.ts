@@ -6,6 +6,7 @@ export interface PlacesSearchCriteria {
   state?: string;
   country?: string;
   pageSize?: number;
+  pageToken?: string;
 }
 
 export interface DiscoveredLead {

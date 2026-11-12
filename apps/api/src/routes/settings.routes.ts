@@ -57,6 +57,8 @@ export function createSettingsRouter(
         email: u.email,
         role: u.role,
         businessType: u.businessType,
+        status: u.status || "active",
+        plan: u.plan || "free",
         createdAt: u.createdAt,
       }));
       res.json({ users: sanitized });

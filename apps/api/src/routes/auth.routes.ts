@@ -144,6 +144,11 @@ export function createAuthRouter(
         return;
       }
 
+      if (user.status === "suspended") {
+        res.status(403).json({ error: "Your account has been suspended by Admin. Please contact Support (+91 9279259690)." });
+        return;
+      }
+
       const valid = await bcrypt.compare(password, user.passwordHash);
       if (!valid) {
         res.status(401).json({ error: "Incorrect email or password. Please try again." });

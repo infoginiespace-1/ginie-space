@@ -22,6 +22,7 @@ import {
   Popconfirm,
   Spin,
   Divider,
+  Select,
 } from "antd";
 import {
   UserOutlined,
@@ -35,6 +36,7 @@ import {
   SafetyCertificateOutlined,
   BellOutlined,
   MessageOutlined,
+  DownloadOutlined,
 } from "@ant-design/icons";
 import { api } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
@@ -49,6 +51,8 @@ interface AdminUser {
   email: string;
   role: "admin" | "user";
   businessType: "retail" | "wholesale";
+  status?: "active" | "suspended";
+  plan?: "free" | "pro";
   createdAt: string;
 }
 
@@ -59,6 +63,8 @@ export default function AdminPage() {
   // Users Management State
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
+  const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
+  const [downloadingBackup, setDownloadingBackup] = useState(false);
 
   // WhatsApp Support Bot State
   const [supportStatus, setSupportStatus] = useState<"disconnected" | "connecting" | "connected">("disconnected");
@@ -243,6 +249,42 @@ export default function AdminPage() {
     }
   };
 
+  const handleUpdateUserAccount = async (targetUser: AdminUser, patch: { status?: "active" | "suspended"; plan?: "free" | "pro" }) => {
+    try {
+      setUpdatingUserId(targetUser.id);
+      const res = await api.put(`/api/admin/users/${targetUser.id}`, patch);
+      if (res.data?.user) {
+        setUsers((prev) => prev.map((u) => (u.id === targetUser.id ? res.data.user : u)));
+      }
+      message.success(`Updated ${targetUser.name}'s account`);
+    } catch (err: any) {
+      message.error(err.message || "Could not update user account");
+    } finally {
+      setUpdatingUserId(null);
+    }
+  };
+
+  const handleDownloadBackup = async () => {
+    try {
+      setDownloadingBackup(true);
+      const res = await api.get("/api/admin/backup");
+      const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `giniespace-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      message.success("Full platform JSON backup downloaded!");
+    } catch (err: any) {
+      message.error(err.message || "Failed to export backup");
+    } finally {
+      setDownloadingBackup(false);
+    }
+  };
+
   const columns = [
     {
       title: "Name",
@@ -280,6 +322,47 @@ export default function AdminPage() {
       dataIndex: "createdAt",
       key: "createdAt",
       render: (date: string) => new Date(date).toLocaleDateString(),
+    },
+    {
+      title: "Plan",
+      dataIndex: "plan",
+      key: "plan",
+      render: (plan: string | undefined, record: AdminUser) => (
+        <Select
+          size="small"
+          value={plan || "free"}
+          style={{ width: 95 }}
+          loading={updatingUserId === record.id}
+          onChange={(val) => handleUpdateUserAccount(record, { plan: val as "free" | "pro" })}
+          options={[
+            { value: "free", label: "FREE" },
+            { value: "pro", label: "PRO" },
+          ]}
+        />
+      ),
+    },
+    {
+      title: "Status & Access",
+      dataIndex: "status",
+      key: "status",
+      render: (status: string | undefined, record: AdminUser) => {
+        const isSuspended = status === "suspended";
+        return (
+          <Space>
+            <Tag color={isSuspended ? "red" : "green"}>{isSuspended ? "SUSPENDED" : "ACTIVE"}</Tag>
+            {record.role !== "admin" && (
+              <Button
+                size="small"
+                danger={!isSuspended}
+                loading={updatingUserId === record.id}
+                onClick={() => handleUpdateUserAccount(record, { status: isSuspended ? "active" : "suspended" })}
+              >
+                {isSuspended ? "Activate" : "Suspend"}
+              </Button>
+            )}
+          </Space>
+        );
+      },
     },
   ];
 
@@ -562,7 +645,19 @@ export default function AdminPage() {
                   </Col>
                 </Row>
 
-                <Card title="Registered Business Users" style={{ borderRadius: 12 }}>
+                <Card
+                  title="Registered Business Users"
+                  extra={
+                    <Button
+                      icon={<DownloadOutlined />}
+                      loading={downloadingBackup}
+                      onClick={handleDownloadBackup}
+                    >
+                      Download Full Platform Backup (JSON)
+                    </Button>
+                  }
+                  style={{ borderRadius: 12 }}
+                >
                   <Table
                     dataSource={users}
                     columns={columns}

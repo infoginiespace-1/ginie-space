@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Layout, Menu, Button, Modal, Badge, Tag, Space, Typography, Spin, message, Drawer, Grid, Tooltip } from "antd";
+import { Layout, Menu, Button, Modal, Badge, Tag, Space, Typography, Spin, message, Drawer, Grid, Tooltip, Popover, List } from "antd";
 import {
   DashboardOutlined,
   MessageOutlined,
@@ -18,6 +18,7 @@ import {
   SyncOutlined,
   MenuOutlined,
   WhatsAppOutlined,
+  BellOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "../context/AuthContext";
 import { usePathname, useRouter } from "next/navigation";
@@ -40,8 +41,21 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [qrModalVisible, setQrModalVisible] = useState(false);
   const [connecting, setConnecting] = useState(false);
+  const [pendingOrdersCount, setPendingOrdersCount] = useState(0);
+  const [lowStockItems, setLowStockItems] = useState<Array<{ id: string; name: string; stock: number; unit?: string }>>([]);
+  const [unreadChatsCount, setUnreadChatsCount] = useState(0);
 
   useEffect(() => {
+    Promise.all([
+      api.get("/api/orders").catch(() => ({ data: { orders: [] } })),
+      api.get("/api/products").catch(() => ({ data: { products: [] } })),
+    ]).then(([ordRes, prodRes]) => {
+      const ords = ordRes.data?.orders || [];
+      setPendingOrdersCount(ords.filter((o: any) => o.status === "pending").length);
+      const prods = prodRes.data?.products || [];
+      setLowStockItems(prods.filter((p: any) => Number(p.stock) <= 5));
+    });
+
     // Initial fetch of WhatsApp Status
     api.get("/api/whatsapp/status")
       .then((res) => {
@@ -70,15 +84,33 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         setWaStatus("connecting");
         setQrModalVisible(true);
       });
+
+      socket.on("order:created", () => {
+        setPendingOrdersCount((c) => c + 1);
+      });
+
+      socket.on("whatsapp:message", (ev: any) => {
+        if (!ev?.fromMe && pathname !== "/inbox") {
+          setUnreadChatsCount((c) => c + 1);
+        }
+      });
     }
 
     return () => {
       if (socket) {
         socket.off("whatsapp:status");
         socket.off("whatsapp:qr");
+        socket.off("order:created");
+        socket.off("whatsapp:message");
       }
     };
-  }, []);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (pathname === "/inbox") {
+      setUnreadChatsCount(0);
+    }
+  }, [pathname]);
 
   const handleConnectWhatsApp = async () => {
     try {
@@ -109,8 +141,20 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   const menuItems = [
     { key: "/dashboard", icon: <DashboardOutlined />, label: "Dashboard" },
-    { key: "/inbox", icon: <MessageOutlined />, label: "Live Inbox" },
-    { key: "/orders", icon: <ShoppingOutlined />, label: "Orders & Sales" },
+    {
+      key: "/inbox",
+      icon: <MessageOutlined />,
+      label: unreadChatsCount > 0 ? (
+        <Space size={6}><span>Live Inbox</span><Badge count={unreadChatsCount} size="small" /></Space>
+      ) : "Live Inbox",
+    },
+    {
+      key: "/orders",
+      icon: <ShoppingOutlined />,
+      label: pendingOrdersCount > 0 ? (
+        <Space size={6}><span>Orders &amp; Sales</span><Badge count={pendingOrdersCount} size="small" color="#fa8c16" /></Space>
+      ) : "Orders & Sales",
+    },
     { key: "/leads", icon: <SearchOutlined />, label: "Find New Leads" },
     { key: "/customers", icon: <TeamOutlined />, label: "Customers" },
     { key: "/products", icon: <AppstoreOutlined />, label: "Catalog & Items" },
@@ -244,6 +288,45 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </Space>
 
           <Space size="small">
+            <Popover
+              placement="bottomRight"
+              trigger="click"
+              title="Notifications & Store Alerts"
+              content={
+                <div style={{ width: 290 }}>
+                  <List
+                    size="small"
+                    dataSource={[
+                      ...(pendingOrdersCount > 0
+                        ? [{ key: "pending", title: `${pendingOrdersCount} Pending Order(s)`, desc: "Awaiting confirmation/dispatch", href: "/orders" }]
+                        : []),
+                      ...(unreadChatsCount > 0
+                        ? [{ key: "chats", title: `${unreadChatsCount} New WhatsApp Message(s)`, desc: "Reply in Live Inbox", href: "/inbox" }]
+                        : []),
+                      ...lowStockItems.slice(0, 4).map((p) => ({
+                        key: `stock_${p.id}`,
+                        title: `Low Stock: ${p.name}`,
+                        desc: `Only ${p.stock} ${p.unit || "pcs"} left`,
+                        href: "/products",
+                      })),
+                    ]}
+                    locale={{ emptyText: "All caught up! Zero pending alerts." }}
+                    renderItem={(item: any) => (
+                      <List.Item
+                        style={{ cursor: "pointer", padding: "6px 0" }}
+                        onClick={() => router.push(item.href)}
+                      >
+                        <List.Item.Meta title={<Text strong style={{ fontSize: 13 }}>{item.title}</Text>} description={<Text type="secondary" style={{ fontSize: 11 }}>{item.desc}</Text>} />
+                      </List.Item>
+                    )}
+                  />
+                </div>
+              }
+            >
+              <Badge count={pendingOrdersCount + unreadChatsCount + lowStockItems.length} size="small">
+                <Button size={isMobile ? "small" : "middle"} icon={<BellOutlined />} aria-label="Notifications" />
+              </Badge>
+            </Popover>
             {!isMobile && (
               <Space direction="horizontal">
                 <Text strong>{user?.name}</Text>

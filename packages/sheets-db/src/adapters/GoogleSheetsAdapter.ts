@@ -74,7 +74,7 @@ export class GoogleSheetsRepository<T extends { id: string; createdAt?: string; 
       } else {
         const num = Number(val);
         const headerStr = (header as string).toLowerCase();
-        const isNumeric = headerStr.includes("count") || headerStr.includes("price") || headerStr.includes("rating") || headerStr.includes("stock") || headerStr.includes("amount");
+        const isNumeric = headerStr.includes("count") || headerStr.includes("price") || headerStr.includes("rating") || headerStr.includes("stock") || headerStr.includes("amount") || headerStr.includes("qty") || headerStr.includes("charge");
         if (isNumeric && !isNaN(num) && val.trim() !== "") {
           entity[header] = num;
         } else {
@@ -303,7 +303,7 @@ export class GoogleSheetsDatabase implements IDatabase {
       this.sheets,
       this.spreadsheetId,
       "Users",
-      ["id", "email", "passwordHash", "name", "role", "businessType", "createdAt", "updatedAt"],
+      ["id", "email", "passwordHash", "name", "role", "businessType", "createdAt", "updatedAt", "status", "plan"],
       this.throttler
     );
 
@@ -327,7 +327,7 @@ export class GoogleSheetsDatabase implements IDatabase {
       this.sheets,
       this.spreadsheetId,
       "Products",
-      ["id", "userId", "name", "description", "price", "unit", "stock", "imageUrl", "createdAt", "updatedAt"],
+      ["id", "userId", "name", "description", "price", "unit", "stock", "imageUrl", "createdAt", "updatedAt", "category", "minOrderQty"],
       this.throttler
     );
 
@@ -335,7 +335,7 @@ export class GoogleSheetsDatabase implements IDatabase {
       this.sheets,
       this.spreadsheetId,
       "Orders",
-      ["id", "userId", "customerId", "customerName", "customerPhone", "itemsJson", "totalAmount", "status", "notes", "createdAt", "updatedAt", "paymentStatus", "paidAmount"],
+      ["id", "userId", "customerId", "customerName", "customerPhone", "itemsJson", "totalAmount", "status", "notes", "createdAt", "updatedAt", "paymentStatus", "paidAmount", "discountAmount", "deliveryCharge", "couponCode"],
       this.throttler
     );
 

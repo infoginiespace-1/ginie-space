@@ -17,6 +17,8 @@ import {
   Upload,
   Tag,
   Alert,
+  Select,
+  Progress,
 } from "antd";
 import {
   PlusOutlined,
@@ -28,6 +30,7 @@ import {
   SearchOutlined,
   EditOutlined,
   UploadOutlined,
+  WhatsAppOutlined,
 } from "@ant-design/icons";
 import { api } from "../../lib/api";
 import { downloadCsv, parseCsv } from "../../lib/csv";
@@ -59,6 +62,14 @@ export default function CustomersPage() {
   const [reminderQrUrl, setReminderQrUrl] = useState<string | null>(null);
   const [reminderUpiUri, setReminderUpiUri] = useState<string | null>(null);
   const [searchText, setSearchText] = useState("");
+  const [tagFilter, setTagFilter] = useState<string>("all");
+  const [selectedCustomerKeys, setSelectedCustomerKeys] = useState<React.Key[]>([]);
+  const [broadcastModalOpen, setBroadcastModalOpen] = useState(false);
+  const [broadcastTemplate, setBroadcastTemplate] = useState(
+    "Namaste {name} ji! Hamare store par aaj naye offers aur fresh stock available hai. Order karne ke liye reply karein!"
+  );
+  const [sendingBroadcast, setSendingBroadcast] = useState(false);
+  const [broadcastProgress, setBroadcastProgress] = useState({ sent: 0, failed: 0, total: 0 });
   const router = useRouter();
 
   useEffect(() => {
@@ -316,7 +327,22 @@ export default function CustomersPage() {
     },
   ];
 
+  const uniqueTags = Array.from(
+    new Set(
+      customers
+        .flatMap((c) => String(c.tags || "").split(",").map((t) => t.trim()))
+        .filter(Boolean)
+    )
+  );
+
   const filteredCustomers = customers.filter((c) => {
+    const matchesTag =
+      tagFilter === "all" ||
+      String(c.tags || "")
+        .split(",")
+        .map((t) => t.trim().toLowerCase())
+        .includes(tagFilter.toLowerCase());
+    if (!matchesTag) return false;
     const q = searchText.trim().toLowerCase();
     if (!q) return true;
     return (
@@ -331,9 +357,21 @@ export default function CustomersPage() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
         <div>
           <Title level={4} style={{ margin: 0 }}>Customer Directory</Title>
-          <Text type="secondary">Manage your clients, direct phone numbers, and WhatsApp conversations</Text>
+          <Text type="secondary">Manage your clients, Udhaar/Khata balance, tags, and bulk WhatsApp broadcasts</Text>
         </div>
         <Space wrap>
+          <Button
+            icon={<WhatsAppOutlined />}
+            disabled={selectedCustomerKeys.length === 0}
+            type={selectedCustomerKeys.length > 0 ? "primary" : "default"}
+            style={selectedCustomerKeys.length > 0 ? { background: "#25D366", borderColor: "#25D366" } : undefined}
+            onClick={() => {
+              setBroadcastProgress({ sent: 0, failed: 0, total: selectedCustomerKeys.length });
+              setBroadcastModalOpen(true);
+            }}
+          >
+            Broadcast ({selectedCustomerKeys.length})
+          </Button>
           <Button icon={<UploadOutlined />} onClick={() => setCsvModalOpen(true)}>
             Import CSV
           </Button>
@@ -364,7 +402,7 @@ export default function CustomersPage() {
       </div>
 
       <Card style={{ borderRadius: 12 }}>
-        <div style={{ marginBottom: 16 }}>
+        <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
           <Input
             prefix={<SearchOutlined style={{ color: "#94a3b8" }} />}
             placeholder="Search by customer name, phone, or tags..."
@@ -373,6 +411,15 @@ export default function CustomersPage() {
             onChange={(e) => setSearchText(e.target.value)}
             style={{ maxWidth: 340 }}
           />
+          <Select
+            value={tagFilter}
+            onChange={setTagFilter}
+            style={{ width: 180 }}
+            options={[
+              { value: "all", label: "All Customer Tags" },
+              ...uniqueTags.map((t) => ({ value: t, label: t })),
+            ]}
+          />
         </div>
         <Table
           dataSource={filteredCustomers}
@@ -380,6 +427,13 @@ export default function CustomersPage() {
           rowKey="id"
           loading={loading}
           pagination={{ pageSize: 10 }}
+          rowSelection={{
+            selectedRowKeys: selectedCustomerKeys,
+            onChange: (keys) => setSelectedCustomerKeys(keys),
+            getCheckboxProps: (record: Customer) => ({
+              disabled: !record.phone,
+            }),
+          }}
         />
       </Card>
 
@@ -553,6 +607,88 @@ export default function CustomersPage() {
               </Button>
             </Upload>
           </Space>
+        </Space>
+      </Modal>
+
+      <Modal
+        title={`Bulk Customer Broadcast (${selectedCustomerKeys.length} selected)`}
+        open={broadcastModalOpen}
+        onCancel={() => {
+          if (!sendingBroadcast) setBroadcastModalOpen(false);
+        }}
+        closable={!sendingBroadcast}
+        maskClosable={!sendingBroadcast}
+        footer={[
+          <Button key="close" disabled={sendingBroadcast} onClick={() => setBroadcastModalOpen(false)}>
+            Close
+          </Button>,
+          <Button
+            key="send"
+            type="primary"
+            icon={<WhatsAppOutlined />}
+            loading={sendingBroadcast}
+            style={{ background: "#25D366", borderColor: "#25D366", fontWeight: 600 }}
+            onClick={async () => {
+              const targets = customers.filter((c) => selectedCustomerKeys.includes(c.id) && c.phone);
+              if (targets.length === 0) return;
+              setSendingBroadcast(true);
+              setBroadcastProgress({ sent: 0, failed: 0, total: targets.length });
+              let sentCount = 0;
+              let failedCount = 0;
+
+              for (let i = 0; i < targets.length; i++) {
+                const cust = targets[i];
+                const personalized = broadcastTemplate.replace(/\{name\}/gi, cust.name);
+                try {
+                  await api.post("/api/whatsapp/send", {
+                    recipientPhone: cust.phone,
+                    messageText: personalized,
+                    contactName: cust.name,
+                  });
+                  sentCount++;
+                } catch {
+                  failedCount++;
+                }
+                setBroadcastProgress({ sent: sentCount, failed: failedCount, total: targets.length });
+                if (i < targets.length - 1) {
+                  await new Promise((r) => setTimeout(r, 3000));
+                }
+              }
+
+              setSendingBroadcast(false);
+              setSelectedCustomerKeys([]);
+              if (failedCount === 0) {
+                message.success(`Broadcast sent to ${sentCount} customers!`);
+              } else {
+                message.warning(`Sent: ${sentCount}, Failed: ${failedCount}. Check WhatsApp connection.`);
+              }
+            }}
+          >
+            Start Safe Broadcast (3s Delay)
+          </Button>,
+        ]}
+      >
+        <Space direction="vertical" style={{ width: "100%" }} size={12}>
+          <Text type="secondary">
+            Use <Text code>{"{name}"}</Text> to automatically insert customer names in your WhatsApp broadcast:
+          </Text>
+          <Input.TextArea
+            rows={4}
+            value={broadcastTemplate}
+            onChange={(e) => setBroadcastTemplate(e.target.value)}
+            disabled={sendingBroadcast}
+          />
+          {broadcastProgress.total > 0 && (sendingBroadcast || broadcastProgress.sent + broadcastProgress.failed > 0) && (
+            <div>
+              <Progress
+                percent={Math.round(((broadcastProgress.sent + broadcastProgress.failed) / broadcastProgress.total) * 100)}
+                status={sendingBroadcast ? "active" : broadcastProgress.failed > 0 ? "exception" : "success"}
+              />
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                Sent: {broadcastProgress.sent} | Failed: {broadcastProgress.failed} | Total: {broadcastProgress.total}
+              </Text>
+            </div>
+          )}
         </Space>
       </Modal>
     </AppLayout>

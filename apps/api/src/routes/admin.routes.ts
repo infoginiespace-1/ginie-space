@@ -142,5 +142,96 @@ export function createAdminRouter(
     }
   });
 
+  // 7. Admin Update User Status (active/suspended) & Plan (free/pro)
+  router.put("/users/:id", async (req: Request, res: Response): Promise<void> => {
+    try {
+      const target = await db.users.findById((req.params.id as string));
+      if (!target) {
+        res.status(404).json({ error: "User not found" });
+        return;
+      }
+
+      const { status, plan } = req.body;
+      if (status === "suspended" && target.role === "admin") {
+        res.status(400).json({ error: "Cannot suspend an administrator account" });
+        return;
+      }
+
+      const validStatus = status === "active" || status === "suspended" ? status : target.status || "active";
+      const validPlan = plan === "free" || plan === "pro" ? plan : target.plan || "free";
+
+      const updated = await db.users.update(target.id, {
+        status: validStatus,
+        plan: validPlan,
+      });
+
+      res.json({
+        user: {
+          id: updated.id,
+          name: updated.name,
+          email: updated.email,
+          role: updated.role,
+          businessType: updated.businessType,
+          status: updated.status || "active",
+          plan: updated.plan || "free",
+          createdAt: updated.createdAt,
+        },
+        message: "User account updated successfully",
+      });
+    } catch {
+      res.status(500).json({ error: "Could not update user account" });
+    }
+  });
+
+  // 8. Admin Full Workspace Data Backup Export
+  router.get("/backup", async (_req: Request, res: Response): Promise<void> => {
+    try {
+      const [users, businesses, customers, products, orders, leads, settings] = await Promise.all([
+        db.users.findMany(),
+        db.businesses.findMany(),
+        db.customers.findMany(),
+        db.products.findMany(),
+        db.orders.findMany(),
+        db.leads.findMany(),
+        db.settings.findMany(),
+      ]);
+
+      const safeUsers = users.map((u) => ({
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        role: u.role,
+        businessType: u.businessType,
+        status: u.status || "active",
+        plan: u.plan || "free",
+        createdAt: u.createdAt,
+      }));
+
+      res.json({
+        exportedAt: new Date().toISOString(),
+        counts: {
+          users: safeUsers.length,
+          businesses: businesses.length,
+          customers: customers.length,
+          products: products.length,
+          orders: orders.length,
+          leads: leads.length,
+          settings: settings.length,
+        },
+        data: {
+          users: safeUsers,
+          businesses,
+          customers,
+          products,
+          orders,
+          leads,
+          settings,
+        },
+      });
+    } catch {
+      res.status(500).json({ error: "Could not generate platform backup" });
+    }
+  });
+
   return router;
 }

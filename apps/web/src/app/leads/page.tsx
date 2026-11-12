@@ -17,6 +17,8 @@ import {
   Tooltip,
   Modal,
   Progress,
+  Select,
+  Popconfirm,
 } from "antd";
 import {
   SearchOutlined,
@@ -27,8 +29,11 @@ import {
   EnvironmentOutlined,
   StarOutlined,
   WhatsAppOutlined,
+  DownloadOutlined,
+  DeleteOutlined,
 } from "@ant-design/icons";
 import { api } from "../../lib/api";
+import { downloadCsv } from "../../lib/csv";
 import { getSocket } from "../../lib/socket";
 
 const { Title, Text } = Typography;
@@ -59,8 +64,12 @@ interface SavedLead {
 export default function LeadsPage() {
   const [activeTab, setActiveTab] = useState("discover");
   const [searching, setSearching] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [lastCriteria, setLastCriteria] = useState<any>(null);
+  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
   const [discoveredLeads, setDiscoveredLeads] = useState<DiscoveredLead[]>([]);
   const [savedLeads, setSavedLeads] = useState<SavedLead[]>([]);
+  const [savedStatusFilter, setSavedStatusFilter] = useState<string>("all");
   const [loadingSaved, setLoadingSaved] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [convertingId, setConvertingId] = useState<string | null>(null);
@@ -111,8 +120,10 @@ export default function LeadsPage() {
   const handleSearch = async (values: any) => {
     try {
       setSearching(true);
+      setLastCriteria(values);
       const res = await api.post("/api/leads/discover", values);
       setDiscoveredLeads(res.data.leads || []);
+      setNextPageToken(res.data.nextPageToken || null);
       if (res.data.leads.length === 0) {
         message.info("No matching businesses found. Try broadening your location or category.");
       } else {
@@ -122,6 +133,40 @@ export default function LeadsPage() {
       message.error(err.message || "Failed to search for leads");
     } finally {
       setSearching(false);
+    }
+  };
+
+  const handleLoadMore = async () => {
+    if (!lastCriteria || !nextPageToken) return;
+    try {
+      setLoadingMore(true);
+      const res = await api.post("/api/leads/discover", {
+        ...lastCriteria,
+        pageToken: nextPageToken,
+      });
+      const more = res.data.leads || [];
+      setDiscoveredLeads((prev) => {
+        const existingIds = new Set(prev.map((p) => p.id));
+        return [...prev, ...more.filter((m: DiscoveredLead) => !existingIds.has(m.id))];
+      });
+      setNextPageToken(res.data.nextPageToken || null);
+      if (more.length > 0) {
+        message.success(`Loaded ${more.length} more businesses!`);
+      }
+    } catch (err: any) {
+      message.error(err.message || "Could not load more leads");
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  const handleDeleteLead = async (id: string) => {
+    try {
+      await api.delete(`/api/leads/${id}`);
+      setSavedLeads((prev) => prev.filter((l) => l.id !== id));
+      message.success("Lead removed");
+    } catch {
+      message.error("Could not delete lead");
     }
   };
 
@@ -263,23 +308,34 @@ export default function LeadsPage() {
       },
     },
     {
-      title: "Convert to Customer",
+      title: "Actions",
       key: "convert",
       render: (_: any, record: SavedLead) => (
-        record.status === "converted" ? (
-          <Tag color="success">Converted</Tag>
-        ) : (
-          <Button
-            type="primary"
-            icon={<UserAddOutlined />}
-            size="small"
-            loading={convertingId === record.id}
-            onClick={() => handleConvertToCustomer(record)}
-            style={{ background: "#0284c7", borderColor: "#0284c7" }}
+        <Space>
+          {record.status === "converted" ? (
+            <Tag color="success">Converted</Tag>
+          ) : (
+            <Button
+              type="primary"
+              icon={<UserAddOutlined />}
+              size="small"
+              loading={convertingId === record.id}
+              onClick={() => handleConvertToCustomer(record)}
+              style={{ background: "#0284c7", borderColor: "#0284c7" }}
+            >
+              Add to Customers
+            </Button>
+          )}
+          <Popconfirm
+            title="Remove lead?"
+            description="Delete this saved lead record?"
+            onConfirm={() => handleDeleteLead(record.id)}
+            okText="Delete"
+            cancelText="Cancel"
           >
-            Add to Customers
-          </Button>
-        )
+            <Button size="small" danger icon={<DeleteOutlined />} />
+          </Popconfirm>
+        </Space>
       ),
     },
   ];
@@ -349,6 +405,13 @@ export default function LeadsPage() {
                     loading={searching}
                     pagination={{ pageSize: 10 }}
                   />
+                  {nextPageToken && (
+                    <div style={{ textAlign: "center", marginTop: 14 }}>
+                      <Button onClick={handleLoadMore} loading={loadingMore}>
+                        Load More Results from Google Places
+                      </Button>
+                    </div>
+                  )}
                 </Card>
               </>
             ),
@@ -360,27 +423,55 @@ export default function LeadsPage() {
               <Card style={{ borderRadius: 12 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 8 }}>
                   <Text type="secondary">
-                    Select saved leads with valid phone numbers to send personalized WhatsApp outreach (3s safe delay between messages).
+                    Select saved leads with valid phone numbers to send personalized WhatsApp outreach (3s safe delay).
                   </Text>
-                  <Button
-                    type="primary"
-                    icon={<WhatsAppOutlined />}
-                    disabled={selectedLeadKeys.length === 0}
-                    style={
-                      selectedLeadKeys.length > 0
-                        ? { background: "#25D366", borderColor: "#25D366" }
-                        : undefined
-                    }
-                    onClick={() => {
-                      setCampaignProgress({ sent: 0, failed: 0, total: selectedLeadKeys.length });
-                      setCampaignModalOpen(true);
-                    }}
-                  >
-                    Bulk WhatsApp Campaign ({selectedLeadKeys.length})
-                  </Button>
+                  <Space wrap>
+                    <Select
+                      value={savedStatusFilter}
+                      onChange={setSavedStatusFilter}
+                      style={{ width: 150 }}
+                      options={[
+                        { value: "all", label: "All Statuses" },
+                        { value: "new", label: "New" },
+                        { value: "contacted", label: "Contacted" },
+                        { value: "converted", label: "Converted" },
+                        { value: "archived", label: "Archived" },
+                      ]}
+                    />
+                    <Button
+                      icon={<DownloadOutlined />}
+                      onClick={() =>
+                        downloadCsv(
+                          "giniespace-leads.csv",
+                          ["ID", "Name", "Phone", "Address", "Website", "Rating", "Category", "Status"],
+                          savedLeads
+                            .filter((l) => savedStatusFilter === "all" || l.status === savedStatusFilter)
+                            .map((l) => [l.id, l.name, l.phone, l.address, l.website, l.rating, l.category, l.status])
+                        )
+                      }
+                    >
+                      Export CSV
+                    </Button>
+                    <Button
+                      type="primary"
+                      icon={<WhatsAppOutlined />}
+                      disabled={selectedLeadKeys.length === 0}
+                      style={
+                        selectedLeadKeys.length > 0
+                          ? { background: "#25D366", borderColor: "#25D366" }
+                          : undefined
+                      }
+                      onClick={() => {
+                        setCampaignProgress({ sent: 0, failed: 0, total: selectedLeadKeys.length });
+                        setCampaignModalOpen(true);
+                      }}
+                    >
+                      Bulk WhatsApp Campaign ({selectedLeadKeys.length})
+                    </Button>
+                  </Space>
                 </div>
                 <Table
-                  dataSource={savedLeads}
+                  dataSource={savedLeads.filter((l) => savedStatusFilter === "all" || l.status === savedStatusFilter)}
                   columns={savedColumns}
                   rowKey="id"
                   loading={loadingSaved}

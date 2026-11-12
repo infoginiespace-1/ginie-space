@@ -93,6 +93,12 @@ export default function InboxPage() {
   const [pickerQty, setPickerQty] = useState<number>(1);
   const [upiId, setUpiId] = useState("");
   const [storeName, setStoreName] = useState("Our Store");
+  const [rawSettings, setRawSettings] = useState<Record<string, any>>({});
+  const [customReplies, setCustomReplies] = useState<Array<{ label: string; text: string }>>([]);
+  const [templatesModalOpen, setTemplatesModalOpen] = useState(false);
+  const [newTplLabel, setNewTplLabel] = useState("");
+  const [newTplText, setNewTplText] = useState("");
+  const [savingTemplates, setSavingTemplates] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -119,7 +125,9 @@ export default function InboxPage() {
         if (biz.settingsJson) {
           try {
             const parsed = JSON.parse(biz.settingsJson);
+            setRawSettings(parsed);
             if (parsed.upiId) setUpiId(parsed.upiId);
+            if (Array.isArray(parsed.quickReplies)) setCustomReplies(parsed.quickReplies);
           } catch {}
         }
       }
@@ -241,8 +249,8 @@ export default function InboxPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [conversations, activeKey]);
 
-  const sendTextMessage = async (textToSend: string) => {
-    if (!activeKey || !textToSend.trim()) return;
+  const sendTextMessage = async (textToSend: string, mediaDataUrl?: string) => {
+    if (!activeKey || (!textToSend.trim() && !mediaDataUrl)) return;
     const conv = conversations.get(activeKey);
     const targetPhone = conv?.phone || activeKey;
 
@@ -252,6 +260,7 @@ export default function InboxPage() {
         recipientPhone: targetPhone,
         messageText: textToSend.trim(),
         contactName: conv?.name,
+        mediaDataUrl,
       });
 
       const savedId = res.data?.saved?.messageId || Date.now().toString();
@@ -260,7 +269,7 @@ export default function InboxPage() {
       const outbound: ChatMessage = {
         id: savedId,
         senderPhone: activeKey,
-        text: textToSend.trim(),
+        text: mediaDataUrl ? `[Photo] ${textToSend.trim()}` : textToSend.trim(),
         timestamp: now,
         fromMe: true,
       };
@@ -310,7 +319,7 @@ export default function InboxPage() {
     const greeting = activeConv ? `Namaste ${activeConv.name},\n\n` : "";
     const msg = `${greeting}📦 *${p.name}*\n💰 *Price:* ₹${p.price} / ${p.unit}\n📊 *Status:* ${p.stock > 0 ? `In Stock (${p.stock} ${p.unit})` : "Limited Stock"}${p.description ? `\n📝 ${p.description}` : ""}\n\nOrder karne ke liye reply karein!`;
     setCatalogModalVisible(false);
-    await sendTextMessage(msg);
+    await sendTextMessage(msg, p.imageUrl || undefined);
   };
 
   const activeConv = activeKey ? conversations.get(activeKey) : null;
@@ -322,7 +331,7 @@ export default function InboxPage() {
     })
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
-  const quickReplies = [
+  const defaultQuickReplies = [
     {
       label: "Price List",
       text: `Namaste! Aapka ${storeName} mein swagat hai. Batayein aapko kis item ka wholesale/retail rate chahiye?`,
@@ -342,6 +351,24 @@ export default function InboxPage() {
       text: `Thank you for connecting with *${storeName}*! Kisi bhi aur order ya help ke liye yahan message karein. 🙏`,
     },
   ];
+  const quickReplies = [...defaultQuickReplies, ...customReplies];
+
+  const handleSaveQuickReplies = async (nextList: Array<{ label: string; text: string }>) => {
+    try {
+      setSavingTemplates(true);
+      const updatedSettings = { ...rawSettings, quickReplies: nextList };
+      await api.put("/api/settings/business", {
+        settingsJson: JSON.stringify(updatedSettings),
+      });
+      setRawSettings(updatedSettings);
+      setCustomReplies(nextList);
+      message.success("Quick reply templates saved!");
+    } catch {
+      message.error("Could not save quick reply templates");
+    } finally {
+      setSavingTemplates(false);
+    }
+  };
 
   const handleOpenOrderModal = async () => {
     setOrderItems([]);
@@ -571,7 +598,7 @@ export default function InboxPage() {
 
               {/* Chat Input + Quick Replies */}
               <div style={{ padding: 14, borderTop: "1px solid #f0f0f0", background: "#fff" }}>
-                <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap" }}>
+                <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap", alignItems: "center" }}>
                   {quickReplies.map((qr) => (
                     <Button
                       key={qr.label}
@@ -582,6 +609,15 @@ export default function InboxPage() {
                       ⚡ {qr.label}
                     </Button>
                   ))}
+                  <Button
+                    size="small"
+                    type="dashed"
+                    icon={<PlusOutlined />}
+                    onClick={() => setTemplatesModalOpen(true)}
+                    style={{ borderRadius: 999, fontSize: 12 }}
+                  >
+                    Templates
+                  </Button>
                 </div>
                 <div style={{ display: "flex", gap: 8, width: "100%" }}>
                   <Button
@@ -761,6 +797,68 @@ export default function InboxPage() {
             </List.Item>
           )}
         />
+      </Modal>
+      {/* Custom Quick Replies Manager Modal */}
+      <Modal
+        title="Custom WhatsApp Quick-Reply Templates"
+        open={templatesModalOpen}
+        onCancel={() => setTemplatesModalOpen(false)}
+        footer={null}
+        destroyOnClose
+      >
+        <Space direction="vertical" style={{ width: "100%" }} size={12}>
+          <Input
+            placeholder="Button Label (e.g. Festive Offer)"
+            value={newTplLabel}
+            onChange={(e) => setNewTplLabel(e.target.value)}
+          />
+          <Input.TextArea
+            rows={3}
+            placeholder="Message text..."
+            value={newTplText}
+            onChange={(e) => setNewTplText(e.target.value)}
+          />
+          <Button
+            type="primary"
+            loading={savingTemplates}
+            style={{ background: "#25D366", borderColor: "#25D366" }}
+            onClick={() => {
+              if (!newTplLabel.trim() || !newTplText.trim()) {
+                message.warning("Enter both label and template message");
+                return;
+              }
+              const next = [...customReplies, { label: newTplLabel.trim(), text: newTplText.trim() }];
+              handleSaveQuickReplies(next);
+              setNewTplLabel("");
+              setNewTplText("");
+            }}
+          >
+            Add Custom Template
+          </Button>
+          {customReplies.length > 0 && (
+            <List
+              size="small"
+              bordered
+              dataSource={customReplies}
+              renderItem={(tpl, idx) => (
+                <List.Item
+                  actions={[
+                    <Button
+                      key="del"
+                      type="text"
+                      danger
+                      size="small"
+                      icon={<DeleteOutlined />}
+                      onClick={() => handleSaveQuickReplies(customReplies.filter((_, i) => i !== idx))}
+                    />,
+                  ]}
+                >
+                  <List.Item.Meta title={tpl.label} description={tpl.text} />
+                </List.Item>
+              )}
+            />
+          )}
+        </Space>
       </Modal>
     </AppLayout>
   );

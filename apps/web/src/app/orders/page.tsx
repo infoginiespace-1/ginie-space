@@ -45,6 +45,9 @@ interface Order {
   status: "pending" | "confirmed" | "dispatched" | "delivered" | "cancelled";
   paymentStatus?: "unpaid" | "partial" | "paid";
   paidAmount?: number;
+  discountAmount?: number;
+  deliveryCharge?: number;
+  couponCode?: string;
   notes?: string;
   createdAt: string;
 }
@@ -260,6 +263,8 @@ export default function OrdersPage() {
         notes: values.notes || "",
         paymentStatus,
         paidAmount,
+        discountAmount: Number(values.discountAmount) || 0,
+        deliveryCharge: Number(values.deliveryCharge) || 0,
       });
       message.success("Order created successfully!");
       setCreateModalVisible(false);
@@ -550,6 +555,8 @@ export default function OrdersPage() {
       <div><strong>Billed To:</strong> ${order.customerName} (+${order.customerPhone.replace(/^\+/, "")})</div>
       <table><thead><tr><th>#</th><th>Item</th><th style="text-align:right">Qty</th><th style="text-align:right">Rate</th><th style="text-align:right">Total</th></tr></thead><tbody>${itemRows}</tbody></table>
       <div class="totals">
+        ${Number(order.discountAmount) > 0 ? `<div><span>Discount${order.couponCode ? ` (${order.couponCode})` : ""}:</span><span>-₹${Number(order.discountAmount).toFixed(2)}</span></div>` : ""}
+        ${Number(order.deliveryCharge) > 0 ? `<div><span>Delivery Charge:</span><span>+₹${Number(order.deliveryCharge).toFixed(2)}</span></div>` : ""}
         <div><span>Subtotal:</span><span>₹${baseAmount.toFixed(2)}</span></div>
         ${gstRate > 0 ? `<div><span>GST (${gstRate}%):</span><span>₹${gstAmount.toFixed(2)}</span></div>` : ""}
         <div class="grand"><span>Grand Total:</span><span>₹${grandTotal.toFixed(2)}</span></div>
@@ -728,7 +735,20 @@ export default function OrdersPage() {
           )}
         </div>
 
-        <Form form={form} layout="vertical" onFinish={handleCreateOrder} initialValues={{ status: "pending", paymentStatus: "unpaid", paidAmount: 0 }}>
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleCreateOrder}
+          initialValues={{ status: "pending", paymentStatus: "unpaid", paidAmount: 0, discountAmount: 0, deliveryCharge: 0 }}
+          onValuesChange={(changed) => {
+            if ((changed.discountAmount !== undefined || changed.deliveryCharge !== undefined) && lineItems.length > 0) {
+              const itemsSum = lineItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
+              const disc = Number(form.getFieldValue("discountAmount")) || 0;
+              const deliv = Number(form.getFieldValue("deliveryCharge")) || 0;
+              form.setFieldValue("totalAmount", Math.max(0, itemsSum - disc + deliv));
+            }
+          }}
+        >
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
             <Form.Item
               name="customerName"
@@ -750,9 +770,18 @@ export default function OrdersPage() {
           </div>
 
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <Form.Item name="discountAmount" label="Discount (₹)" style={{ flex: 1, minWidth: 140 }}>
+              <InputNumber style={{ width: "100%" }} min={0} placeholder="0" />
+            </Form.Item>
+            <Form.Item name="deliveryCharge" label="Delivery Charge (₹)" style={{ flex: 1, minWidth: 140 }}>
+              <InputNumber style={{ width: "100%" }} min={0} placeholder="0" />
+            </Form.Item>
+          </div>
+
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
             <Form.Item
               name="totalAmount"
-              label="Total Amount (₹)"
+              label="Final Total Amount (₹)"
               rules={[{ required: true, message: "Please enter total amount" }]}
               style={{ flex: 1, minWidth: 160 }}
             >
@@ -891,6 +920,14 @@ export default function OrdersPage() {
                     />
                   )}
                   <div style={{ textAlign: "right" }}>
+                    {Number(invoiceOrder.discountAmount) > 0 && (
+                      <div style={{ color: "#16a34a" }}>
+                        Discount{invoiceOrder.couponCode ? ` (${invoiceOrder.couponCode})` : ""}: -₹{Number(invoiceOrder.discountAmount).toFixed(2)}
+                      </div>
+                    )}
+                    {Number(invoiceOrder.deliveryCharge) > 0 && (
+                      <div>Delivery Charge: +₹{Number(invoiceOrder.deliveryCharge).toFixed(2)}</div>
+                    )}
                     {gstRate > 0 && (
                       <>
                         <div>Subtotal: ₹{base.toFixed(2)}</div>
