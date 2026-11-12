@@ -15,8 +15,17 @@ import {
   message,
   Popconfirm,
 } from "antd";
-import { PlusOutlined, MessageOutlined, DeleteOutlined, SyncOutlined, DollarOutlined } from "@ant-design/icons";
+import {
+  PlusOutlined,
+  MessageOutlined,
+  DeleteOutlined,
+  SyncOutlined,
+  DollarOutlined,
+  DownloadOutlined,
+  SearchOutlined,
+} from "@ant-design/icons";
 import { api } from "../../lib/api";
+import { downloadCsv } from "../../lib/csv";
 import { useRouter } from "next/navigation";
 
 const { Title, Text } = Typography;
@@ -42,7 +51,32 @@ export default function CustomersPage() {
   const [reminderAmount, setReminderAmount] = useState<number | null>(null);
   const [reminderNote, setReminderNote] = useState("");
   const [sendingReminder, setSendingReminder] = useState(false);
+  const [reminderQrUrl, setReminderQrUrl] = useState<string | null>(null);
+  const [reminderUpiUri, setReminderUpiUri] = useState<string | null>(null);
+  const [searchText, setSearchText] = useState("");
   const router = useRouter();
+
+  useEffect(() => {
+    if (!reminderTarget || !upiId || !upiId.includes("@")) {
+      setReminderQrUrl(null);
+      setReminderUpiUri(null);
+      return;
+    }
+    api
+      .get("/api/storefront/upi-qr", {
+        params: {
+          pa: upiId,
+          pn: businessName,
+          am: reminderAmount || undefined,
+          tn: reminderNote.trim() || `Payment from ${reminderTarget.name}`,
+        },
+      })
+      .then((res) => {
+        setReminderQrUrl(res.data?.qrDataUrl || null);
+        setReminderUpiUri(res.data?.upiUri || null);
+      })
+      .catch(() => {});
+  }, [reminderTarget, reminderAmount, reminderNote, upiId, businessName]);
 
   const loadCustomers = async () => {
     try {
@@ -164,14 +198,36 @@ export default function CustomersPage() {
     },
   ];
 
+  const filteredCustomers = customers.filter((c) => {
+    const q = searchText.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      c.name.toLowerCase().includes(q) ||
+      (c.phone || "").toLowerCase().includes(q) ||
+      (c.tags || "").toLowerCase().includes(q)
+    );
+  });
+
   return (
     <AppLayout>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
         <div>
           <Title level={4} style={{ margin: 0 }}>Customer Directory</Title>
           <Text type="secondary">Manage your clients, direct phone numbers, and WhatsApp conversations</Text>
         </div>
-        <Space>
+        <Space wrap>
+          <Button
+            icon={<DownloadOutlined />}
+            onClick={() =>
+              downloadCsv(
+                "giniespace-customers.csv",
+                ["ID", "Name", "Phone", "Email", "Tags", "Notes", "CreatedAt"],
+                filteredCustomers.map((c) => [c.id, c.name, c.phone, c.email, c.tags, c.notes, c.createdAt])
+              )
+            }
+          >
+            Export CSV
+          </Button>
           <Button icon={<SyncOutlined />} onClick={loadCustomers} loading={loading}>
             Refresh
           </Button>
@@ -187,8 +243,18 @@ export default function CustomersPage() {
       </div>
 
       <Card style={{ borderRadius: 12 }}>
+        <div style={{ marginBottom: 16 }}>
+          <Input
+            prefix={<SearchOutlined style={{ color: "#94a3b8" }} />}
+            placeholder="Search by customer name, phone, or tags..."
+            allowClear
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            style={{ maxWidth: 340 }}
+          />
+        </div>
         <Table
-          dataSource={customers}
+          dataSource={filteredCustomers}
           columns={columns}
           rowKey="id"
           loading={loading}
@@ -257,7 +323,9 @@ export default function CustomersPage() {
           try {
             const amtLine = reminderAmount ? `\n💰 *Pending Balance:* ₹${reminderAmount.toLocaleString("en-IN")}` : "";
             const noteLine = reminderNote.trim() ? `\n📝 *Ref / Note:* ${reminderNote.trim()}` : "";
-            const upiLine = upiId ? `\n💳 *Pay via UPI:* ${upiId}` : "";
+            const upiLine = upiId
+              ? `\n💳 *Pay via UPI:* ${upiId}${reminderUpiUri ? `\n🔗 *Instant Pay Link:* ${reminderUpiUri}` : ""}`
+              : "";
             const msgText =
               `🙏 *Payment Reminder — ${businessName}*\n\n` +
               `Namaste *${reminderTarget.name}*,\n` +
@@ -299,7 +367,21 @@ export default function CustomersPage() {
             />
           </div>
           {upiId ? (
-            <Text type="success">Merchant UPI ID ({upiId}) will be attached automatically.</Text>
+            <div style={{ textAlign: "center", background: "#f0fdf4", padding: 12, borderRadius: 8 }}>
+              <Text type="success" strong style={{ display: "block" }}>
+                Merchant UPI ID ({upiId}) &amp; Payment Link will be attached automatically.
+              </Text>
+              {reminderQrUrl && (
+                <div style={{ marginTop: 10 }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={reminderQrUrl}
+                    alt="Scannable UPI QR"
+                    style={{ width: 150, height: 150, background: "#fff", padding: 6, borderRadius: 8 }}
+                  />
+                </div>
+              )}
+            </div>
           ) : (
             <Text type="warning">Tip: Set your UPI ID in Settings to auto-attach payment link.</Text>
           )}

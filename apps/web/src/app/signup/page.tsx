@@ -20,7 +20,7 @@ export default function SignupPage() {
       setLoading(true);
       setErrorMsg(null);
       await signup(values.name, values.email, values.password, values.businessType);
-      router.push("/inbox");
+      router.push("/dashboard");
     } catch (err: any) {
       setErrorMsg(err.message || "Could not register your account. Please try again.");
     } finally {
@@ -119,7 +119,7 @@ export default function SignupPage() {
             <Radio.Group style={{ width: "100%" }}>
               <Space direction="vertical" style={{ width: "100%" }}>
                 <Radio.Button value="retail" style={{ width: "100%", height: "auto", padding: "12px 16px", borderRadius: 8 }}>
-                  <Space orientation="horizontal" size="middle">
+                  <Space direction="horizontal" size="middle">
                     <ShopOutlined style={{ fontSize: 20, color: "#25D366" }} />
                     <div style={{ textAlign: "left" }}>
                       <div style={{ fontWeight: 600 }}>Retail Business</div>
@@ -129,7 +129,7 @@ export default function SignupPage() {
                 </Radio.Button>
 
                 <Radio.Button value="wholesale" style={{ width: "100%", height: "auto", padding: "12px 16px", borderRadius: 8 }}>
-                  <Space orientation="horizontal" size="middle">
+                  <Space direction="horizontal" size="middle">
                     <ShopOutlined style={{ fontSize: 20, color: "#0284c7" }} />
                     <div style={{ textAlign: "left" }}>
                       <div style={{ fontWeight: 600 }}>Wholesale & B2B</div>

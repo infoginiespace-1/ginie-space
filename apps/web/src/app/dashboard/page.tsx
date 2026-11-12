@@ -17,6 +17,8 @@ import {
   Modal,
   Input,
   message,
+  Progress,
+  Tooltip,
 } from "antd";
 import {
   ShoppingOutlined,
@@ -27,6 +29,7 @@ import {
   ReloadOutlined,
   ArrowRightOutlined,
   ClockCircleOutlined,
+  BarChartOutlined,
 } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 
@@ -110,14 +113,41 @@ export default function DashboardPage() {
         return "orange";
       case "confirmed":
         return "blue";
+      case "dispatched":
       case "shipped":
         return "purple";
       case "delivered":
         return "green";
+      case "cancelled":
+        return "red";
       default:
         return "default";
     }
   };
+
+  // Compute last 7 days revenue chart data
+  const last7Days = Array.from({ length: 7 }, (_, idx) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - idx));
+    const dateKey = d.toISOString().slice(0, 10);
+    const label = d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+    const dayOrders = orders.filter((o) => (o.createdAt || "").startsWith(dateKey));
+    const revenue = dayOrders.reduce((sum, o) => sum + (Number(o.totalAmount) || 0), 0);
+    return { dateKey, label, revenue, count: dayOrders.length };
+  });
+  const maxDayRevenue = Math.max(1, ...last7Days.map((d) => d.revenue));
+
+  const statusBreakdown = [
+    { key: "pending", label: "Pending", color: "#f59e0b" },
+    { key: "confirmed", label: "Confirmed", color: "#3b82f6" },
+    { key: "dispatched", label: "Dispatched", color: "#8b5cf6" },
+    { key: "delivered", label: "Delivered", color: "#16a34a" },
+    { key: "cancelled", label: "Cancelled", color: "#ef4444" },
+  ].map((s) => {
+    const count = orders.filter((o) => o.status === s.key).length;
+    const pct = orders.length > 0 ? Math.round((count / orders.length) * 100) : 0;
+    return { ...s, count, pct };
+  });
 
   return (
     <AppLayout>
@@ -227,6 +257,71 @@ export default function DashboardPage() {
             >
               Launch Campaign <ArrowRightOutlined />
             </Button>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Sales Revenue Trend + Order Status Breakdown Charts */}
+      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        <Col xs={24} lg={14}>
+          <Card
+            loading={loading}
+            title={
+              <Space>
+                <BarChartOutlined style={{ color: "#16a34a" }} />
+                <span>7-Day Sales Revenue Trend</span>
+              </Space>
+            }
+            style={{ borderRadius: 12, height: "100%" }}
+          >
+            <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", height: 180, gap: 10, paddingTop: 18 }}>
+              {last7Days.map((day) => {
+                const heightPct = day.revenue > 0 ? Math.max(10, Math.round((day.revenue / maxDayRevenue) * 100)) : 4;
+                return (
+                  <Tooltip
+                    key={day.dateKey}
+                    title={`${day.label}: ₹${day.revenue.toLocaleString("en-IN")} (${day.count} orders)`}
+                  >
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", height: "100%", justifyContent: "flex-end" }}>
+                      <Text type="secondary" style={{ fontSize: 10, marginBottom: 4 }}>
+                        {day.revenue > 0 ? `₹${day.revenue >= 1000 ? `${(day.revenue / 1000).toFixed(1)}k` : day.revenue}` : "-"}
+                      </Text>
+                      <div
+                        style={{
+                          width: "100%",
+                          maxWidth: 42,
+                          height: `${heightPct}%`,
+                          background: day.revenue > 0 ? "linear-gradient(180deg, #25D366 0%, #16a34a 100%)" : "#e2e8f0",
+                          borderRadius: "6px 6px 2px 2px",
+                          transition: "height 0.3s ease",
+                        }}
+                      />
+                      <Text type="secondary" style={{ fontSize: 11, marginTop: 6 }}>{day.label}</Text>
+                    </div>
+                  </Tooltip>
+                );
+              })}
+            </div>
+          </Card>
+        </Col>
+
+        <Col xs={24} lg={10}>
+          <Card
+            loading={loading}
+            title="Order Pipeline Breakdown"
+            style={{ borderRadius: 12, height: "100%" }}
+          >
+            <Space direction="vertical" style={{ width: "100%" }} size={10}>
+              {statusBreakdown.map((item) => (
+                <div key={item.key}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 2 }}>
+                    <Text strong>{item.label}</Text>
+                    <Text type="secondary">{item.count} orders ({item.pct}%)</Text>
+                  </div>
+                  <Progress percent={item.pct} showInfo={false} strokeColor={item.color} size="small" />
+                </div>
+              ))}
+            </Space>
           </Card>
         </Col>
       </Row>

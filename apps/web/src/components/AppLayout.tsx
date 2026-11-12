@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Layout, Menu, Button, Modal, Badge, Tag, Space, Typography, Spin, message } from "antd";
+import { Layout, Menu, Button, Modal, Badge, Tag, Space, Typography, Spin, message, Drawer, Grid, Tooltip } from "antd";
 import {
   DashboardOutlined,
   MessageOutlined,
@@ -16,6 +16,8 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   SyncOutlined,
+  MenuOutlined,
+  WhatsAppOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "../context/AuthContext";
 import { usePathname, useRouter } from "next/navigation";
@@ -29,6 +31,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const screens = Grid.useBreakpoint();
+  const isMobile = screens.md === false;
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const [waStatus, setWaStatus] = useState<"disconnected" | "connecting" | "connected">("disconnected");
   const [waPhone, setWaPhone] = useState<string | undefined>(undefined);
@@ -116,75 +121,113 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     menuItems.push({ key: "/admin", icon: <SafetyCertificateOutlined />, label: "Admin Panel" });
   }
 
+  const sidebarHeader = (
+    <div style={{ padding: "20px 24px", display: "flex", alignItems: "center", gap: 8 }}>
+      <div
+        style={{
+          width: 34,
+          height: 34,
+          borderRadius: 8,
+          background: "#25D366",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#fff",
+          fontWeight: 700,
+          fontSize: 18,
+        }}
+      >
+        G
+      </div>
+      <div>
+        <div style={{ fontWeight: 700, fontSize: 16, color: "#1f1f1f", lineHeight: 1.2 }}>GinieSpace</div>
+        <div style={{ fontSize: 11, color: "#8c8c8c" }}>{user?.businessType === "wholesale" ? "Wholesale Hub" : "Retail Hub"}</div>
+      </div>
+    </div>
+  );
+
   return (
     <Layout style={{ minHeight: "100vh" }}>
-      <Sider width={240} theme="light" style={{ borderRight: "1px solid #f0f0f0" }}>
-        <div style={{ padding: "20px 24px", display: "flex", alignItems: "center", gap: 8 }}>
-          <div
-            style={{
-              width: 34,
-              height: 34,
-              borderRadius: 8,
-              background: "#25D366",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#fff",
-              fontWeight: 700,
-              fontSize: 18,
-            }}
-          >
-            G
-          </div>
-          <div>
-            <div style={{ fontWeight: 700, fontSize: 16, color: "#1f1f1f", lineHeight: 1.2 }}>GinieSpace</div>
-            <div style={{ fontSize: 11, color: "#8c8c8c" }}>{user?.businessType === "wholesale" ? "Wholesale Hub" : "Retail Hub"}</div>
-          </div>
-        </div>
+      {!isMobile && (
+        <Sider className="no-print" width={240} theme="light" style={{ borderRight: "1px solid #f0f0f0" }}>
+          {sidebarHeader}
+          <Menu
+            mode="inline"
+            selectedKeys={[pathname]}
+            items={menuItems}
+            onClick={({ key }) => router.push(key)}
+            style={{ borderRight: 0 }}
+          />
+        </Sider>
+      )}
 
+      <Drawer
+        title={null}
+        placement="left"
+        width={250}
+        onClose={() => setMobileMenuOpen(false)}
+        open={isMobile && mobileMenuOpen}
+        styles={{ body: { padding: 0 } }}
+      >
+        {sidebarHeader}
         <Menu
           mode="inline"
           selectedKeys={[pathname]}
           items={menuItems}
-          onClick={({ key }) => router.push(key)}
+          onClick={({ key }) => {
+            setMobileMenuOpen(false);
+            router.push(key);
+          }}
           style={{ borderRight: 0 }}
         />
-      </Sider>
+      </Drawer>
 
       <Layout>
         <Header
+          className="no-print"
           style={{
             background: "#fff",
-            padding: "0 24px",
+            padding: isMobile ? "0 12px" : "0 24px",
             borderBottom: "1px solid #f0f0f0",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
+            gap: 8,
+            flexWrap: "wrap",
+            height: "auto",
+            minHeight: 64,
           }}
         >
-          <Space orientation="horizontal" size="middle">
+          <Space direction="horizontal" size="small" wrap>
+            {isMobile && (
+              <Button
+                icon={<MenuOutlined />}
+                onClick={() => setMobileMenuOpen(true)}
+                aria-label="Open navigation menu"
+              />
+            )}
             {waStatus === "connected" ? (
-              <Space>
-                <Tag icon={<CheckCircleOutlined />} color="success" style={{ padding: "4px 10px", fontSize: 13 }}>
-                  WhatsApp Connected {waPhone ? `(${waPhone})` : ""}
+              <Space size="small">
+                <Tag icon={<CheckCircleOutlined />} color="success" style={{ padding: "4px 10px", fontSize: 12 }}>
+                  {isMobile ? "WA Connected" : `WhatsApp Connected ${waPhone ? `(${waPhone})` : ""}`}
                 </Tag>
                 <Button size="small" danger onClick={handleDisconnectWhatsApp}>
                   Disconnect
                 </Button>
               </Space>
             ) : waStatus === "connecting" ? (
-              <Space>
-                <Tag icon={<SyncOutlined spin />} color="warning" style={{ padding: "4px 10px", fontSize: 13 }}>
+              <Space size="small">
+                <Tag icon={<SyncOutlined spin />} color="warning" style={{ padding: "4px 10px", fontSize: 12 }}>
                   Connecting...
                 </Tag>
                 <Button size="small" type="primary" onClick={() => setQrModalVisible(true)}>
-                  Show QR
+                  QR
                 </Button>
               </Space>
             ) : (
-              <Space>
-                <Tag icon={<CloseCircleOutlined />} color="error" style={{ padding: "4px 10px", fontSize: 13 }}>
-                  WhatsApp Disconnected
+              <Space size="small">
+                <Tag icon={<CloseCircleOutlined />} color="error" style={{ padding: "4px 10px", fontSize: 12 }}>
+                  {isMobile ? "WA Offline" : "WhatsApp Disconnected"}
                 </Tag>
                 <Button
                   size="small"
@@ -200,21 +243,53 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             )}
           </Space>
 
-          <Space size="middle">
-            <Space orientation="horizontal">
-              <Text strong>{user?.name}</Text>
-              <Tag color={user?.role === "admin" ? "purple" : "blue"}>
-                {user?.role === "admin" ? "Admin" : "Business"}
-              </Tag>
-            </Space>
-            <Button icon={<LogoutOutlined />} onClick={logout}>
-              Log out
+          <Space size="small">
+            {!isMobile && (
+              <Space direction="horizontal">
+                <Text strong>{user?.name}</Text>
+                <Tag color={user?.role === "admin" ? "purple" : "blue"}>
+                  {user?.role === "admin" ? "Admin" : "Business"}
+                </Tag>
+              </Space>
+            )}
+            <Button size={isMobile ? "small" : "middle"} icon={<LogoutOutlined />} onClick={logout}>
+              {isMobile ? "" : "Log out"}
             </Button>
           </Space>
         </Header>
 
-        <Content style={{ padding: 24, background: "#f8fafc" }}>{children}</Content>
+        <Content style={{ padding: isMobile ? 12 : 24, background: "#f8fafc" }}>{children}</Content>
       </Layout>
+
+      {/* Floating Official GinieSpace WhatsApp Support Button */}
+      <Tooltip title="Official GinieSpace Support (+91 9279259690)" placement="left">
+        <a
+          className="no-print"
+          href="https://wa.me/919279259690?text=Hi%20GinieSpace%20Support%2C%20I%20need%20help."
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            position: "fixed",
+            right: 20,
+            bottom: 20,
+            zIndex: 999,
+            background: "#25D366",
+            color: "#fff",
+            borderRadius: 999,
+            padding: "10px 16px",
+            boxShadow: "0 8px 20px rgba(37, 211, 102, 0.35)",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            fontWeight: 600,
+            fontSize: 13,
+            textDecoration: "none",
+          }}
+        >
+          <WhatsAppOutlined style={{ fontSize: 18 }} />
+          {!isMobile && <span>Support Help</span>}
+        </a>
+      </Tooltip>
 
       {/* WhatsApp QR Modal */}
       <Modal

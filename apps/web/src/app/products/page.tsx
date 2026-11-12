@@ -16,8 +16,18 @@ import {
   Popconfirm,
   Tag,
 } from "antd";
-import { PlusOutlined, DeleteOutlined, EditOutlined, SyncOutlined } from "@ant-design/icons";
+import {
+  PlusOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  SyncOutlined,
+  DownloadOutlined,
+  ShopOutlined,
+  CopyOutlined,
+} from "@ant-design/icons";
 import { api } from "../../lib/api";
+import { downloadCsv } from "../../lib/csv";
+import { useAuth } from "../../context/AuthContext";
 
 const { Title, Text } = Typography;
 
@@ -32,6 +42,7 @@ interface Product {
 }
 
 export default function ProductsPage() {
+  const { user } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
@@ -142,12 +153,24 @@ export default function ProductsPage() {
 
   return (
     <AppLayout>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
         <div>
-          <Title level={4} style={{ margin: 0 }}>Catalog & Items</Title>
+          <Title level={4} style={{ margin: 0 }}>Catalog &amp; Items</Title>
           <Text type="secondary">Manage your product offerings, pricing, and available stock</Text>
         </div>
-        <Space>
+        <Space wrap>
+          <Button
+            icon={<DownloadOutlined />}
+            onClick={() =>
+              downloadCsv(
+                "giniespace-catalog.csv",
+                ["ID", "Name", "Description", "Price", "Unit", "Stock"],
+                products.map((p) => [p.id, p.name, p.description, p.price, p.unit, p.stock])
+              )
+            }
+          >
+            Export CSV
+          </Button>
           <Button icon={<SyncOutlined />} onClick={loadProducts} loading={loading}>
             Refresh
           </Button>
@@ -165,6 +188,35 @@ export default function ProductsPage() {
           </Button>
         </Space>
       </div>
+
+      {user?.id && (
+        <Card size="small" style={{ marginBottom: 16, borderRadius: 12, background: "#f0fdf4", borderColor: "#bbf7d0" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+            <div>
+              <Text strong style={{ color: "#15803d" }}>
+                <ShopOutlined /> Shareable Public Catalog Link:
+              </Text>{" "}
+              <Text code>{`https://app.ginie.space/shop/${user.id}`}</Text>
+            </div>
+            <Space>
+              <Button
+                size="small"
+                icon={<CopyOutlined />}
+                onClick={() => {
+                  const url = `${window.location.origin}/shop/${user.id}`;
+                  navigator.clipboard?.writeText(url);
+                  message.success("Storefront link copied!");
+                }}
+              >
+                Copy Link
+              </Button>
+              <Button size="small" type="primary" href={`/shop/${user.id}`} target="_blank">
+                Preview Store
+              </Button>
+            </Space>
+          </div>
+        </Card>
+      )}
 
       <Card style={{ borderRadius: 12 }}>
         <Table

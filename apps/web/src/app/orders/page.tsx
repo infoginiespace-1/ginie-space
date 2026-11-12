@@ -16,10 +16,20 @@ import {
   Typography,
   message,
   Checkbox,
+  Divider,
 } from "antd";
-import { PlusOutlined, ShoppingCartOutlined, SyncOutlined, WhatsAppOutlined } from "@ant-design/icons";
+import {
+  PlusOutlined,
+  ShoppingCartOutlined,
+  SyncOutlined,
+  WhatsAppOutlined,
+  DownloadOutlined,
+  PrinterOutlined,
+  SearchOutlined,
+} from "@ant-design/icons";
 import { api } from "../../lib/api";
 import { getSocket } from "../../lib/socket";
+import { downloadCsv } from "../../lib/csv";
 
 const { Title, Text } = Typography;
 
@@ -42,6 +52,17 @@ export default function OrdersPage() {
   const [statusUpdating, setStatusUpdating] = useState<string | null>(null);
   const [sendingBillId, setSendingBillId] = useState<string | null>(null);
   const [upiId, setUpiId] = useState("");
+  const [businessProfile, setBusinessProfile] = useState<{
+    name: string;
+    phone?: string;
+    address?: string;
+    gstin?: string;
+    gstRate?: number;
+  }>({ name: "GinieSpace Store" });
+  const [searchText, setSearchText] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [invoiceOrder, setInvoiceOrder] = useState<Order | null>(null);
+  const [invoiceQrUrl, setInvoiceQrUrl] = useState<string | null>(null);
 
   const handleSendWhatsAppBill = async (order: Order) => {
     try {
@@ -86,12 +107,22 @@ export default function OrdersPage() {
     loadOrders();
     api.get("/api/settings")
       .then((res) => {
-        const sj = res.data?.business?.settingsJson;
-        if (sj) {
-          try {
-            const parsed = JSON.parse(sj);
-            if (parsed.upiId) setUpiId(parsed.upiId);
-          } catch {}
+        const b = res.data?.business;
+        if (b) {
+          let parsed: any = {};
+          if (b.settingsJson) {
+            try {
+              parsed = JSON.parse(b.settingsJson);
+            } catch {}
+          }
+          if (parsed.upiId) setUpiId(parsed.upiId);
+          setBusinessProfile({
+            name: b.name || "GinieSpace Store",
+            phone: b.phone || "",
+            address: b.address || "",
+            gstin: parsed.gstin || "",
+            gstRate: Number(parsed.gstRate) || 0,
+          });
         }
       })
       .catch(() => {});
@@ -212,28 +243,148 @@ export default function OrdersPage() {
       title: "Action",
       key: "action",
       render: (_: any, record: Order) => (
-        <Button
-          size="small"
-          type="primary"
-          icon={<WhatsAppOutlined />}
-          loading={sendingBillId === record.id}
-          onClick={() => handleSendWhatsAppBill(record)}
-          style={{ background: "#25D366", borderColor: "#25D366" }}
-        >
-          Send Bill
-        </Button>
+        <Space size="small">
+          <Button
+            size="small"
+            icon={<PrinterOutlined />}
+            onClick={async () => {
+              setInvoiceOrder(record);
+              setInvoiceQrUrl(null);
+              if (upiId && upiId.includes("@")) {
+                try {
+                  const qrRes = await api.get("/api/storefront/upi-qr", {
+                    params: {
+                      pa: upiId,
+                      pn: businessProfile.name,
+                      am: record.totalAmount,
+                      tn: `Order #${record.id.slice(-6)}`,
+                    },
+                  });
+                  setInvoiceQrUrl(qrRes.data?.qrDataUrl || null);
+                } catch {}
+              }
+            }}
+          >
+            Invoice
+          </Button>
+          <Button
+            size="small"
+            type="primary"
+            icon={<WhatsAppOutlined />}
+            loading={sendingBillId === record.id}
+            onClick={() => handleSendWhatsAppBill(record)}
+            style={{ background: "#25D366", borderColor: "#25D366" }}
+          >
+            Send Bill
+          </Button>
+        </Space>
       ),
     },
   ];
 
+  const filteredOrders = orders.filter((o) => {
+    const matchesStatus = statusFilter === "all" || o.status === statusFilter;
+    const q = searchText.trim().toLowerCase();
+    const matchesSearch =
+      !q ||
+      o.customerName.toLowerCase().includes(q) ||
+      o.customerPhone.toLowerCase().includes(q) ||
+      o.id.toLowerCase().includes(q);
+    return matchesStatus && matchesSearch;
+  });
+
+  const handlePrintInvoiceWindow = (order: Order) => {
+    const win = window.open("", "_blank", "width=820,height=900");
+    if (!win) {
+      message.warning("Please allow popups to print/save PDF invoice");
+      return;
+    }
+
+    let items: Array<{ name: string; price: number; quantity: number }> = [];
+    try {
+      const parsed = JSON.parse(order.itemsJson || "[]");
+      if (Array.isArray(parsed)) items = parsed;
+    } catch {}
+
+    const gstRate = Number(businessProfile.gstRate) || 0;
+    const grandTotal = Number(order.totalAmount) || 0;
+    const baseAmount = gstRate > 0 ? grandTotal / (1 + gstRate / 100) : grandTotal;
+    const gstAmount = gstRate > 0 ? grandTotal - baseAmount : 0;
+
+    const itemRows =
+      items.length > 0
+        ? items
+            .map(
+              (item, idx) =>
+                `<tr>
+                  <td>${idx + 1}</td>
+                  <td>${item.name}</td>
+                  <td style="text-align:right">${item.quantity}</td>
+                  <td style="text-align:right">₹${Number(item.price).toFixed(2)}</td>
+                  <td style="text-align:right">₹${(Number(item.price) * Number(item.quantity)).toFixed(2)}</td>
+                </tr>`
+            )
+            .join("")
+        : `<tr><td>1</td><td>Order Items (${order.notes || "Summary"})</td><td style="text-align:right">1</td><td style="text-align:right">₹${baseAmount.toFixed(2)}</td><td style="text-align:right">₹${baseAmount.toFixed(2)}</td></tr>`;
+
+    win.document.write(`<!DOCTYPE html><html><head><title>Invoice #${order.id.slice(-6)}</title>
+      <style>
+        body { font-family: Arial, sans-serif; color: #1e293b; padding: 32px; max-width: 760px; margin: 0 auto; }
+        .header { display: flex; justify-content: space-between; border-bottom: 2px solid #25D366; padding-bottom: 16px; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; margin: 18px 0; }
+        th, td { border: 1px solid #e2e8f0; padding: 10px; font-size: 13px; text-align: left; }
+        th { background: #f8fafc; }
+        .totals { width: 280px; margin-left: auto; font-size: 14px; }
+        .totals div { display: flex; justify-content: space-between; padding: 4px 0; }
+        .grand { font-size: 17px; font-weight: bold; border-top: 2px solid #0f172a; padding-top: 8px; margin-top: 6px; }
+      </style></head><body>
+      <div class="header">
+        <div>
+          <h2 style="margin:0;color:#0f172a">${businessProfile.name}</h2>
+          ${businessProfile.address ? `<div>${businessProfile.address}</div>` : ""}
+          ${businessProfile.phone ? `<div>Phone: ${businessProfile.phone}</div>` : ""}
+          ${businessProfile.gstin ? `<div><strong>GSTIN:</strong> ${businessProfile.gstin}</div>` : ""}
+        </div>
+        <div style="text-align:right">
+          <h3 style="margin:0;color:#16a34a">TAX INVOICE</h3>
+          <div><strong>Invoice #:</strong> ${order.id.slice(-6).toUpperCase()}</div>
+          <div><strong>Date:</strong> ${new Date(order.createdAt).toLocaleDateString()}</div>
+          <div><strong>Status:</strong> ${order.status.toUpperCase()}</div>
+        </div>
+      </div>
+      <div><strong>Billed To:</strong> ${order.customerName} (+${order.customerPhone.replace(/^\+/, "")})</div>
+      <table><thead><tr><th>#</th><th>Item</th><th style="text-align:right">Qty</th><th style="text-align:right">Rate</th><th style="text-align:right">Total</th></tr></thead><tbody>${itemRows}</tbody></table>
+      <div class="totals">
+        <div><span>Subtotal:</span><span>₹${baseAmount.toFixed(2)}</span></div>
+        ${gstRate > 0 ? `<div><span>GST (${gstRate}%):</span><span>₹${gstAmount.toFixed(2)}</span></div>` : ""}
+        <div class="grand"><span>Grand Total:</span><span>₹${grandTotal.toFixed(2)}</span></div>
+      </div>
+      ${upiId ? `<div style="margin-top:24px;padding:12px;border:1px solid #bbf7d0;background:#f0fdf4;display:inline-block"><strong>Pay via UPI:</strong> ${upiId}${invoiceQrUrl ? `<br/><img src="${invoiceQrUrl}" style="width:130px;height:130px;margin-top:8px"/>` : ""}</div>` : ""}
+      <script>window.onload = function() { window.print(); };</script>
+      </body></html>`);
+    win.document.close();
+  };
+
   return (
     <AppLayout>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
         <div>
-          <Title level={4} style={{ margin: 0 }}>Orders & Sales</Title>
-          <Text type="secondary">Manage customer orders and automatic WhatsApp delivery updates</Text>
+          <Title level={4} style={{ margin: 0 }}>Orders &amp; Sales</Title>
+          <Text type="secondary">Manage customer orders, GST invoices, and automatic WhatsApp delivery updates</Text>
         </div>
-        <Space>
+        <Space wrap>
+          <Button
+            icon={<DownloadOutlined />}
+            onClick={() =>
+              downloadCsv(
+                "giniespace-orders.csv",
+                ["OrderID", "Customer", "Phone", "Amount", "Status", "Notes", "Date"],
+                filteredOrders.map((o) => [o.id, o.customerName, o.customerPhone, o.totalAmount, o.status, o.notes, o.createdAt])
+              )
+            }
+          >
+            Export CSV
+          </Button>
           <Button icon={<SyncOutlined />} onClick={loadOrders} loading={loading}>
             Refresh
           </Button>
@@ -249,8 +400,31 @@ export default function OrdersPage() {
       </div>
 
       <Card style={{ borderRadius: 12 }}>
+        <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+          <Input
+            prefix={<SearchOutlined style={{ color: "#94a3b8" }} />}
+            placeholder="Search by customer name, phone, or order #..."
+            allowClear
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            style={{ maxWidth: 320 }}
+          />
+          <Select
+            value={statusFilter}
+            onChange={setStatusFilter}
+            style={{ width: 160 }}
+            options={[
+              { value: "all", label: "All Statuses" },
+              { value: "pending", label: "Pending" },
+              { value: "confirmed", label: "Confirmed" },
+              { value: "dispatched", label: "Dispatched" },
+              { value: "delivered", label: "Delivered" },
+              { value: "cancelled", label: "Cancelled" },
+            ]}
+          />
+        </div>
         <Table
-          dataSource={orders}
+          dataSource={filteredOrders}
           columns={columns}
           rowKey="id"
           loading={loading}
@@ -306,6 +480,98 @@ export default function OrdersPage() {
             </Button>
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* Printable Invoice & UPI QR Modal */}
+      <Modal
+        title={`Invoice #${invoiceOrder ? invoiceOrder.id.slice(-6).toUpperCase() : ""}`}
+        open={Boolean(invoiceOrder)}
+        onCancel={() => setInvoiceOrder(null)}
+        width={620}
+        footer={[
+          <Button key="close" onClick={() => setInvoiceOrder(null)}>Close</Button>,
+          <Button
+            key="print"
+            type="primary"
+            icon={<PrinterOutlined />}
+            style={{ background: "#25D366", borderColor: "#25D366" }}
+            onClick={() => invoiceOrder && handlePrintInvoiceWindow(invoiceOrder)}
+          >
+            Print / Save as PDF
+          </Button>,
+        ]}
+      >
+        {invoiceOrder && (
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+              <div>
+                <Title level={5} style={{ margin: 0 }}>{businessProfile.name}</Title>
+                {businessProfile.address && <Text type="secondary" style={{ display: "block" }}>{businessProfile.address}</Text>}
+                {businessProfile.gstin && <Text strong style={{ fontSize: 12 }}>GSTIN: {businessProfile.gstin}</Text>}
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <Text strong>Date:</Text> {new Date(invoiceOrder.createdAt).toLocaleDateString()}
+                <div><Tag color={statusColors[invoiceOrder.status]}>{invoiceOrder.status.toUpperCase()}</Tag></div>
+              </div>
+            </div>
+            <Divider />
+            <div style={{ marginBottom: 12 }}>
+              <Text strong>Customer:</Text> {invoiceOrder.customerName} (+{invoiceOrder.customerPhone.replace(/^\+/, "")})
+            </div>
+            {(() => {
+              let parsedItems: any[] = [];
+              try {
+                parsedItems = JSON.parse(invoiceOrder.itemsJson || "[]");
+              } catch {}
+              const gstRate = Number(businessProfile.gstRate) || 0;
+              const grand = Number(invoiceOrder.totalAmount) || 0;
+              const base = gstRate > 0 ? grand / (1 + gstRate / 100) : grand;
+              const tax = gstRate > 0 ? grand - base : 0;
+
+              return (
+                <>
+                  {Array.isArray(parsedItems) && parsedItems.length > 0 && (
+                    <Table
+                      size="small"
+                      pagination={false}
+                      dataSource={parsedItems}
+                      rowKey={(r, i) => `${r.name}_${i}`}
+                      columns={[
+                        { title: "Item", dataIndex: "name" },
+                        { title: "Qty", dataIndex: "quantity", align: "right" as const },
+                        { title: "Rate", dataIndex: "price", render: (p: number) => `₹${p}`, align: "right" as const },
+                        { title: "Amount", render: (_: any, r: any) => `₹${(Number(r.price) * Number(r.quantity)).toFixed(2)}`, align: "right" as const },
+                      ]}
+                      style={{ marginBottom: 14 }}
+                    />
+                  )}
+                  <div style={{ textAlign: "right" }}>
+                    {gstRate > 0 && (
+                      <>
+                        <div>Subtotal: ₹{base.toFixed(2)}</div>
+                        <div>GST ({gstRate}%): ₹{tax.toFixed(2)}</div>
+                      </>
+                    )}
+                    <Title level={4} style={{ margin: "6px 0", color: "#16a34a" }}>
+                      Grand Total: ₹{grand.toLocaleString("en-IN")}
+                    </Title>
+                  </div>
+                </>
+              );
+            })()}
+            {upiId && (
+              <Card size="small" style={{ marginTop: 12, background: "#f0fdf4", textAlign: "center" }}>
+                <Text strong>Pay via UPI:</Text> <Text code>{upiId}</Text>
+                {invoiceQrUrl && (
+                  <div style={{ marginTop: 10 }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={invoiceQrUrl} alt="Invoice UPI QR" style={{ width: 150, height: 150, background: "#fff", padding: 6, borderRadius: 8 }} />
+                  </div>
+                )}
+              </Card>
+            )}
+          </div>
+        )}
       </Modal>
     </AppLayout>
   );

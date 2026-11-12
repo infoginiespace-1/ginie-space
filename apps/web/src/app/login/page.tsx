@@ -20,7 +20,7 @@ export default function LoginPage() {
       setLoading(true);
       setErrorMsg(null);
       await login(values.email, values.password);
-      router.push("/inbox");
+      router.push("/dashboard");
     } catch (err: any) {
       setErrorMsg(err.message || "Could not sign in. Please check your credentials.");
     } finally {

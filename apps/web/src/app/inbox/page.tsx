@@ -5,6 +5,7 @@ import { AppLayout } from "../../components/AppLayout";
 import {
   Card,
   Input,
+  InputNumber,
   Button,
   List,
   Avatar,
@@ -15,12 +16,17 @@ import {
   message,
   Modal,
   Tag,
+  Form,
+  Grid,
 } from "antd";
 import {
   SendOutlined,
   UserOutlined,
   WhatsAppOutlined,
   AppstoreOutlined,
+  SearchOutlined,
+  ShoppingCartOutlined,
+  ArrowLeftOutlined,
 } from "@ant-design/icons";
 import { getSocket } from "../../lib/socket";
 import { api } from "../../lib/api";
@@ -63,20 +69,53 @@ function normalizePhoneKey(raw: string): string {
 }
 
 export default function InboxPage() {
+  const screens = Grid.useBreakpoint();
+  const isMobile = screens.md === false;
   const [conversations, setConversations] = useState<Map<string, Conversation>>(new Map());
   const [activeKey, setActiveKey] = useState<string | null>(null);
+  const activeKeyRef = useRef<string | null>(null);
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+  const [searchTerm, setSearchTerm] = useState("");
   const [inputText, setInputText] = useState("");
   const [sending, setSending] = useState(false);
   const [catalogModalVisible, setCatalogModalVisible] = useState(false);
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
+  const [orderModalOpen, setOrderModalOpen] = useState(false);
+  const [creatingOrder, setCreatingOrder] = useState(false);
+  const [orderForm] = Form.useForm();
+  const [upiId, setUpiId] = useState("");
+  const [storeName, setStoreName] = useState("Our Store");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    activeKeyRef.current = activeKey;
+    if (activeKey) {
+      setUnreadCounts((prev) => {
+        if (!prev[activeKey]) return prev;
+        const copy = { ...prev };
+        delete copy[activeKey];
+        return copy;
+      });
+    }
+  }, [activeKey]);
 
   useEffect(() => {
     Promise.all([
       api.get("/api/customers").catch(() => ({ data: { customers: [] } })),
       api.get("/api/whatsapp/messages").catch(() => ({ data: { messages: [] } })),
-    ]).then(([custRes, msgRes]) => {
+      api.get("/api/settings").catch(() => ({ data: { business: null } })),
+    ]).then(([custRes, msgRes, setRes]) => {
+      const biz = setRes.data?.business;
+      if (biz) {
+        if (biz.name) setStoreName(biz.name);
+        if (biz.settingsJson) {
+          try {
+            const parsed = JSON.parse(biz.settingsJson);
+            if (parsed.upiId) setUpiId(parsed.upiId);
+          } catch {}
+        }
+      }
       const custs = custRes.data.customers || [];
       const savedMsgs = msgRes.data.messages || [];
       const map = new Map<string, Conversation>();
@@ -130,7 +169,7 @@ export default function InboxPage() {
       const requestedKey = phoneParam ? normalizePhoneKey(phoneParam) : "";
       if (requestedKey && map.has(requestedKey)) {
         setActiveKey(requestedKey);
-      } else if (keys.length > 0 && !activeKey) {
+      } else if (!isMobile && keys.length > 0 && !activeKey) {
         setActiveKey(keys[0]);
       }
     });
@@ -175,6 +214,13 @@ export default function InboxPage() {
           next.set(key, updatedConv);
           return next;
         });
+
+        if (!event.fromMe && activeKeyRef.current !== key) {
+          setUnreadCounts((prev) => ({
+            ...prev,
+            [key]: (prev[key] || 0) + 1,
+          }));
+        }
       };
 
       socket.on("whatsapp:message", handleIncoming);
@@ -261,26 +307,81 @@ export default function InboxPage() {
   };
 
   const activeConv = activeKey ? conversations.get(activeKey) : null;
-  const conversationList = Array.from(conversations.values()).sort(
-    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-  );
+  const conversationList = Array.from(conversations.values())
+    .filter((c) => {
+      const q = searchTerm.trim().toLowerCase();
+      if (!q) return true;
+      return c.name.toLowerCase().includes(q) || c.phone.toLowerCase().includes(q);
+    })
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+  const quickReplies = [
+    {
+      label: "Price List",
+      text: `Namaste! Aapka ${storeName} mein swagat hai. Batayein aapko kis item ka wholesale/retail rate chahiye?`,
+    },
+    {
+      label: "UPI Pay Info",
+      text: upiId
+        ? `💳 *Payment Details (${storeName}):*\nAap hamare UPI ID *${upiId}* par payment karke screenshot share kar sakte hain.`
+        : `Payment details ke liye kripya batayein, hum abhi UPI/Bank detail share kar rahe hain.`,
+    },
+    {
+      label: "Order Shipped",
+      text: `🚚 Aapka order dispatch ho gaya hai! Delivery milne par zaroor batayein. Dhanyavaad!`,
+    },
+    {
+      label: "Thanks",
+      text: `Thank you for connecting with *${storeName}*! Kisi bhi aur order ya help ke liye yahan message karein. 🙏`,
+    },
+  ];
+
+  const handleCreateQuickOrder = async (values: any) => {
+    if (!activeConv) return;
+    setCreatingOrder(true);
+    try {
+      await api.post("/api/orders", {
+        customerName: activeConv.name,
+        customerPhone: activeConv.phone,
+        totalAmount: values.totalAmount,
+        notes: values.notes,
+      });
+      message.success(`Order created for ${activeConv.name}!`);
+      setOrderModalOpen(false);
+      orderForm.resetFields();
+    } catch (err: any) {
+      message.error(err.message || "Could not create order");
+    } finally {
+      setCreatingOrder(false);
+    }
+  };
 
   return (
     <AppLayout>
-      <div style={{ display: "flex", gap: 16, height: "calc(100vh - 120px)" }}>
+      <div style={{ display: "flex", gap: 16, height: isMobile ? "calc(100vh - 96px)" : "calc(100vh - 120px)" }}>
         {/* Conversations List */}
+        {(!isMobile || !activeKey) && (
         <Card
-          style={{ width: 340, height: "100%", overflowY: "auto", borderRadius: 12 }}
-          bodyStyle={{ padding: 0 }}
+          style={{ width: isMobile ? "100%" : 340, height: "100%", overflowY: "auto", borderRadius: 12 }}
+          styles={{ body: { padding: 0 } }}
         >
-          <div style={{ padding: "16px 20px", borderBottom: "1px solid #f0f0f0" }}>
+          <div style={{ padding: "14px 16px", borderBottom: "1px solid #f0f0f0" }}>
             <Title level={5} style={{ margin: 0 }}>Conversations</Title>
-            <Text type="secondary" style={{ fontSize: 12 }}>Real-time WhatsApp messages (Cloud Synced)</Text>
+            <Text type="secondary" style={{ fontSize: 12, display: "block", marginBottom: 10 }}>
+              Real-time WhatsApp messages (Cloud Synced)
+            </Text>
+            <Input
+              prefix={<SearchOutlined style={{ color: "#94a3b8" }} />}
+              placeholder="Search name or phone..."
+              allowClear
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
 
           {conversationList.length === 0 ? (
             <div style={{ padding: 40, textAlign: "center" }}>
-              <Empty description="No chats yet" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+              <Empty description="No chats match your filter" image={Empty.PRESENTED_IMAGE_SIMPLE} />
             </div>
           ) : (
             <List
@@ -299,10 +400,12 @@ export default function InboxPage() {
                 >
                   <List.Item.Meta
                     avatar={
-                      <Avatar
-                        style={{ background: "#25D366" }}
-                        icon={<WhatsAppOutlined />}
-                      />
+                      <Badge count={unreadCounts[item.key] || 0} size="small">
+                        <Avatar
+                          style={{ background: "#25D366" }}
+                          icon={<WhatsAppOutlined />}
+                        />
+                      </Badge>
                     }
                     title={<Text strong>{item.name}</Text>}
                     description={
@@ -320,32 +423,48 @@ export default function InboxPage() {
             />
           )}
         </Card>
+        )}
 
         {/* Active Conversation Chat Window */}
+        {(!isMobile || Boolean(activeKey)) && (
         <Card
           style={{ flex: 1, height: "100%", display: "flex", flexDirection: "column", borderRadius: 12 }}
-          bodyStyle={{ flex: 1, display: "flex", flexDirection: "column", padding: 0, height: "100%" }}
+          styles={{ body: { flex: 1, display: "flex", flexDirection: "column", padding: 0, height: "100%" } }}
         >
           {activeConv ? (
             <>
               {/* Chat Header */}
               <div
                 style={{
-                  padding: "16px 24px",
+                  padding: "14px 18px",
                   borderBottom: "1px solid #f0f0f0",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
+                  gap: 8,
+                  flexWrap: "wrap",
                 }}
               >
                 <Space>
+                  {isMobile && (
+                    <Button icon={<ArrowLeftOutlined />} size="small" onClick={() => setActiveKey(null)} />
+                  )}
                   <Avatar style={{ background: "#25D366" }} icon={<UserOutlined />} />
                   <div>
                     <div style={{ fontWeight: 600, fontSize: 15 }}>{activeConv.name}</div>
                     <Text type="secondary" style={{ fontSize: 12 }}>+{activeConv.phone.replace(/^\+/, "")}</Text>
                   </div>
                 </Space>
-                <Badge status="processing" text="Live Sync" />
+                <Space>
+                  <Button
+                    size="small"
+                    icon={<ShoppingCartOutlined />}
+                    onClick={() => setOrderModalOpen(true)}
+                  >
+                    Create Order
+                  </Button>
+                  <Badge status="processing" text="Live" />
+                </Space>
               </div>
 
               {/* Chat Messages */}
@@ -393,8 +512,20 @@ export default function InboxPage() {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Chat Input */}
-              <div style={{ padding: 16, borderTop: "1px solid #f0f0f0", background: "#fff" }}>
+              {/* Chat Input + Quick Replies */}
+              <div style={{ padding: 14, borderTop: "1px solid #f0f0f0", background: "#fff" }}>
+                <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap" }}>
+                  {quickReplies.map((qr) => (
+                    <Button
+                      key={qr.label}
+                      size="small"
+                      onClick={() => setInputText(qr.text)}
+                      style={{ borderRadius: 999, fontSize: 12 }}
+                    >
+                      ⚡ {qr.label}
+                    </Button>
+                  ))}
+                </div>
                 <div style={{ display: "flex", gap: 8, width: "100%" }}>
                   <Button
                     icon={<AppstoreOutlined />}
@@ -431,7 +562,39 @@ export default function InboxPage() {
             </div>
           )}
         </Card>
+        )}
       </div>
+
+      {/* Quick Create Order from Chat Modal */}
+      <Modal
+        title={`Create Order — ${activeConv?.name || ""}`}
+        open={orderModalOpen}
+        onCancel={() => setOrderModalOpen(false)}
+        footer={null}
+        destroyOnClose
+      >
+        <Form form={orderForm} layout="vertical" onFinish={handleCreateQuickOrder}>
+          <Form.Item
+            name="totalAmount"
+            label="Order Total Amount (₹)"
+            rules={[{ required: true, message: "Enter amount" }]}
+          >
+            <InputNumber style={{ width: "100%" }} min={1} placeholder="e.g. 2400" />
+          </Form.Item>
+          <Form.Item name="notes" label="Items & Delivery Notes">
+            <Input.TextArea rows={3} placeholder="e.g. 4 pcs Cotton Kurta, urgent delivery" />
+          </Form.Item>
+          <Button
+            type="primary"
+            htmlType="submit"
+            block
+            loading={creatingOrder}
+            style={{ background: "#25D366", borderColor: "#25D366", fontWeight: 600 }}
+          >
+            Save Order &amp; Notify Customer
+          </Button>
+        </Form>
+      </Modal>
 
       {/* Quick Product Catalog Share Modal */}
       <Modal

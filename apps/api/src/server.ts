@@ -16,6 +16,7 @@ import { createLeadsRouter } from "./routes/leads.routes";
 import { createWhatsAppRouter } from "./routes/whatsapp.routes";
 import { createSettingsRouter } from "./routes/settings.routes";
 import { createAdminRouter } from "./routes/admin.routes";
+import { createStorefrontRouter } from "./routes/storefront.routes";
 import { NotificationService } from "./services/notification.service";
 
 async function bootstrap() {
@@ -125,8 +126,9 @@ async function bootstrap() {
     res.json({ status: "healthy", timestamp: new Date().toISOString() });
   });
 
-  // Auth Routes (Public)
+  // Auth Routes & Public Storefront (Public)
   app.use("/api/auth", createAuthRouter(db, config.jwtSecret, notificationService));
+  app.use("/api/storefront", createStorefrontRouter(db, io, notificationService));
 
   // Protected Business Routes
   const auth = authMiddleware(config.jwtSecret);

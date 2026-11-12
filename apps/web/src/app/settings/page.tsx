@@ -26,13 +26,17 @@ import {
   CloseCircleOutlined,
   SyncOutlined,
   PhoneOutlined,
+  ShopOutlined,
+  CopyOutlined,
 } from "@ant-design/icons";
 import { api } from "../../lib/api";
 import { getSocket } from "../../lib/socket";
+import { useAuth } from "../../context/AuthContext";
 
 const { Title, Text, Paragraph } = Typography;
 
 export default function SettingsPage() {
+  const { user } = useAuth();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -48,10 +52,12 @@ export default function SettingsPage() {
     api.get("/api/settings")
       .then((res) => {
         const b = res.data.business || {};
-        let parsedSettings: { autoReply: boolean; welcomeMessage: string; upiId?: string } = {
+        let parsedSettings: { autoReply: boolean; welcomeMessage: string; upiId?: string; gstin?: string; gstRate?: number } = {
           autoReply: true,
           welcomeMessage: "Hello! Welcome to our store.",
           upiId: "",
+          gstin: "",
+          gstRate: 0,
         };
         if (b.settingsJson) {
           try {
@@ -63,6 +69,8 @@ export default function SettingsPage() {
           phone: b.phone || "",
           address: b.address || "",
           upiId: parsedSettings.upiId || "",
+          gstin: parsedSettings.gstin || "",
+          gstRate: parsedSettings.gstRate || 0,
           autoReply: parsedSettings.autoReply,
           welcomeMessage: parsedSettings.welcomeMessage,
         });
@@ -139,6 +147,8 @@ export default function SettingsPage() {
         autoReply: values.autoReply,
         welcomeMessage: values.welcomeMessage,
         upiId: (values.upiId || "").trim(),
+        gstin: (values.gstin || "").trim().toUpperCase(),
+        gstRate: Number(values.gstRate) || 0,
       });
 
       await api.put("/api/settings/business", {
@@ -183,10 +193,44 @@ export default function SettingsPage() {
               <Form.Item
                 name="upiId"
                 label="Merchant UPI ID (for Bills &amp; Payment Reminders)"
-                extra="Automatically included on WhatsApp Order Bills &amp; Customer Payment Reminders"
+                extra="Automatically included on WhatsApp Order Bills, Storefront Checkout &amp; Scannable UPI QR Codes"
               >
                 <Input placeholder="e.g. yourstore@ybl or 9876543210@paytm" />
               </Form.Item>
+
+              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 12 }}>
+                <Form.Item name="gstin" label="GSTIN (Optional for Invoices)">
+                  <Input placeholder="e.g. 27ABCDE1234F1Z5" />
+                </Form.Item>
+
+                <Form.Item name="gstRate" label="Default GST %">
+                  <Input type="number" min={0} max={28} placeholder="0 or 18" />
+                </Form.Item>
+              </div>
+
+              {user?.id && (
+                <Card size="small" style={{ marginBottom: 16, background: "#f0fdf4", borderColor: "#bbf7d0" }}>
+                  <Space direction="vertical" size={4} style={{ width: "100%" }}>
+                    <Text strong style={{ color: "#15803d" }}>
+                      <ShopOutlined /> Your Public Digital Storefront Link
+                    </Text>
+                    <Space wrap>
+                      <Text code>{`https://app.ginie.space/shop/${user.id}`}</Text>
+                      <Button
+                        size="small"
+                        icon={<CopyOutlined />}
+                        onClick={() => {
+                          const url = `${window.location.origin}/shop/${user.id}`;
+                          navigator.clipboard?.writeText(url);
+                          message.success("Storefront link copied!");
+                        }}
+                      >
+                        Copy Link
+                      </Button>
+                    </Space>
+                  </Space>
+                </Card>
+              )}
 
               <Divider />
 
