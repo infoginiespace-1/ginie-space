@@ -2,6 +2,36 @@ import { Router, Request, Response } from "express";
 import { IDatabase } from "@giniespace/sheets-db";
 import { Server } from "socket.io";
 
+const MAX_IMAGE_BYTES = 60 * 1024; // 60 KB strict max
+const MAX_SHEETS_CELL_CHARS = 49500; // Google Sheets single-cell safety cap
+
+function validateProductImageUrl(imageUrl: unknown): string | null {
+  if (imageUrl === undefined || imageUrl === null || imageUrl === "") return null;
+  if (typeof imageUrl !== "string") return "Invalid image format";
+  const trimmed = imageUrl.trim();
+  if (!trimmed) return null;
+
+  if (trimmed.startsWith("data:")) {
+    if (!trimmed.startsWith("data:image/jpeg;base64,")) {
+      return "Only JPG / JPEG format images are allowed";
+    }
+    const base64Part = trimmed.slice("data:image/jpeg;base64,".length);
+    const decodedBytes = Buffer.from(base64Part, "base64").length;
+    if (decodedBytes > MAX_IMAGE_BYTES) {
+      return "Image size exceeds 60 KB limit";
+    }
+    if (trimmed.length > MAX_SHEETS_CELL_CHARS) {
+      return "Image payload exceeds storage capacity (~35 KB optimized JPEG max)";
+    }
+    return null;
+  }
+
+  if (!trimmed.startsWith("https://") && !trimmed.startsWith("http://")) {
+    return "Image URL must be a valid JPG upload or http(s) URL";
+  }
+  return null;
+}
+
 export function createProductsRouter(db: IDatabase, io: Server): Router {
   const router = Router();
 
@@ -35,6 +65,11 @@ export function createProductsRouter(db: IDatabase, io: Server): Router {
   router.post("/", async (req: Request, res: Response): Promise<void> => {
     try {
       const { name, description, price, unit, stock, imageUrl } = req.body;
+      const imageErr = validateProductImageUrl(imageUrl);
+      if (imageErr) {
+        res.status(400).json({ error: imageErr });
+        return;
+      }
       if (!name || price === undefined) {
         res.status(400).json({ error: "Item name and price are required" });
         return;
@@ -71,6 +106,11 @@ export function createProductsRouter(db: IDatabase, io: Server): Router {
       }
 
       const { name, description, price, unit, stock, imageUrl } = req.body;
+      const imageErr = validateProductImageUrl(imageUrl);
+      if (imageErr) {
+        res.status(400).json({ error: imageErr });
+        return;
+      }
       const updated = await db.products.update((req.params.id as string), {
         name: name !== undefined ? name.trim() : existing.name,
         description: description !== undefined ? description.trim() : existing.description,

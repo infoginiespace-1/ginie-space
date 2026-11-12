@@ -31,7 +31,7 @@ async function bootstrap() {
       credentials: true,
     })
   );
-  app.use(express.json());
+  app.use(express.json({ limit: "256kb" }));
 
   // Database Abstraction Layer (Google Sheets)
   const db = createDatabase({

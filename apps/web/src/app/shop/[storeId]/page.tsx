@@ -51,6 +51,7 @@ interface StoreProduct {
   price: number;
   unit: string;
   stock: number;
+  imageUrl?: string;
 }
 
 export default function PublicStorefrontPage() {
@@ -259,6 +260,22 @@ export default function PublicStorefrontPage() {
                     styles={{ body: { flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" } }}
                   >
                     <div>
+                      {p.imageUrl && (
+                        <div style={{ marginBottom: 12 }}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={p.imageUrl}
+                            alt={p.name}
+                            style={{
+                              width: "100%",
+                              height: 160,
+                              objectFit: "cover",
+                              borderRadius: 8,
+                              border: "1px solid #f1f5f9",
+                            }}
+                          />
+                        </div>
+                      )}
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
                         <Title level={5} style={{ margin: 0 }}>{p.name}</Title>
                         <Tag color={outOfStock ? "red" : "green"}>

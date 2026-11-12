@@ -58,6 +58,7 @@ interface ProductItem {
   price: number;
   unit: string;
   stock: number;
+  imageUrl?: string;
 }
 
 function normalizePhoneKey(raw: string): string {
@@ -624,6 +625,13 @@ export default function InboxPage() {
               ]}
             >
               <List.Item.Meta
+                avatar={
+                  item.imageUrl ? (
+                    <Avatar src={item.imageUrl} shape="square" size={44} />
+                  ) : (
+                    <Avatar icon={<AppstoreOutlined />} shape="square" size={44} style={{ background: "#f0fdf4", color: "#25D366" }} />
+                  )
+                }
                 title={<Text strong>{item.name}</Text>}
                 description={
                   <Space size="small">
