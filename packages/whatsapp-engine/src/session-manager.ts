@@ -128,12 +128,28 @@ export class WhatsAppSessionManager extends EventEmitter {
       throw new Error(`WhatsApp session for user ${req.userId} is not connected`);
     }
 
-    let cleanPhone = req.recipientPhone.replace(/[^0-9]/g, "");
-    if (!cleanPhone.includes("@s.whatsapp.net")) {
-      cleanPhone = `${cleanPhone}@s.whatsapp.net`;
+    let digits = req.recipientPhone.replace(/[^0-9]/g, "");
+    if (digits.startsWith("00")) digits = digits.slice(2);
+    if (digits.startsWith("0") && digits.length === 11) digits = digits.slice(1);
+    // Auto-prefix Indian country code 91 if only 10 digits provided
+    if (digits.length === 10) {
+      digits = `91${digits}`;
     }
 
-    const result = await sock.sendMessage(cleanPhone, {
+    const defaultJid = `${digits}@s.whatsapp.net`;
+
+    try {
+      const results = await sock.onWhatsApp(digits);
+      if (results && results.length > 0 && results[0].exists) {
+        return await sock.sendMessage(results[0].jid, {
+          text: req.messageText,
+        });
+      }
+    } catch (err: any) {
+      console.warn(`[WhatsAppManager] onWhatsApp query warning: ${err.message}`);
+    }
+
+    const result = await sock.sendMessage(defaultJid, {
       text: req.messageText,
     });
 
