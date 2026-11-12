@@ -1,6 +1,7 @@
 export type UserRole = "admin" | "user";
 export type BusinessType = "retail" | "wholesale";
 export type OrderStatus = "pending" | "confirmed" | "dispatched" | "delivered" | "cancelled";
+export type PaymentStatus = "unpaid" | "partial" | "paid";
 export type LeadStatus = "new" | "contacted" | "converted" | "archived";
 export type WhatsAppStatus = "disconnected" | "connecting" | "connected";
 
@@ -68,6 +69,8 @@ export interface Order {
   totalAmount: number;
   status: OrderStatus;
   notes?: string;
+  paymentStatus?: PaymentStatus;
+  paidAmount?: number;
   createdAt: string;
   updatedAt: string;
 }

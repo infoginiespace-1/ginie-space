@@ -18,6 +18,7 @@ import {
   Tag,
   Form,
   Grid,
+  Select,
 } from "antd";
 import {
   SendOutlined,
@@ -27,6 +28,8 @@ import {
   SearchOutlined,
   ShoppingCartOutlined,
   ArrowLeftOutlined,
+  PlusOutlined,
+  DeleteOutlined,
 } from "@ant-design/icons";
 import { getSocket } from "../../lib/socket";
 import { api } from "../../lib/api";
@@ -85,6 +88,9 @@ export default function InboxPage() {
   const [orderModalOpen, setOrderModalOpen] = useState(false);
   const [creatingOrder, setCreatingOrder] = useState(false);
   const [orderForm] = Form.useForm();
+  const [orderItems, setOrderItems] = useState<Array<{ productId: string; name: string; price: number; quantity: number; unit?: string }>>([]);
+  const [pickerProductId, setPickerProductId] = useState<string | undefined>(undefined);
+  const [pickerQty, setPickerQty] = useState<number>(1);
   const [upiId, setUpiId] = useState("");
   const [storeName, setStoreName] = useState("Our Store");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -337,18 +343,68 @@ export default function InboxPage() {
     },
   ];
 
+  const handleOpenOrderModal = async () => {
+    setOrderItems([]);
+    setPickerProductId(undefined);
+    setPickerQty(1);
+    orderForm.resetFields();
+    orderForm.setFieldsValue({ paymentStatus: "unpaid" });
+    setOrderModalOpen(true);
+    if (products.length === 0) {
+      try {
+        const res = await api.get("/api/products");
+        setProducts(res.data.products || []);
+      } catch {}
+    }
+  };
+
+  const handleAddQuickOrderItem = () => {
+    if (!pickerProductId) return;
+    const prod = products.find((p) => p.id === pickerProductId);
+    if (!prod) return;
+    const qty = Math.max(1, Number(pickerQty) || 1);
+    setOrderItems((prev) => {
+      const existing = prev.find((i) => i.productId === prod.id);
+      const next = existing
+        ? prev.map((i) => (i.productId === prod.id ? { ...i, quantity: i.quantity + qty } : i))
+        : [...prev, { productId: prod.id, name: prod.name, price: Number(prod.price) || 0, quantity: qty, unit: prod.unit }];
+      const sum = next.reduce((acc, item) => acc + item.price * item.quantity, 0);
+      orderForm.setFieldsValue({ totalAmount: sum });
+      return next;
+    });
+    setPickerProductId(undefined);
+    setPickerQty(1);
+  };
+
+  const handleRemoveQuickOrderItem = (productId: string) => {
+    setOrderItems((prev) => {
+      const next = prev.filter((i) => i.productId !== productId);
+      const sum = next.reduce((acc, item) => acc + item.price * item.quantity, 0);
+      if (next.length > 0) {
+        orderForm.setFieldsValue({ totalAmount: sum });
+      }
+      return next;
+    });
+  };
+
   const handleCreateQuickOrder = async (values: any) => {
     if (!activeConv) return;
     setCreatingOrder(true);
     try {
+      const total = Number(values.totalAmount) || 0;
+      const paymentStatus = values.paymentStatus || "unpaid";
       await api.post("/api/orders", {
         customerName: activeConv.name,
         customerPhone: activeConv.phone,
-        totalAmount: values.totalAmount,
+        items: orderItems.length > 0 ? orderItems : undefined,
+        totalAmount: total,
         notes: values.notes,
+        paymentStatus,
+        paidAmount: paymentStatus === "paid" ? total : 0,
       });
       message.success(`Order created for ${activeConv.name}!`);
       setOrderModalOpen(false);
+      setOrderItems([]);
       orderForm.resetFields();
     } catch (err: any) {
       message.error(err.message || "Could not create order");
@@ -460,7 +516,7 @@ export default function InboxPage() {
                   <Button
                     size="small"
                     icon={<ShoppingCartOutlined />}
-                    onClick={() => setOrderModalOpen(true)}
+                    onClick={handleOpenOrderModal}
                   >
                     Create Order
                   </Button>
@@ -573,17 +629,79 @@ export default function InboxPage() {
         onCancel={() => setOrderModalOpen(false)}
         footer={null}
         destroyOnClose
+        width={520}
       >
-        <Form form={orderForm} layout="vertical" onFinish={handleCreateQuickOrder}>
-          <Form.Item
-            name="totalAmount"
-            label="Order Total Amount (₹)"
-            rules={[{ required: true, message: "Enter amount" }]}
-          >
-            <InputNumber style={{ width: "100%" }} min={1} placeholder="e.g. 2400" />
-          </Form.Item>
+        <div style={{ marginBottom: 14, padding: 10, background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0" }}>
+          <Text strong style={{ display: "block", marginBottom: 6, fontSize: 12 }}>
+            Add Catalog Items (Auto-computes Total &amp; Deducts Stock)
+          </Text>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Select
+              showSearch
+              placeholder="Select item from catalog..."
+              optionFilterProp="label"
+              value={pickerProductId}
+              onChange={setPickerProductId}
+              style={{ flex: 1, minWidth: 180 }}
+              options={products.map((p) => ({
+                value: p.id,
+                label: `${p.name} — ₹${p.price}/${p.unit || "pcs"} (Stock: ${p.stock})`,
+              }))}
+            />
+            <InputNumber
+              min={1}
+              value={pickerQty}
+              onChange={(v) => setPickerQty(Number(v) || 1)}
+              style={{ width: 70 }}
+            />
+            <Button icon={<PlusOutlined />} onClick={handleAddQuickOrderItem}>
+              Add
+            </Button>
+          </div>
+          {orderItems.length > 0 && (
+            <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 4 }}>
+              {orderItems.map((item) => (
+                <div
+                  key={item.productId}
+                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, background: "#fff", padding: "4px 8px", borderRadius: 6 }}
+                >
+                  <span>
+                    {item.name} × {item.quantity} = <strong>₹{(item.price * item.quantity).toLocaleString("en-IN")}</strong>
+                  </span>
+                  <Button
+                    type="text"
+                    size="small"
+                    danger
+                    icon={<DeleteOutlined />}
+                    onClick={() => handleRemoveQuickOrderItem(item.productId)}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <Form form={orderForm} layout="vertical" onFinish={handleCreateQuickOrder} initialValues={{ paymentStatus: "unpaid" }}>
+          <div style={{ display: "flex", gap: 12 }}>
+            <Form.Item
+              name="totalAmount"
+              label="Order Total Amount (₹)"
+              rules={[{ required: true, message: "Enter amount" }]}
+              style={{ flex: 1 }}
+            >
+              <InputNumber style={{ width: "100%" }} min={1} placeholder="e.g. 2400" />
+            </Form.Item>
+            <Form.Item name="paymentStatus" label="Payment Status" style={{ width: 170 }}>
+              <Select
+                options={[
+                  { value: "unpaid", label: "Unpaid / Udhaar" },
+                  { value: "paid", label: "Paid (Full)" },
+                ]}
+              />
+            </Form.Item>
+          </div>
           <Form.Item name="notes" label="Items & Delivery Notes">
-            <Input.TextArea rows={3} placeholder="e.g. 4 pcs Cotton Kurta, urgent delivery" />
+            <Input.TextArea rows={2} placeholder="e.g. urgent evening delivery" />
           </Form.Item>
           <Button
             type="primary"

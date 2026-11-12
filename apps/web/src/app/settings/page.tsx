@@ -28,6 +28,7 @@ import {
   PhoneOutlined,
   ShopOutlined,
   CopyOutlined,
+  LockOutlined,
 } from "@ant-design/icons";
 import { api } from "../../lib/api";
 import { getSocket } from "../../lib/socket";
@@ -38,8 +39,10 @@ const { Title, Text, Paragraph } = Typography;
 export default function SettingsPage() {
   const { user } = useAuth();
   const [form] = Form.useForm();
+  const [passwordForm] = Form.useForm();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
 
   // Merchant WhatsApp Connection State
   const [waStatus, setWaStatus] = useState<"disconnected" | "connecting" | "connected">("disconnected");
@@ -137,6 +140,26 @@ export default function SettingsPage() {
       message.info("Your store WhatsApp has been disconnected");
     } catch (err: any) {
       message.error(err.message || "Could not disconnect WhatsApp");
+    }
+  };
+
+  const handleChangePassword = async (values: { currentPassword: string; newPassword: string; confirmPassword: string }) => {
+    if (values.newPassword !== values.confirmPassword) {
+      message.error("New password and confirm password do not match");
+      return;
+    }
+    try {
+      setChangingPassword(true);
+      const res = await api.post("/api/auth/change-password", {
+        currentPassword: values.currentPassword,
+        newPassword: values.newPassword,
+      });
+      message.success(res.data?.message || "Password updated successfully!");
+      passwordForm.resetFields();
+    } catch (err: any) {
+      message.error(err.message || "Could not update password");
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -320,6 +343,46 @@ export default function SettingsPage() {
                 <Button onClick={() => setQrModalVisible(true)}>View QR</Button>
               )}
             </Space>
+          </Card>
+
+          <Card
+            title={
+              <Space>
+                <LockOutlined style={{ color: "#15803d" }} />
+                <span>Account Security — Change Password</span>
+              </Space>
+            }
+            style={{ borderRadius: 12, marginBottom: 20 }}
+          >
+            <Form form={passwordForm} layout="vertical" onFinish={handleChangePassword}>
+              <Form.Item
+                name="currentPassword"
+                label="Current Password"
+                rules={[{ required: true, message: "Enter current password" }]}
+              >
+                <Input.Password placeholder="Current password" />
+              </Form.Item>
+              <Form.Item
+                name="newPassword"
+                label="New Password"
+                rules={[
+                  { required: true, message: "Enter new password" },
+                  { min: 6, message: "Minimum 6 characters required" },
+                ]}
+              >
+                <Input.Password placeholder="At least 6 characters" />
+              </Form.Item>
+              <Form.Item
+                name="confirmPassword"
+                label="Confirm New Password"
+                rules={[{ required: true, message: "Confirm new password" }]}
+              >
+                <Input.Password placeholder="Repeat new password" />
+              </Form.Item>
+              <Button type="primary" htmlType="submit" loading={changingPassword} block>
+                Update Password
+              </Button>
+            </Form>
           </Card>
 
           <Alert

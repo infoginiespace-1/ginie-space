@@ -31,7 +31,7 @@ import {
   PictureOutlined,
 } from "@ant-design/icons";
 import { api } from "../../lib/api";
-import { downloadCsv } from "../../lib/csv";
+import { downloadCsv, parseCsv } from "../../lib/csv";
 import { useAuth } from "../../context/AuthContext";
 
 const { Title, Text } = Typography;
@@ -137,6 +137,8 @@ export default function ProductsPage() {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
+  const [csvModalOpen, setCsvModalOpen] = useState(false);
+  const [importingCsv, setImportingCsv] = useState(false);
   const [form] = Form.useForm();
 
   const watchedUnitType = Form.useWatch("unitType", form) || "pcs";
@@ -233,6 +235,53 @@ export default function ProductsPage() {
     } catch {
       message.error("Failed to delete item");
     }
+  };
+
+  const handleBulkCsvFile = async (file: File) => {
+    try {
+      setImportingCsv(true);
+      const text = await file.text();
+      const rows = parseCsv(text);
+      if (rows.length < 2) {
+        message.error("CSV must contain a header row and at least 1 product row");
+        return Upload.LIST_IGNORE;
+      }
+      const header = rows[0].map((h) => h.trim().toLowerCase());
+      const nameIdx = header.findIndex((h) => h.includes("name"));
+      const descIdx = header.findIndex((h) => h.includes("desc"));
+      const priceIdx = header.findIndex((h) => h.includes("price") || h.includes("rate"));
+      const unitIdx = header.findIndex((h) => h.includes("unit"));
+      const stockIdx = header.findIndex((h) => h.includes("stock") || h.includes("qty"));
+
+      if (nameIdx === -1 || priceIdx === -1) {
+        message.error("CSV header must include 'Name' and 'Price' columns");
+        return Upload.LIST_IGNORE;
+      }
+
+      let imported = 0;
+      for (const cols of rows.slice(1)) {
+        const name = (cols[nameIdx] || "").trim();
+        const price = Number(cols[priceIdx]);
+        if (!name || Number.isNaN(price)) continue;
+        await api.post("/api/products", {
+          name,
+          description: descIdx >= 0 ? (cols[descIdx] || "").trim() : "",
+          price,
+          unit: unitIdx >= 0 && cols[unitIdx]?.trim() ? cols[unitIdx].trim() : "pcs",
+          stock: stockIdx >= 0 && !Number.isNaN(Number(cols[stockIdx])) ? Number(cols[stockIdx]) : 10,
+        });
+        imported++;
+      }
+
+      message.success(`Imported ${imported} products into catalog!`);
+      setCsvModalOpen(false);
+      loadProducts();
+    } catch (err: any) {
+      message.error(err.message || "Failed to import CSV products");
+    } finally {
+      setImportingCsv(false);
+    }
+    return false;
   };
 
   const openAddModal = () => {
@@ -357,6 +406,9 @@ export default function ProductsPage() {
           <Text type="secondary">Manage products, pack/carton/jar quantities, pricing, and JPG images</Text>
         </div>
         <Space wrap>
+          <Button icon={<UploadOutlined />} onClick={() => setCsvModalOpen(true)}>
+            Import CSV
+          </Button>
           <Button
             icon={<DownloadOutlined />}
             onClick={() =>
@@ -618,6 +670,50 @@ export default function ProductsPage() {
             </Button>
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal
+        title="Bulk Import Catalog Products (CSV)"
+        open={csvModalOpen}
+        onCancel={() => setCsvModalOpen(false)}
+        footer={null}
+        destroyOnClose
+      >
+        <Space direction="vertical" style={{ width: "100%" }} size={14}>
+          <Alert
+            type="info"
+            showIcon
+            message="Expected CSV Columns: Name, Description, Price, Unit, Stock"
+            description="Example: Basmati Rice 5kg, Premium aged grain, 480, pack (5 kg), 25"
+          />
+          <Space>
+            <Button
+              icon={<DownloadOutlined />}
+              onClick={() =>
+                downloadCsv(
+                  "giniespace-products-template.csv",
+                  ["Name", "Description", "Price", "Unit", "Stock"],
+                  [
+                    ["Cotton Kurti", "Handloom festive kurti", 599, "pcs", 25],
+                    ["Soan Papdi Box", "Bharat Gold Sweets", 450, "pack (12 pcs)", 40],
+                  ]
+                )
+              }
+            >
+              Download Sample CSV
+            </Button>
+            <Upload accept=".csv,text/csv" showUploadList={false} beforeUpload={handleBulkCsvFile}>
+              <Button
+                type="primary"
+                icon={<UploadOutlined />}
+                loading={importingCsv}
+                style={{ background: "#25D366", borderColor: "#25D366", fontWeight: 600 }}
+              >
+                Upload &amp; Import CSV
+              </Button>
+            </Upload>
+          </Space>
+        </Space>
       </Modal>
     </AppLayout>
   );

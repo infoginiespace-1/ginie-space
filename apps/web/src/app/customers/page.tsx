@@ -14,6 +14,9 @@ import {
   Typography,
   message,
   Popconfirm,
+  Upload,
+  Tag,
+  Alert,
 } from "antd";
 import {
   PlusOutlined,
@@ -23,9 +26,11 @@ import {
   DollarOutlined,
   DownloadOutlined,
   SearchOutlined,
+  EditOutlined,
+  UploadOutlined,
 } from "@ant-design/icons";
 import { api } from "../../lib/api";
-import { downloadCsv } from "../../lib/csv";
+import { downloadCsv, parseCsv } from "../../lib/csv";
 import { useRouter } from "next/navigation";
 
 const { Title, Text } = Typography;
@@ -78,14 +83,36 @@ export default function CustomersPage() {
       .catch(() => {});
   }, [reminderTarget, reminderAmount, reminderNote, upiId, businessName]);
 
+  const [dueByPhone, setDueByPhone] = useState<Record<string, number>>({});
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [csvModalOpen, setCsvModalOpen] = useState(false);
+  const [importingCsv, setImportingCsv] = useState(false);
+
+  const normalizePhone = (p?: string) => String(p || "").replace(/[^0-9]/g, "").slice(-10);
+
   const loadCustomers = async () => {
     try {
       setLoading(true);
-      const [custRes, setRes] = await Promise.all([
+      const [custRes, setRes, ordRes] = await Promise.all([
         api.get("/api/customers"),
         api.get("/api/settings").catch(() => ({ data: { business: null } })),
+        api.get("/api/orders").catch(() => ({ data: { orders: [] } })),
       ]);
       setCustomers(custRes.data.customers || []);
+
+      const dueMap: Record<string, number> = {};
+      for (const ord of ordRes.data?.orders || []) {
+        if (ord.status === "cancelled" || ord.paymentStatus === "paid") continue;
+        const total = Number(ord.totalAmount) || 0;
+        const paid = Number(ord.paidAmount) || 0;
+        const rem = Math.max(0, total - paid);
+        const key = normalizePhone(ord.customerPhone);
+        if (rem > 0 && key) {
+          dueMap[key] = (dueMap[key] || 0) + rem;
+        }
+      }
+      setDueByPhone(dueMap);
+
       const b = setRes.data?.business;
       if (b) {
         if (b.name) setBusinessName(b.name);
@@ -107,16 +134,87 @@ export default function CustomersPage() {
     loadCustomers();
   }, []);
 
-  const handleCreateCustomer = async (values: any) => {
+  const handleSaveCustomer = async (values: any) => {
     try {
-      await api.post("/api/customers", values);
-      message.success("Customer added successfully!");
+      if (editingCustomer) {
+        await api.put(`/api/customers/${editingCustomer.id}`, values);
+        message.success("Customer updated successfully!");
+      } else {
+        await api.post("/api/customers", values);
+        message.success("Customer added successfully!");
+      }
       setModalVisible(false);
+      setEditingCustomer(null);
       form.resetFields();
       loadCustomers();
     } catch (err: any) {
-      message.error(err.message || "Failed to add customer");
+      message.error(err.message || "Failed to save customer");
     }
+  };
+
+  const openAddCustomer = () => {
+    setEditingCustomer(null);
+    form.resetFields();
+    setModalVisible(true);
+  };
+
+  const openEditCustomer = (record: Customer) => {
+    setEditingCustomer(record);
+    form.setFieldsValue({
+      name: record.name,
+      phone: record.phone,
+      email: record.email || "",
+      tags: record.tags || "",
+      notes: record.notes || "",
+    });
+    setModalVisible(true);
+  };
+
+  const handleBulkCustomerCsv = async (file: File) => {
+    try {
+      setImportingCsv(true);
+      const text = await file.text();
+      const rows = parseCsv(text);
+      if (rows.length < 2) {
+        message.error("CSV must contain a header row and at least 1 customer row");
+        return Upload.LIST_IGNORE;
+      }
+      const header = rows[0].map((h) => h.trim().toLowerCase());
+      const nameIdx = header.findIndex((h) => h.includes("name"));
+      const phoneIdx = header.findIndex((h) => h.includes("phone") || h.includes("whatsapp") || h.includes("mobile"));
+      const emailIdx = header.findIndex((h) => h.includes("email"));
+      const tagsIdx = header.findIndex((h) => h.includes("tag"));
+      const notesIdx = header.findIndex((h) => h.includes("note"));
+
+      if (nameIdx === -1 || phoneIdx === -1) {
+        message.error("CSV header must include 'Name' and 'Phone' columns");
+        return Upload.LIST_IGNORE;
+      }
+
+      let imported = 0;
+      for (const cols of rows.slice(1)) {
+        const name = (cols[nameIdx] || "").trim();
+        const phone = (cols[phoneIdx] || "").trim();
+        if (!name || !phone) continue;
+        await api.post("/api/customers", {
+          name,
+          phone,
+          email: emailIdx >= 0 ? (cols[emailIdx] || "").trim() : "",
+          tags: tagsIdx >= 0 ? (cols[tagsIdx] || "").trim() : "",
+          notes: notesIdx >= 0 ? (cols[notesIdx] || "").trim() : "",
+        });
+        imported++;
+      }
+
+      message.success(`Imported ${imported} customers!`);
+      setCsvModalOpen(false);
+      loadCustomers();
+    } catch (err: any) {
+      message.error(err.message || "Failed to import customers CSV");
+    } finally {
+      setImportingCsv(false);
+    }
+    return false;
   };
 
   const handleDeleteCustomer = async (id: string) => {
@@ -160,6 +258,18 @@ export default function CustomersPage() {
       render: (notes: string) => notes || "-",
     },
     {
+      title: "Udhaar / Due",
+      key: "due",
+      render: (_: any, record: Customer) => {
+        const due = dueByPhone[normalizePhone(record.phone)] || 0;
+        return due > 0 ? (
+          <Tag color="red">₹{due.toLocaleString("en-IN")} Due</Tag>
+        ) : (
+          <Tag color="green">Settled</Tag>
+        );
+      },
+    },
+    {
       title: "Actions",
       key: "actions",
       render: (_: any, record: Customer) => (
@@ -174,11 +284,19 @@ export default function CustomersPage() {
             Chat
           </Button>
           <Button
+            icon={<EditOutlined />}
+            size="small"
+            onClick={() => openEditCustomer(record)}
+          >
+            Edit
+          </Button>
+          <Button
             icon={<DollarOutlined />}
             size="small"
             onClick={() => {
+              const due = dueByPhone[normalizePhone(record.phone)] || 0;
               setReminderTarget(record);
-              setReminderAmount(null);
+              setReminderAmount(due > 0 ? due : null);
               setReminderNote("");
             }}
           >
@@ -216,6 +334,9 @@ export default function CustomersPage() {
           <Text type="secondary">Manage your clients, direct phone numbers, and WhatsApp conversations</Text>
         </div>
         <Space wrap>
+          <Button icon={<UploadOutlined />} onClick={() => setCsvModalOpen(true)}>
+            Import CSV
+          </Button>
           <Button
             icon={<DownloadOutlined />}
             onClick={() =>
@@ -234,7 +355,7 @@ export default function CustomersPage() {
           <Button
             type="primary"
             icon={<PlusOutlined />}
-            onClick={() => setModalVisible(true)}
+            onClick={openAddCustomer}
             style={{ background: "#25D366", borderColor: "#25D366" }}
           >
             Add Customer
@@ -263,13 +384,16 @@ export default function CustomersPage() {
       </Card>
 
       <Modal
-        title="Add New Customer"
+        title={editingCustomer ? "Edit Customer" : "Add New Customer"}
         open={modalVisible}
-        onCancel={() => setModalVisible(false)}
+        onCancel={() => {
+          setModalVisible(false);
+          setEditingCustomer(null);
+        }}
         footer={null}
         destroyOnClose
       >
-        <Form form={form} layout="vertical" onFinish={handleCreateCustomer}>
+        <Form form={form} layout="vertical" onFinish={handleSaveCustomer}>
           <Form.Item
             name="name"
             label="Customer Name"
@@ -385,6 +509,50 @@ export default function CustomersPage() {
           ) : (
             <Text type="warning">Tip: Set your UPI ID in Settings to auto-attach payment link.</Text>
           )}
+        </Space>
+      </Modal>
+
+      <Modal
+        title="Bulk Import Customers (CSV)"
+        open={csvModalOpen}
+        onCancel={() => setCsvModalOpen(false)}
+        footer={null}
+        destroyOnClose
+      >
+        <Space direction="vertical" style={{ width: "100%" }} size={14}>
+          <Alert
+            type="info"
+            showIcon
+            message="Expected CSV Columns: Name, Phone, Email, Tags, Notes"
+            description="Example: Ramesh Traders, 919876543210, ramesh@shop.com, Wholesale, Weekly buyer"
+          />
+          <Space>
+            <Button
+              icon={<DownloadOutlined />}
+              onClick={() =>
+                downloadCsv(
+                  "giniespace-customers-template.csv",
+                  ["Name", "Phone", "Email", "Tags", "Notes"],
+                  [
+                    ["Anjali Sharma", "919876543210", "anjali@example.com", "VIP", "Prefers evening delivery"],
+                    ["Ramesh Traders", "919811223344", "", "Wholesale", "Net 7 days"],
+                  ]
+                )
+              }
+            >
+              Download Sample CSV
+            </Button>
+            <Upload accept=".csv,text/csv" showUploadList={false} beforeUpload={handleBulkCustomerCsv}>
+              <Button
+                type="primary"
+                icon={<UploadOutlined />}
+                loading={importingCsv}
+                style={{ background: "#25D366", borderColor: "#25D366", fontWeight: 600 }}
+              >
+                Upload &amp; Import CSV
+              </Button>
+            </Upload>
+          </Space>
         </Space>
       </Modal>
     </AppLayout>

@@ -30,6 +30,7 @@ import {
   ArrowRightOutlined,
   ClockCircleOutlined,
   BarChartOutlined,
+  TrophyOutlined,
 } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 
@@ -88,6 +89,50 @@ export default function DashboardPage() {
   const recentOrders = [...orders]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 6);
+
+  const nonCancelledOrders = orders.filter((o) => o.status !== "cancelled");
+
+  // Top Selling Products leaderboard from itemized orders
+  const productTotals = new Map<string, { name: string; qty: number; revenue: number }>();
+  for (const ord of nonCancelledOrders) {
+    try {
+      const items = JSON.parse(ord.itemsJson || "[]");
+      if (Array.isArray(items)) {
+        for (const it of items) {
+          const name = String(it.name || "").trim();
+          if (!name) continue;
+          const qty = Number(it.quantity) || 1;
+          const rev = (Number(it.price) || 0) * qty;
+          const prev = productTotals.get(name) || { name, qty: 0, revenue: 0 };
+          productTotals.set(name, { name, qty: prev.qty + qty, revenue: prev.revenue + rev });
+        }
+      }
+    } catch {}
+  }
+  const topProducts = Array.from(productTotals.values())
+    .sort((a, b) => b.revenue - a.revenue || b.qty - a.qty)
+    .slice(0, 5);
+
+  // Top Repeat Customers leaderboard
+  const customerTotals = new Map<string, { name: string; phone: string; ordersCount: number; totalSpent: number }>();
+  for (const ord of nonCancelledOrders) {
+    const phoneKey = String(ord.customerPhone || ord.customerName || "unknown").replace(/[^0-9a-zA-Z]/g, "");
+    const prev = customerTotals.get(phoneKey) || {
+      name: ord.customerName || "Customer",
+      phone: ord.customerPhone || "",
+      ordersCount: 0,
+      totalSpent: 0,
+    };
+    customerTotals.set(phoneKey, {
+      name: prev.name,
+      phone: prev.phone,
+      ordersCount: prev.ordersCount + 1,
+      totalSpent: prev.totalSpent + (Number(ord.totalAmount) || 0),
+    });
+  }
+  const topCustomers = Array.from(customerTotals.values())
+    .sort((a, b) => b.totalSpent - a.totalSpent || b.ordersCount - a.ordersCount)
+    .slice(0, 5);
 
   const handleSendDailySummary = async () => {
     const target = summaryPhone.trim() || businessPhone.trim();
@@ -427,6 +472,80 @@ export default function DashboardPage() {
                   key: "price",
                   render: (p: number) => `₹${p}`,
                 },
+              ]}
+            />
+          </Card>
+        </Col>
+      </Row>
+
+      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+        <Col xs={24} lg={12}>
+          <Card
+            title={
+              <Space>
+                <TrophyOutlined style={{ color: "#15803d" }} />
+                <span>Top-Selling Products</span>
+              </Space>
+            }
+            extra={
+              <Button type="link" onClick={() => router.push("/products")}>
+                Catalog
+              </Button>
+            }
+            style={{ borderRadius: 12 }}
+          >
+            <Table
+              dataSource={topProducts}
+              rowKey="name"
+              loading={loading}
+              pagination={false}
+              size="small"
+              locale={{ emptyText: "Itemized order sales will appear here automatically." }}
+              columns={[
+                { title: "Product", dataIndex: "name", key: "name", render: (n: string) => <Text strong>{n}</Text> },
+                { title: "Units Sold", dataIndex: "qty", key: "qty", render: (q: number) => <Tag color="blue">{q}</Tag> },
+                { title: "Revenue", dataIndex: "revenue", key: "revenue", render: (r: number) => <Text strong style={{ color: "#16a34a" }}>₹{r.toLocaleString("en-IN")}</Text> },
+              ]}
+            />
+          </Card>
+        </Col>
+
+        <Col xs={24} lg={12}>
+          <Card
+            title={
+              <Space>
+                <TeamOutlined style={{ color: "#2563eb" }} />
+                <span>Top Repeat Customers</span>
+              </Space>
+            }
+            extra={
+              <Button type="link" onClick={() => router.push("/customers")}>
+                Directory
+              </Button>
+            }
+            style={{ borderRadius: 12 }}
+          >
+            <Table
+              dataSource={topCustomers}
+              rowKey={(r) => `${r.phone}_${r.name}`}
+              loading={loading}
+              pagination={false}
+              size="small"
+              locale={{ emptyText: "Repeat buyer rankings appear as orders come in." }}
+              columns={[
+                {
+                  title: "Customer",
+                  dataIndex: "name",
+                  key: "name",
+                  render: (n: string, r: any) => (
+                    <div>
+                      <div style={{ fontWeight: 600 }}>{n}</div>
+                      {r.phone && <Text type="secondary" style={{ fontSize: 11 }}>+{String(r.phone).replace(/^\+/, "")}</Text>}
+                    </div>
+                  ),
+                },
+                { title: "Orders", dataIndex: "ordersCount", key: "ordersCount", render: (c: number) => <Tag color="green">{c}</Tag> },
+                { title: "Total Spent", dataIndex: "totalSpent", key: "totalSpent", render: (s: number) => <Text strong>₹{s.toLocaleString("en-IN")}</Text> },
               ]}
             />
           </Card>

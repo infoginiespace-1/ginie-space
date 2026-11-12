@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { Form, Input, Button, Card, Typography, Alert, Radio, Space } from "antd";
-import { UserOutlined, LockOutlined, MailOutlined, ShopOutlined } from "@ant-design/icons";
+import { UserOutlined, LockOutlined, MailOutlined, ShopOutlined, PhoneOutlined } from "@ant-design/icons";
 import { useAuth } from "../../context/AuthContext";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -19,7 +19,7 @@ export default function SignupPage() {
     try {
       setLoading(true);
       setErrorMsg(null);
-      await signup(values.name, values.email, values.password, values.businessType);
+      await signup(values.name, values.email, values.password, values.businessType, values.phone);
       router.push("/dashboard");
     } catch (err: any) {
       setErrorMsg(err.message || "Could not register your account. Please try again.");
@@ -98,6 +98,15 @@ export default function SignupPage() {
             ]}
           >
             <Input prefix={<MailOutlined style={{ color: "#94a3b8" }} />} placeholder="name@company.com" />
+          </Form.Item>
+
+          <Form.Item
+            name="phone"
+            label="WhatsApp Mobile Number"
+            rules={[{ required: true, message: "Please enter your WhatsApp number" }]}
+            extra="Used for Official GinieSpace Support alerts & password recovery OTP"
+          >
+            <Input prefix={<PhoneOutlined style={{ color: "#94a3b8" }} />} placeholder="e.g. 9876543210" />
           </Form.Item>
 
           <Form.Item

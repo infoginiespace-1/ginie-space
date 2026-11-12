@@ -17,7 +17,7 @@ interface AuthContextType {
   token: string | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  signup: (name: string, email: string, password: string, businessType: "retail" | "wholesale") => Promise<void>;
+  signup: (name: string, email: string, password: string, businessType: "retail" | "wholesale", phone?: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -61,13 +61,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     name: string,
     email: string,
     password: string,
-    businessType: "retail" | "wholesale"
+    businessType: "retail" | "wholesale",
+    phone?: string
   ) => {
     const res = await api.post("/api/auth/signup", {
       name,
       email,
       password,
       businessType,
+      phone,
     });
     const { token: receivedToken, user: receivedUser } = res.data;
 

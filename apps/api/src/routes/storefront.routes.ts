@@ -169,6 +169,8 @@ export function createStorefrontRouter(
         itemsJson: JSON.stringify(verifiedItems),
         totalAmount,
         status: "pending",
+        paymentStatus: "unpaid",
+        paidAmount: 0,
         notes: notes ? `[Online Store] ${notes.trim()}` : "[Online Store Order]",
       });
 

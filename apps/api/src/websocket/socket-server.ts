@@ -15,6 +15,7 @@ export function setupSocketServer(
   db: IDatabase,
   notificationService: NotificationService
 ): SocketIOServer {
+  const merchantAutoReplyCooldown = new Map<string, number>();
   const io = new SocketIOServer(httpServer, {
     cors: {
       origin: true,
@@ -145,6 +146,63 @@ export function setupSocketServer(
         }
       } catch {
         // Background logging failsafe
+      }
+
+      // Merchant Automated Welcome Bot (respects Settings autoReply & welcomeMessage with 24h cooldown)
+      const cooldownKey = `${event.userId}:${contactDigits}`;
+      const nowMs = Date.now();
+      const lastRepliedAt = merchantAutoReplyCooldown.get(cooldownKey) || 0;
+      if (nowMs - lastRepliedAt > 24 * 60 * 60 * 1000) {
+        try {
+          const business = await db.businesses.findOne({ userId: event.userId });
+          let autoReplyEnabled = true;
+          let welcomeText = `Namaste! Welcome to ${business?.name || "our store"}. How can we help you today?`;
+
+          if (business?.settingsJson) {
+            try {
+              const parsed = JSON.parse(business.settingsJson);
+              if (parsed.autoReply === false) autoReplyEnabled = false;
+              if (parsed.welcomeMessage && String(parsed.welcomeMessage).trim()) {
+                welcomeText = String(parsed.welcomeMessage).trim();
+              }
+            } catch {}
+          }
+
+          if (autoReplyEnabled) {
+            merchantAutoReplyCooldown.set(cooldownKey, nowMs);
+            const fullGreeting = `${welcomeText}\n\n🛍️ *Browse Our Catalog & Order Online:* https://app.ginie.space/shop/${event.userId}`;
+            await waManager.sendMessage({
+              userId: event.userId,
+              recipientPhone: contactDigits,
+              messageText: fullGreeting,
+            });
+
+            const autoId = `auto_${Date.now()}`;
+            const autoTs = new Date().toISOString();
+            await db.messages.create({
+              userId: event.userId,
+              contactPhone: contactDigits,
+              contactName: event.senderName || `+${contactDigits}`,
+              text: fullGreeting,
+              fromMe: "true",
+              messageId: autoId,
+              timestamp: autoTs,
+            }).catch(() => {});
+
+            io.to("user:" + event.userId).emit("whatsapp:message", {
+              userId: event.userId,
+              senderJid: `${contactDigits}@s.whatsapp.net`,
+              contactPhone: contactDigits,
+              senderName: event.senderName,
+              messageText: fullGreeting,
+              timestamp: autoTs,
+              messageId: autoId,
+              fromMe: true,
+            });
+          }
+        } catch {
+          // Non-fatal auto-reply safeguard
+        }
       }
     }
   });

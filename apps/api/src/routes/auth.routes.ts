@@ -1,10 +1,11 @@
 import { Router, Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { randomInt } from "crypto";
 import { IDatabase, BusinessType, UserRole } from "@giniespace/sheets-db";
 import { AuthenticatedUser } from "../middleware/auth";
 import { NotificationService } from "../services/notification.service";
-import { toE164 } from "../utils/phone";
+import { normalizePhoneDigits, toE164 } from "../utils/phone";
 
 const MASTER_ADMIN_EMAIL = "info.giniespace@gmail.com";
 const MASTER_ADMIN_PASS = "Dawood@3210";
@@ -217,6 +218,167 @@ export function createAuthRouter(
     } catch (err: any) {
       console.error("[Auth /me error]:", err.message);
       res.status(500).json({ error: "Could not load user profile" });
+    }
+  });
+
+  router.post("/forgot-password", async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        res.status(400).json({ error: "Please enter your registered email address" });
+        return;
+      }
+
+      const cleanEmail = String(email).toLowerCase().trim();
+      const user = await db.users.findOne({ email: cleanEmail }).catch(() => null);
+      if (!user) {
+        res.status(404).json({ error: "No account found with that email address" });
+        return;
+      }
+
+      const business = await db.businesses.findOne({ userId: user.id }).catch(() => null);
+      const targetDigits = normalizePhoneDigits(business?.phone || "");
+      if (!targetDigits || targetDigits.length < 10) {
+        res.status(400).json({
+          error: "No Store WhatsApp Phone saved for this account. Contact Official Support (+91 9279259690).",
+        });
+        return;
+      }
+
+      if (!notificationService) {
+        res.status(503).json({ error: "Support WhatsApp service is unavailable" });
+        return;
+      }
+
+      const otp = String(randomInt(100000, 999999));
+      const otpHash = await bcrypt.hash(otp, 8);
+      const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+      const payload = JSON.stringify({ otpHash, expiresAt });
+
+      const existingSetting = await db.settings
+        .findOne({ userId: user.id, key: "password_reset_otp" })
+        .catch(() => null);
+      if (existingSetting) {
+        await db.settings.update(existingSetting.id, { value: payload });
+      } else {
+        await db.settings.create({
+          userId: user.id,
+          key: "password_reset_otp",
+          value: payload,
+        });
+      }
+
+      const msg =
+        `🔐 *GinieSpace Password Reset OTP*\n\n` +
+        `Hello *${user.name}*,\n` +
+        `Your 6-digit password reset OTP is: *${otp}*\n` +
+        `Valid for 10 minutes. Do not share this code with anyone.\n\n` +
+        `- GinieSpace Official Support (+91 9279259690)`;
+
+      const sent = await notificationService.sendSupportNotification(targetDigits, msg);
+      if (!sent) {
+        res.status(503).json({
+          error: "Support WhatsApp (+91 9279259690) is currently offline. Please try again later.",
+        });
+        return;
+      }
+
+      const masked = `***${targetDigits.slice(-4)}`;
+      res.json({ message: `OTP sent to your registered WhatsApp ending in ${masked}` });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Could not send password reset OTP" });
+    }
+  });
+
+  router.post("/reset-password", async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { email, otp, newPassword } = req.body;
+      if (!email || !otp || !newPassword || String(newPassword).length < 6) {
+        res.status(400).json({ error: "Email, 6-digit OTP, and new password (min 6 chars) are required" });
+        return;
+      }
+
+      const cleanEmail = String(email).toLowerCase().trim();
+      const user = await db.users.findOne({ email: cleanEmail }).catch(() => null);
+      if (!user) {
+        res.status(404).json({ error: "Account not found" });
+        return;
+      }
+
+      const setting = await db.settings
+        .findOne({ userId: user.id, key: "password_reset_otp" })
+        .catch(() => null);
+      if (!setting?.value) {
+        res.status(400).json({ error: "No active OTP request found. Please request a new OTP." });
+        return;
+      }
+
+      let parsed: { otpHash: string; expiresAt: number } | null = null;
+      try {
+        parsed = JSON.parse(setting.value);
+      } catch {}
+
+      if (!parsed || Date.now() > parsed.expiresAt) {
+        res.status(400).json({ error: "OTP has expired. Please request a new OTP." });
+        return;
+      }
+
+      const match = await bcrypt.compare(String(otp).trim(), parsed.otpHash);
+      if (!match) {
+        res.status(400).json({ error: "Invalid OTP. Please double check your WhatsApp message." });
+        return;
+      }
+
+      const passwordHash = await bcrypt.hash(String(newPassword), 10);
+      await db.users.update(user.id, { passwordHash });
+      await db.settings.update(setting.id, { value: JSON.stringify({ otpHash: "", expiresAt: 0 }) }).catch(() => {});
+
+      res.json({ message: "Password updated successfully! You can now sign in." });
+    } catch {
+      res.status(500).json({ error: "Could not reset password" });
+    }
+  });
+
+  router.post("/change-password", async (req: Request, res: Response): Promise<void> => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      res.status(401).json({ error: "Authentication required" });
+      return;
+    }
+
+    let userPayload: AuthenticatedUser | null = null;
+    try {
+      userPayload = jwt.verify(authHeader.substring(7), jwtSecret) as AuthenticatedUser;
+    } catch {
+      res.status(401).json({ error: "Invalid or expired session" });
+      return;
+    }
+
+    try {
+      const { currentPassword, newPassword } = req.body;
+      if (!currentPassword || !newPassword || String(newPassword).length < 6) {
+        res.status(400).json({ error: "Current password and new password (min 6 chars) are required" });
+        return;
+      }
+
+      const user = await db.users.findById(userPayload.id);
+      if (!user) {
+        res.status(404).json({ error: "User record not found" });
+        return;
+      }
+
+      const valid = await bcrypt.compare(String(currentPassword), user.passwordHash);
+      if (!valid) {
+        res.status(400).json({ error: "Current password is incorrect" });
+        return;
+      }
+
+      const passwordHash = await bcrypt.hash(String(newPassword), 10);
+      await db.users.update(user.id, { passwordHash });
+
+      res.json({ message: "Password changed successfully!" });
+    } catch {
+      res.status(500).json({ error: "Could not change password" });
     }
   });
 

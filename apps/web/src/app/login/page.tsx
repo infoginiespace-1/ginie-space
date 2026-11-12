@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
-import { Form, Input, Button, Card, Typography, Alert } from "antd";
-import { UserOutlined, LockOutlined } from "@ant-design/icons";
+import { Form, Input, Button, Card, Typography, Alert, Modal, message, Space } from "antd";
+import { UserOutlined, LockOutlined, WhatsAppOutlined } from "@ant-design/icons";
 import { useAuth } from "../../context/AuthContext";
+import { api } from "../../lib/api";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -14,6 +15,56 @@ export default function LoginPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotStep, setForgotStep] = useState<"email" | "otp">("email");
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotOtp, setForgotOtp] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotError, setForgotError] = useState<string | null>(null);
+
+  const handleRequestOtp = async () => {
+    if (!forgotEmail.trim()) {
+      setForgotError("Please enter your registered email address");
+      return;
+    }
+    try {
+      setForgotLoading(true);
+      setForgotError(null);
+      const res = await api.post("/api/auth/forgot-password", { email: forgotEmail.trim() });
+      message.success(res.data?.message || "6-digit OTP sent to your registered WhatsApp number!");
+      setForgotStep("otp");
+    } catch (err: any) {
+      setForgotError(err.message || "Could not send password reset OTP");
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!forgotOtp.trim() || newPassword.length < 6) {
+      setForgotError("Enter the 6-digit OTP and a new password (min 6 characters)");
+      return;
+    }
+    try {
+      setForgotLoading(true);
+      setForgotError(null);
+      const res = await api.post("/api/auth/reset-password", {
+        email: forgotEmail.trim(),
+        otp: forgotOtp.trim(),
+        newPassword,
+      });
+      message.success(res.data?.message || "Password reset successfully! Please sign in.");
+      setForgotOpen(false);
+      setForgotStep("email");
+      setForgotOtp("");
+      setNewPassword("");
+    } catch (err: any) {
+      setForgotError(err.message || "Invalid or expired OTP");
+    } finally {
+      setForgotLoading(false);
+    }
+  };
 
   const handleSubmit = async (values: any) => {
     try {
@@ -100,7 +151,22 @@ export default function LoginPage() {
             <Input.Password prefix={<LockOutlined style={{ color: "#94a3b8" }} />} placeholder="••••••••" />
           </Form.Item>
 
-          <Form.Item style={{ marginTop: 24 }}>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: -10, marginBottom: 12 }}>
+            <Button
+              type="link"
+              size="small"
+              style={{ padding: 0, color: "#15803d", fontWeight: 500 }}
+              onClick={() => {
+                setForgotStep("email");
+                setForgotError(null);
+                setForgotOpen(true);
+              }}
+            >
+              Forgot Password?
+            </Button>
+          </div>
+
+          <Form.Item style={{ marginTop: 12 }}>
             <Button
               type="primary"
               htmlType="submit"
@@ -122,6 +188,78 @@ export default function LoginPage() {
           </Text>
         </div>
       </Card>
+
+      <Modal
+        title={
+          <Space>
+            <WhatsAppOutlined style={{ color: "#25D366" }} />
+            <span>Reset Password via WhatsApp OTP</span>
+          </Space>
+        }
+        open={forgotOpen}
+        onCancel={() => setForgotOpen(false)}
+        footer={null}
+        destroyOnClose
+      >
+        {forgotError && (
+          <Alert message={forgotError} type="error" showIcon style={{ marginBottom: 14 }} />
+        )}
+        {forgotStep === "email" ? (
+          <Space direction="vertical" style={{ width: "100%" }} size={12}>
+            <Text type="secondary">
+              Apna registered email enter karein. GinieSpace Official Support WhatsApp par 6-digit OTP bhejega.
+            </Text>
+            <Input
+              prefix={<UserOutlined />}
+              placeholder="name@business.com"
+              value={forgotEmail}
+              onChange={(e) => setForgotEmail(e.target.value)}
+              onPressEnter={handleRequestOtp}
+            />
+            <Button
+              type="primary"
+              block
+              loading={forgotLoading}
+              onClick={handleRequestOtp}
+              style={{ background: "#25D366", borderColor: "#25D366", fontWeight: 600 }}
+            >
+              Send WhatsApp OTP
+            </Button>
+          </Space>
+        ) : (
+          <Space direction="vertical" style={{ width: "100%" }} size={12}>
+            <Alert
+              type="success"
+              showIcon
+              message={`OTP sent to WhatsApp linked with ${forgotEmail}`}
+            />
+            <Input
+              placeholder="Enter 6-digit OTP"
+              maxLength={6}
+              value={forgotOtp}
+              onChange={(e) => setForgotOtp(e.target.value)}
+            />
+            <Input.Password
+              prefix={<LockOutlined />}
+              placeholder="New password (min 6 characters)"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              onPressEnter={handleResetPassword}
+            />
+            <Space style={{ width: "100%", justifyContent: "space-between" }}>
+              <Button onClick={() => setForgotStep("email")}>Back</Button>
+              <Button
+                type="primary"
+                loading={forgotLoading}
+                onClick={handleResetPassword}
+                style={{ background: "#25D366", borderColor: "#25D366", fontWeight: 600 }}
+              >
+                Update Password
+              </Button>
+            </Space>
+          </Space>
+        )}
+      </Modal>
     </div>
   );
 }

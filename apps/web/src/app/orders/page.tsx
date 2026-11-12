@@ -17,6 +17,7 @@ import {
   message,
   Checkbox,
   Divider,
+  Popconfirm,
 } from "antd";
 import {
   PlusOutlined,
@@ -26,6 +27,8 @@ import {
   DownloadOutlined,
   PrinterOutlined,
   SearchOutlined,
+  DeleteOutlined,
+  MinusCircleOutlined,
 } from "@ant-design/icons";
 import { api } from "../../lib/api";
 import { getSocket } from "../../lib/socket";
@@ -40,16 +43,49 @@ interface Order {
   itemsJson: string;
   totalAmount: number;
   status: "pending" | "confirmed" | "dispatched" | "delivered" | "cancelled";
+  paymentStatus?: "unpaid" | "partial" | "paid";
+  paidAmount?: number;
   notes?: string;
   createdAt: string;
 }
 
+interface CatalogProduct {
+  id: string;
+  name: string;
+  price: number;
+  unit: string;
+  stock: number;
+}
+
+interface CustomerOption {
+  id: string;
+  name: string;
+  phone: string;
+}
+
+interface OrderLineItem {
+  productId: string;
+  name: string;
+  price: number;
+  quantity: number;
+  unit?: string;
+}
+
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [products, setProducts] = useState<CatalogProduct[]>([]);
+  const [customers, setCustomers] = useState<CustomerOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [createModalVisible, setCreateModalVisible] = useState(false);
+  const [creatingOrder, setCreatingOrder] = useState(false);
   const [form] = Form.useForm();
+  const [lineItems, setLineItems] = useState<OrderLineItem[]>([]);
+  const [pickerProductId, setPickerProductId] = useState<string | undefined>(undefined);
+  const [pickerQty, setPickerQty] = useState<number>(1);
   const [statusUpdating, setStatusUpdating] = useState<string | null>(null);
+  const [paymentUpdating, setPaymentUpdating] = useState<string | null>(null);
+  const [partialModalOrder, setPartialModalOrder] = useState<Order | null>(null);
+  const [partialPaidInput, setPartialPaidInput] = useState<number>(0);
   const [sendingBillId, setSendingBillId] = useState<string | null>(null);
   const [upiId, setUpiId] = useState("");
   const [businessProfile, setBusinessProfile] = useState<{
@@ -94,8 +130,14 @@ export default function OrdersPage() {
   const loadOrders = async () => {
     try {
       setLoading(true);
-      const res = await api.get("/api/orders");
-      setOrders(res.data.orders || []);
+      const [ordRes, prodRes, custRes] = await Promise.all([
+        api.get("/api/orders"),
+        api.get("/api/products").catch(() => ({ data: { products: [] } })),
+        api.get("/api/customers").catch(() => ({ data: { customers: [] } })),
+      ]);
+      setOrders(ordRes.data.orders || []);
+      setProducts(prodRes.data.products || []);
+      setCustomers(custRes.data.customers || []);
     } catch {
       message.error("Could not load orders");
     } finally {
@@ -164,14 +206,110 @@ export default function OrdersPage() {
     }
   };
 
+  const handleAddLineItem = () => {
+    if (!pickerProductId) {
+      message.warning("Select a product from catalog first");
+      return;
+    }
+    const prod = products.find((p) => p.id === pickerProductId);
+    if (!prod) return;
+    const qty = Math.max(1, Number(pickerQty) || 1);
+
+    setLineItems((prev) => {
+      const existing = prev.find((i) => i.productId === prod.id);
+      const next = existing
+        ? prev.map((i) => (i.productId === prod.id ? { ...i, quantity: i.quantity + qty } : i))
+        : [...prev, { productId: prod.id, name: prod.name, price: Number(prod.price) || 0, quantity: qty, unit: prod.unit }];
+
+      const sum = next.reduce((acc, item) => acc + item.price * item.quantity, 0);
+      form.setFieldsValue({ totalAmount: sum });
+      return next;
+    });
+    setPickerProductId(undefined);
+    setPickerQty(1);
+  };
+
+  const handleRemoveLineItem = (productId: string) => {
+    setLineItems((prev) => {
+      const next = prev.filter((i) => i.productId !== productId);
+      const sum = next.reduce((acc, item) => acc + item.price * item.quantity, 0);
+      if (next.length > 0) {
+        form.setFieldsValue({ totalAmount: sum });
+      }
+      return next;
+    });
+  };
+
   const handleCreateOrder = async (values: any) => {
     try {
-      await api.post("/api/orders", values);
+      setCreatingOrder(true);
+      const total = Number(values.totalAmount) || 0;
+      const paymentStatus = values.paymentStatus || "unpaid";
+      const paidAmount =
+        paymentStatus === "paid"
+          ? total
+          : paymentStatus === "partial"
+            ? Number(values.paidAmount) || 0
+            : 0;
+
+      await api.post("/api/orders", {
+        customerName: values.customerName,
+        customerPhone: values.customerPhone,
+        totalAmount: total,
+        items: lineItems.length > 0 ? lineItems : undefined,
+        notes: values.notes || "",
+        paymentStatus,
+        paidAmount,
+      });
       message.success("Order created successfully!");
       setCreateModalVisible(false);
+      setLineItems([]);
       form.resetFields();
+      loadOrders();
     } catch (err: any) {
       message.error(err.message || "Could not create order");
+    } finally {
+      setCreatingOrder(false);
+    }
+  };
+
+  const handlePaymentUpdate = async (order: Order, nextStatus: "unpaid" | "partial" | "paid", customPaidAmount?: number) => {
+    if (nextStatus === "partial" && customPaidAmount === undefined) {
+      setPartialModalOrder(order);
+      setPartialPaidInput(Number(order.paidAmount) || Math.round(Number(order.totalAmount || 0) / 2));
+      return;
+    }
+    try {
+      setPaymentUpdating(order.id);
+      const paid =
+        nextStatus === "paid"
+          ? Number(order.totalAmount) || 0
+          : nextStatus === "partial"
+            ? Number(customPaidAmount || 0)
+            : 0;
+      const res = await api.put(`/api/orders/${order.id}/payment`, {
+        paymentStatus: nextStatus,
+        paidAmount: paid,
+      });
+      if (res.data?.order) {
+        setOrders((prev) => prev.map((o) => (o.id === order.id ? res.data.order : o)));
+      }
+      message.success(`Payment marked as ${nextStatus.toUpperCase()}`);
+      setPartialModalOrder(null);
+    } catch (err: any) {
+      message.error(err.message || "Could not update payment status");
+    } finally {
+      setPaymentUpdating(null);
+    }
+  };
+
+  const handleDeleteOrder = async (id: string) => {
+    try {
+      await api.delete(`/api/orders/${id}`);
+      setOrders((prev) => prev.filter((o) => o.id !== id));
+      message.success("Order deleted");
+    } catch (err: any) {
+      message.error(err.message || "Could not delete order");
     }
   };
 
@@ -205,7 +343,23 @@ export default function OrdersPage() {
       title: "Amount",
       dataIndex: "totalAmount",
       key: "totalAmount",
-      render: (amt: number) => <Text strong>₹{amt.toLocaleString()}</Text>,
+      render: (amt: number, record: Order) => {
+        let count = 0;
+        try {
+          const arr = JSON.parse(record.itemsJson || "[]");
+          if (Array.isArray(arr)) count = arr.length;
+        } catch {}
+        return (
+          <div>
+            <Text strong>₹{Number(amt || 0).toLocaleString("en-IN")}</Text>
+            {count > 0 && (
+              <div>
+                <Text type="secondary" style={{ fontSize: 11 }}>{count} item(s)</Text>
+              </div>
+            )}
+          </div>
+        );
+      },
     },
     {
       title: "Status",
@@ -214,7 +368,7 @@ export default function OrdersPage() {
       render: (status: string, record: Order) => (
         <Select
           value={status}
-          style={{ width: 140 }}
+          style={{ width: 135 }}
           loading={statusUpdating === record.id}
           onChange={(val) => handleStatusChange(record.id, val)}
           options={[
@@ -226,6 +380,38 @@ export default function OrdersPage() {
           ]}
         />
       ),
+    },
+    {
+      title: "Payment / Khata",
+      dataIndex: "paymentStatus",
+      key: "paymentStatus",
+      render: (pStatus: "unpaid" | "partial" | "paid" | undefined, record: Order) => {
+        const currentStatus = pStatus || "unpaid";
+        const total = Number(record.totalAmount) || 0;
+        const paid = currentStatus === "paid" ? total : Number(record.paidAmount) || 0;
+        const due = Math.max(0, total - paid);
+        return (
+          <div>
+            <Select
+              size="small"
+              value={currentStatus}
+              style={{ width: 120 }}
+              loading={paymentUpdating === record.id}
+              onChange={(val) => handlePaymentUpdate(record, val)}
+              options={[
+                { value: "unpaid", label: <Tag color="red">Unpaid</Tag> },
+                { value: "partial", label: <Tag color="orange">Partial</Tag> },
+                { value: "paid", label: <Tag color="green">Paid</Tag> },
+              ]}
+            />
+            {currentStatus !== "paid" && due > 0 && record.status !== "cancelled" && (
+              <div style={{ fontSize: 11, color: "#b91c1c", marginTop: 2 }}>
+                Due: ₹{due.toLocaleString("en-IN")}
+              </div>
+            )}
+          </div>
+        );
+      },
     },
     {
       title: "Date",
@@ -277,6 +463,15 @@ export default function OrdersPage() {
           >
             Send Bill
           </Button>
+          <Popconfirm
+            title="Delete order?"
+            description="Remove this order permanently?"
+            onConfirm={() => handleDeleteOrder(record.id)}
+            okText="Delete"
+            cancelText="Cancel"
+          >
+            <Button size="small" danger icon={<DeleteOutlined />} />
+          </Popconfirm>
         </Space>
       ),
     },
@@ -358,6 +553,8 @@ export default function OrdersPage() {
         <div><span>Subtotal:</span><span>₹${baseAmount.toFixed(2)}</span></div>
         ${gstRate > 0 ? `<div><span>GST (${gstRate}%):</span><span>₹${gstAmount.toFixed(2)}</span></div>` : ""}
         <div class="grand"><span>Grand Total:</span><span>₹${grandTotal.toFixed(2)}</span></div>
+        <div><span>Paid (${(order.paymentStatus || "unpaid").toUpperCase()}):</span><span>₹${(order.paymentStatus === "paid" ? grandTotal : Number(order.paidAmount) || 0).toFixed(2)}</span></div>
+        ${order.paymentStatus !== "paid" ? `<div style="color:#b91c1c;font-weight:bold"><span>Balance Due:</span><span>₹${Math.max(0, grandTotal - (Number(order.paidAmount) || 0)).toFixed(2)}</span></div>` : ""}
       </div>
       ${upiId ? `<div style="margin-top:24px;padding:12px;border:1px solid #bbf7d0;background:#f0fdf4;display:inline-block"><strong>Pay via UPI:</strong> ${upiId}${invoiceQrUrl ? `<br/><img src="${invoiceQrUrl}" style="width:130px;height:130px;margin-top:8px"/>` : ""}</div>` : ""}
       <script>window.onload = function() { window.print(); };</script>
@@ -378,8 +575,18 @@ export default function OrdersPage() {
             onClick={() =>
               downloadCsv(
                 "giniespace-orders.csv",
-                ["OrderID", "Customer", "Phone", "Amount", "Status", "Notes", "Date"],
-                filteredOrders.map((o) => [o.id, o.customerName, o.customerPhone, o.totalAmount, o.status, o.notes, o.createdAt])
+                ["OrderID", "Customer", "Phone", "Amount", "Status", "PaymentStatus", "PaidAmount", "Notes", "Date"],
+                filteredOrders.map((o) => [
+                  o.id,
+                  o.customerName,
+                  o.customerPhone,
+                  o.totalAmount,
+                  o.status,
+                  o.paymentStatus || "unpaid",
+                  o.paidAmount || 0,
+                  o.notes,
+                  o.createdAt,
+                ])
               )
             }
           >
@@ -391,7 +598,12 @@ export default function OrdersPage() {
           <Button
             type="primary"
             icon={<PlusOutlined />}
-            onClick={() => setCreateModalVisible(true)}
+            onClick={() => {
+              setLineItems([]);
+              form.resetFields();
+              form.setFieldsValue({ status: "pending", paymentStatus: "unpaid", paidAmount: 0 });
+              setCreateModalVisible(true);
+            }}
             style={{ background: "#25D366", borderColor: "#25D366" }}
           >
             New Order
@@ -434,52 +646,185 @@ export default function OrdersPage() {
 
       {/* Create Order Modal */}
       <Modal
-        title="Create New Order"
+        title="Create New Order (Itemized + Stock Deduction)"
         open={createModalVisible}
         onCancel={() => setCreateModalVisible(false)}
         footer={null}
         destroyOnClose
+        width={600}
       >
-        <Form form={form} layout="vertical" onFinish={handleCreateOrder} initialValues={{ status: "pending" }}>
-          <Form.Item
-            name="customerName"
-            label="Customer Name"
-            rules={[{ required: true, message: "Please enter customer name" }]}
-          >
-            <Input placeholder="e.g. Ramesh Kumar" />
-          </Form.Item>
+        {customers.length > 0 && (
+          <div style={{ marginBottom: 14 }}>
+            <Text type="secondary" style={{ fontSize: 12, display: "block", marginBottom: 4 }}>
+              Quick Fill from Existing Customers (Optional):
+            </Text>
+            <Select
+              showSearch
+              allowClear
+              placeholder="Search saved customer by name or phone..."
+              optionFilterProp="label"
+              style={{ width: "100%" }}
+              onChange={(custId) => {
+                const c = customers.find((item) => item.id === custId);
+                if (c) {
+                  form.setFieldsValue({ customerName: c.name, customerPhone: c.phone });
+                }
+              }}
+              options={customers.map((c) => ({
+                value: c.id,
+                label: `${c.name} (+${String(c.phone).replace(/^\+/, "")})`,
+              }))}
+            />
+          </div>
+        )}
 
-          <Form.Item
-            name="customerPhone"
-            label="Customer WhatsApp Phone Number"
-            rules={[{ required: true, message: "Please enter phone number" }]}
-          >
-            <Input placeholder="e.g. 919876543210" />
-          </Form.Item>
+        <div style={{ marginBottom: 16, padding: 12, background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0" }}>
+          <Text strong style={{ display: "block", marginBottom: 8, fontSize: 13 }}>
+            <ShoppingCartOutlined /> Add Catalog Items (Optional — auto-calculates total &amp; deducts stock)
+          </Text>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Select
+              showSearch
+              placeholder="Choose product from catalog..."
+              optionFilterProp="label"
+              value={pickerProductId}
+              onChange={setPickerProductId}
+              style={{ flex: 1, minWidth: 210 }}
+              options={products.map((p) => ({
+                value: p.id,
+                label: `${p.name} — ₹${p.price}/${p.unit || "pcs"} (Stock: ${p.stock})`,
+              }))}
+            />
+            <InputNumber
+              min={1}
+              value={pickerQty}
+              onChange={(v) => setPickerQty(Number(v) || 1)}
+              style={{ width: 75 }}
+            />
+            <Button icon={<PlusOutlined />} onClick={handleAddLineItem}>
+              Add
+            </Button>
+          </div>
+          {lineItems.length > 0 && (
+            <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6 }}>
+              {lineItems.map((item) => (
+                <div
+                  key={item.productId}
+                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, background: "#fff", padding: "6px 10px", borderRadius: 6 }}
+                >
+                  <span>
+                    <strong>{item.name}</strong> × {item.quantity} {item.unit || ""} = <strong>₹{(item.price * item.quantity).toLocaleString("en-IN")}</strong>
+                  </span>
+                  <Button
+                    type="text"
+                    size="small"
+                    danger
+                    icon={<MinusCircleOutlined />}
+                    onClick={() => handleRemoveLineItem(item.productId)}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
-          <Form.Item
-            name="totalAmount"
-            label="Total Amount (₹)"
-            rules={[{ required: true, message: "Please enter total amount" }]}
-          >
-            <InputNumber style={{ width: "100%" }} min={0} placeholder="1500" />
-          </Form.Item>
+        <Form form={form} layout="vertical" onFinish={handleCreateOrder} initialValues={{ status: "pending", paymentStatus: "unpaid", paidAmount: 0 }}>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <Form.Item
+              name="customerName"
+              label="Customer Name"
+              rules={[{ required: true, message: "Please enter customer name" }]}
+              style={{ flex: 1, minWidth: 200 }}
+            >
+              <Input placeholder="e.g. Ramesh Kumar" />
+            </Form.Item>
+
+            <Form.Item
+              name="customerPhone"
+              label="Customer WhatsApp Phone Number"
+              rules={[{ required: true, message: "Please enter phone number" }]}
+              style={{ flex: 1, minWidth: 200 }}
+            >
+              <Input placeholder="e.g. 919876543210" />
+            </Form.Item>
+          </div>
+
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <Form.Item
+              name="totalAmount"
+              label="Total Amount (₹)"
+              rules={[{ required: true, message: "Please enter total amount" }]}
+              style={{ flex: 1, minWidth: 160 }}
+            >
+              <InputNumber style={{ width: "100%" }} min={0} placeholder="1500" />
+            </Form.Item>
+
+            <Form.Item name="paymentStatus" label="Payment Status" style={{ width: 160 }}>
+              <Select
+                options={[
+                  { value: "unpaid", label: "Unpaid / Udhaar" },
+                  { value: "partial", label: "Partial Paid" },
+                  { value: "paid", label: "Paid (Full)" },
+                ]}
+              />
+            </Form.Item>
+
+            <Form.Item name="paidAmount" label="Paid Now (₹ if Partial)" style={{ width: 160 }}>
+              <InputNumber style={{ width: "100%" }} min={0} placeholder="0" />
+            </Form.Item>
+          </div>
 
           <Form.Item name="notes" label="Order Details / Notes">
-            <Input.TextArea rows={3} placeholder="e.g. 5 boxes of cotton shirts, delivery before Monday" />
+            <Input.TextArea rows={2} placeholder="e.g. delivery before Monday" />
           </Form.Item>
 
-          <Form.Item>
+          <Form.Item style={{ marginBottom: 0 }}>
             <Button
               type="primary"
               htmlType="submit"
               block
+              loading={creatingOrder}
               style={{ background: "#25D366", borderColor: "#25D366", fontWeight: 600 }}
             >
               Save Order
             </Button>
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* Partial Payment Amount Modal */}
+      <Modal
+        title={`Record Partial Payment — #${partialModalOrder ? partialModalOrder.id.slice(-6).toUpperCase() : ""}`}
+        open={Boolean(partialModalOrder)}
+        onCancel={() => setPartialModalOrder(null)}
+        confirmLoading={paymentUpdating === partialModalOrder?.id}
+        okText="Save Partial Payment"
+        onOk={() => {
+          if (partialModalOrder) {
+            handlePaymentUpdate(partialModalOrder, "partial", partialPaidInput);
+          }
+        }}
+      >
+        {partialModalOrder && (
+          <Space direction="vertical" style={{ width: "100%" }} size={10}>
+            <div>
+              Order Total: <strong>₹{Number(partialModalOrder.totalAmount || 0).toLocaleString("en-IN")}</strong>
+            </div>
+            <div>
+              <Text type="secondary">Amount Received So Far (₹):</Text>
+              <InputNumber
+                style={{ width: "100%", marginTop: 4 }}
+                min={0}
+                max={Number(partialModalOrder.totalAmount) || 99999999}
+                value={partialPaidInput}
+                onChange={(val) => setPartialPaidInput(Number(val) || 0)}
+              />
+            </div>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              Remaining Udhaar / Due: <strong>₹{Math.max(0, Number(partialModalOrder.totalAmount || 0) - partialPaidInput).toLocaleString("en-IN")}</strong>
+            </Text>
+          </Space>
+        )}
       </Modal>
 
       {/* Printable Invoice & UPI QR Modal */}
@@ -552,9 +897,21 @@ export default function OrdersPage() {
                         <div>GST ({gstRate}%): ₹{tax.toFixed(2)}</div>
                       </>
                     )}
-                    <Title level={4} style={{ margin: "6px 0", color: "#16a34a" }}>
-                      Grand Total: ₹{grand.toLocaleString("en-IN")}
-                    </Title>
+                      <Title level={4} style={{ margin: "6px 0", color: "#16a34a" }}>
+                        Grand Total: ₹{grand.toLocaleString("en-IN")}
+                      </Title>
+                      <div>
+                        <Text type="secondary">
+                          Payment: <strong>{(invoiceOrder.paymentStatus || "unpaid").toUpperCase()}</strong> (Paid: ₹{(invoiceOrder.paymentStatus === "paid" ? grand : Number(invoiceOrder.paidAmount) || 0).toLocaleString("en-IN")})
+                        </Text>
+                      </div>
+                      {invoiceOrder.paymentStatus !== "paid" && (
+                        <div>
+                          <Text type="danger" strong>
+                            Balance Due: ₹{Math.max(0, grand - (Number(invoiceOrder.paidAmount) || 0)).toLocaleString("en-IN")}
+                          </Text>
+                        </div>
+                      )}
                   </div>
                 </>
               );

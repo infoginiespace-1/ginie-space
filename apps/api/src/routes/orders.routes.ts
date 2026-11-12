@@ -1,9 +1,9 @@
 import { Router, Request, Response } from "express";
-import { IDatabase, OrderStatus } from "@giniespace/sheets-db";
+import { IDatabase, OrderStatus, PaymentStatus } from "@giniespace/sheets-db";
 import { Server } from "socket.io";
 import { WhatsAppSessionManager } from "@giniespace/whatsapp-engine";
 import { NotificationService } from "../services/notification.service";
-import { toE164 } from "../utils/phone";
+import { normalizePhoneDigits, toE164 } from "../utils/phone";
 
 export function createOrdersRouter(
   db: IDatabase,
@@ -42,22 +42,96 @@ export function createOrdersRouter(
 
   router.post("/", async (req: Request, res: Response): Promise<void> => {
     try {
-      const { customerId, customerName, customerPhone, items, totalAmount, notes } = req.body;
+      const { customerId, customerName, customerPhone, items, totalAmount, notes, paymentStatus, paidAmount } = req.body;
 
-      if (!customerName || !customerPhone || totalAmount === undefined) {
-        res.status(400).json({ error: "Customer name, phone number, and total amount are required" });
+      if (!customerName || !customerPhone) {
+        res.status(400).json({ error: "Customer name and phone number are required" });
         return;
       }
 
+      const parsedItems = Array.isArray(items) ? items : [];
+      if (totalAmount === undefined && parsedItems.length === 0) {
+        res.status(400).json({ error: "Total amount or catalog items are required" });
+        return;
+      }
+
+      let resolvedItems: any[] = parsedItems;
+      let resolvedTotal = Number(totalAmount) || 0;
+
+      // Verify itemized products, compute total if not manually provided, and decrement stock
+      if (parsedItems.length > 0) {
+        const userProducts = await db.products.findMany({ userId: req.user!.id });
+        const productMap = new Map(userProducts.map((p) => [p.id, p]));
+        let computedItemsTotal = 0;
+
+        resolvedItems = parsedItems.map((it: any) => {
+          const prod = productMap.get(String(it.productId || ""));
+          const qty = Math.max(1, Number(it.quantity) || 1);
+          const unitPrice = prod ? Number(prod.price) : Number(it.price) || 0;
+          computedItemsTotal += unitPrice * qty;
+
+          if (prod && Number(prod.stock) > 0) {
+            const nextStock = Math.max(0, Number(prod.stock) - qty);
+            db.products.update(prod.id, { stock: nextStock }).catch(() => {});
+          }
+
+          return {
+            productId: prod?.id || it.productId || "",
+            name: prod?.name || it.name || "Item",
+            price: unitPrice,
+            unit: prod?.unit || it.unit || "pcs",
+            quantity: qty,
+          };
+        });
+
+        if (totalAmount === undefined || Number(totalAmount) <= 0) {
+          resolvedTotal = computedItemsTotal;
+        }
+      }
+
+      // Auto-link or create customer in merchant's directory
+      const e164Phone = toE164(customerPhone) || customerPhone.trim();
+      const digits = normalizePhoneDigits(e164Phone);
+      let resolvedCustomerId = customerId || "";
+      if (!resolvedCustomerId && digits) {
+        try {
+          const existingCusts = await db.customers.findMany({ userId: req.user!.id });
+          const matched = existingCusts.find((c) => normalizePhoneDigits(c.phone || "") === digits);
+          if (matched) {
+            resolvedCustomerId = matched.id;
+          } else {
+            const createdCust = await db.customers.create({
+              userId: req.user!.id,
+              name: customerName.trim(),
+              phone: e164Phone,
+              tags: "Order Customer",
+            });
+            resolvedCustomerId = createdCust.id;
+            io.to(`user:${req.user!.id}`).emit("customer:created", createdCust);
+          }
+        } catch {}
+      }
+
+      const validPayStatuses: PaymentStatus[] = ["unpaid", "partial", "paid"];
+      const resolvedPayStatus: PaymentStatus = validPayStatuses.includes(paymentStatus) ? paymentStatus : "unpaid";
+      const resolvedPaidAmount =
+        resolvedPayStatus === "paid"
+          ? resolvedTotal
+          : resolvedPayStatus === "unpaid"
+          ? 0
+          : Math.min(resolvedTotal, Math.max(0, Number(paidAmount) || 0));
+
       const order = await db.orders.create({
         userId: req.user!.id,
-        customerId: customerId || "",
+        customerId: resolvedCustomerId,
         customerName: customerName.trim(),
-        customerPhone: toE164(customerPhone) || customerPhone.trim(),
-        itemsJson: typeof items === "string" ? items : JSON.stringify(items || []),
-        totalAmount: Number(totalAmount) || 0,
+        customerPhone: e164Phone,
+        itemsJson: typeof items === "string" ? items : JSON.stringify(resolvedItems),
+        totalAmount: resolvedTotal,
         status: "pending",
         notes: notes ? notes.trim() : undefined,
+        paymentStatus: resolvedPayStatus,
+        paidAmount: resolvedPaidAmount,
       });
 
       io.to(`user:${req.user!.id}`).emit("order:created", order);
@@ -127,6 +201,45 @@ export function createOrdersRouter(
       res.json({ order: updated, message: `Order status updated to ${status}` });
     } catch {
       res.status(500).json({ error: "Could not update order status" });
+    }
+  });
+
+  router.put("/:id/payment", async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { paymentStatus, paidAmount } = req.body;
+      const validPayStatuses: PaymentStatus[] = ["unpaid", "partial", "paid"];
+      if (!paymentStatus || !validPayStatuses.includes(paymentStatus)) {
+        res.status(400).json({ error: `Payment status must be one of: ${validPayStatuses.join(", ")}` });
+        return;
+      }
+
+      const existing = await db.orders.findById((req.params.id as string));
+      if (!existing) {
+        res.status(404).json({ error: "Order not found" });
+        return;
+      }
+      if (req.user?.role !== "admin" && existing.userId !== req.user!.id) {
+        res.status(403).json({ error: "Access denied" });
+        return;
+      }
+
+      const total = Number(existing.totalAmount) || 0;
+      const nextPaid =
+        paymentStatus === "paid"
+          ? total
+          : paymentStatus === "unpaid"
+          ? 0
+          : Math.min(total, Math.max(0, Number(paidAmount) || 0));
+
+      const updated = await db.orders.update((req.params.id as string), {
+        paymentStatus: paymentStatus as PaymentStatus,
+        paidAmount: nextPaid,
+      });
+
+      io.to(`user:${existing.userId}`).emit("order:updated", updated);
+      res.json({ order: updated, message: `Payment marked as ${paymentStatus}` });
+    } catch {
+      res.status(500).json({ error: "Could not update payment status" });
     }
   });
 
