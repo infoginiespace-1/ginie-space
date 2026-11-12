@@ -218,7 +218,7 @@ export default function InboxPage() {
                   <Avatar style={{ background: "#25D366" }} icon={<UserOutlined />} />
                   <div>
                     <div style={{ fontWeight: 600, fontSize: 15 }}>{activeConv.name}</div>
-                    <Text type="secondary" style={{ fontSize: 12 }}>+{activeConv.phone}</Text>
+                    <Text type="secondary" style={{ fontSize: 12 }}>+{activeConv.phone.replace(/^\+/, "")}</Text>
                   </div>
                 </Space>
                 <Badge status="processing" text="Live Sync" />
