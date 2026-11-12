@@ -3,16 +3,22 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { IDatabase, BusinessType, UserRole } from "@giniespace/sheets-db";
 import { AuthenticatedUser } from "../middleware/auth";
+import { NotificationService } from "../services/notification.service";
+import { toE164 } from "../utils/phone";
 
 const MASTER_ADMIN_EMAIL = "info.giniespace@gmail.com";
 const MASTER_ADMIN_PASS = "Dawood@3210";
 
-export function createAuthRouter(db: IDatabase, jwtSecret: string): Router {
+export function createAuthRouter(
+  db: IDatabase,
+  jwtSecret: string,
+  notificationService?: NotificationService
+): Router {
   const router = Router();
 
   router.post("/signup", async (req: Request, res: Response): Promise<void> => {
     try {
-      const { email, password, name, businessType } = req.body;
+      const { email, password, name, businessType, phone } = req.body;
 
       if (!email || !password || !name || !businessType) {
         res.status(400).json({ error: "Please fill in all required fields (Name, Email, Password, Business Type)" });
@@ -46,10 +52,14 @@ export function createAuthRouter(db: IDatabase, jwtSecret: string): Router {
       await db.businesses.create({
         userId: newUser.id,
         name: `${name.trim()}'s Business`,
-        phone: "",
+        phone: phone ? toE164(phone) : "",
         address: "",
         settingsJson: JSON.stringify({ autoReply: true, welcomeMessage: "Hello! Welcome to our store." }),
       }).catch(() => null);
+
+      if (notificationService && phone) {
+        notificationService.notifyNewUserOnboarding(newUser.name, phone).catch(() => {});
+      }
 
       const payload: AuthenticatedUser = {
         id: newUser.id,

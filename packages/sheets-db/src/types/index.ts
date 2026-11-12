@@ -109,3 +109,16 @@ export interface WhatsAppSession {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface ChatMessage {
+  id: string;
+  userId: string;
+  contactPhone: string;
+  contactName?: string;
+  text: string;
+  fromMe: string;
+  messageId?: string;
+  timestamp: string;
+  createdAt: string;
+  updatedAt: string;
+}

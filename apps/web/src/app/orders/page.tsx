@@ -17,7 +17,7 @@ import {
   message,
   Checkbox,
 } from "antd";
-import { PlusOutlined, ShoppingCartOutlined, SyncOutlined } from "@ant-design/icons";
+import { PlusOutlined, ShoppingCartOutlined, SyncOutlined, WhatsAppOutlined } from "@ant-design/icons";
 import { api } from "../../lib/api";
 import { getSocket } from "../../lib/socket";
 
@@ -40,6 +40,33 @@ export default function OrdersPage() {
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [form] = Form.useForm();
   const [statusUpdating, setStatusUpdating] = useState<string | null>(null);
+  const [sendingBillId, setSendingBillId] = useState<string | null>(null);
+
+  const handleSendWhatsAppBill = async (order: Order) => {
+    try {
+      setSendingBillId(order.id);
+      let itemsSummary = "";
+      try {
+        const parsed = JSON.parse(order.itemsJson || "[]");
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          itemsSummary = "\n📋 *Items:*\n" + parsed.map((i: any) => `• ${i.name} x ${i.quantity} = ₹${i.price * i.quantity}`).join("\n");
+        }
+      } catch {}
+
+      const billText = `🧾 *Order Invoice / Bill #${order.id.slice(-6)}*\n\nNamaste *${order.customerName}*,\nAapka order detail neeche diya gaya hai:${itemsSummary}\n\n💰 *Total Amount:* ₹${order.totalAmount}\n📌 *Status:* ${order.status.toUpperCase()}${order.notes ? `\n📝 *Note:* ${order.notes}` : ""}\n📅 *Date:* ${new Date(order.createdAt).toLocaleDateString()}\n\nThank you for your business! 🙏`;
+
+      await api.post("/api/whatsapp/send", {
+        recipientPhone: order.customerPhone,
+        messageText: billText,
+        contactName: order.customerName,
+      });
+      message.success(`WhatsApp bill sent to ${order.customerName}!`);
+    } catch (err: any) {
+      message.error(err.response?.data?.error || err.message || "Could not send bill. Please ensure WhatsApp is connected.");
+    } finally {
+      setSendingBillId(null);
+    }
+  };
 
   const loadOrders = async () => {
     try {
@@ -126,7 +153,7 @@ export default function OrdersPage() {
       render: (name: string, record: Order) => (
         <div>
           <div style={{ fontWeight: 600 }}>{name}</div>
-          <Text type="secondary" style={{ fontSize: 12 }}>+{record.customerPhone}</Text>
+          <Text type="secondary" style={{ fontSize: 12 }}>+{record.customerPhone.replace(/^\+/, "")}</Text>
         </div>
       ),
     },
@@ -167,6 +194,22 @@ export default function OrdersPage() {
       dataIndex: "notes",
       key: "notes",
       render: (notes: string) => notes || "-",
+    },
+    {
+      title: "Action",
+      key: "action",
+      render: (_: any, record: Order) => (
+        <Button
+          size="small"
+          type="primary"
+          icon={<WhatsAppOutlined />}
+          loading={sendingBillId === record.id}
+          onClick={() => handleSendWhatsAppBill(record)}
+          style={{ background: "#25D366", borderColor: "#25D366" }}
+        >
+          Send Bill
+        </Button>
+      ),
     },
   ];
 

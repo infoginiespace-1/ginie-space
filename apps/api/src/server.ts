@@ -118,7 +118,7 @@ async function bootstrap() {
   }, 2500);
 
   // Real-time WebSockets
-  const io = setupSocketServer(server, config.jwtSecret, config.corsOrigin, waManager, db);
+  const io = setupSocketServer(server, config.jwtSecret, config.corsOrigin, waManager, db, notificationService);
 
   // Health Check
   app.get("/api/health", (_req, res) => {
@@ -126,15 +126,15 @@ async function bootstrap() {
   });
 
   // Auth Routes (Public)
-  app.use("/api/auth", createAuthRouter(db, config.jwtSecret));
+  app.use("/api/auth", createAuthRouter(db, config.jwtSecret, notificationService));
 
   // Protected Business Routes
   const auth = authMiddleware(config.jwtSecret);
   app.use("/api/customers", auth, createCustomersRouter(db, io));
   app.use("/api/products", auth, createProductsRouter(db, io));
-  app.use("/api/orders", auth, createOrdersRouter(db, io, waManager));
-  app.use("/api/leads", auth, createLeadsRouter(db, placesClient, io));
-  app.use("/api/whatsapp", auth, createWhatsAppRouter(waManager));
+  app.use("/api/orders", auth, createOrdersRouter(db, io, waManager, notificationService));
+  app.use("/api/leads", auth, createLeadsRouter(db, placesClient, io, notificationService));
+  app.use("/api/whatsapp", auth, createWhatsAppRouter(waManager, db));
   app.use("/api/settings", auth, createSettingsRouter(db));
   app.use("/api/admin", auth, requireAdmin, createAdminRouter(db, waManager, notificationService));
 

@@ -2,11 +2,14 @@ import { Router, Request, Response } from "express";
 import { IDatabase, OrderStatus } from "@giniespace/sheets-db";
 import { Server } from "socket.io";
 import { WhatsAppSessionManager } from "@giniespace/whatsapp-engine";
+import { NotificationService } from "../services/notification.service";
+import { toE164 } from "../utils/phone";
 
 export function createOrdersRouter(
   db: IDatabase,
   io: Server,
-  waManager: WhatsAppSessionManager
+  waManager: WhatsAppSessionManager,
+  notificationService?: NotificationService
 ): Router {
   const router = Router();
 
@@ -50,7 +53,7 @@ export function createOrdersRouter(
         userId: req.user!.id,
         customerId: customerId || "",
         customerName: customerName.trim(),
-        customerPhone: customerPhone.trim(),
+        customerPhone: toE164(customerPhone) || customerPhone.trim(),
         itemsJson: typeof items === "string" ? items : JSON.stringify(items || []),
         totalAmount: Number(totalAmount) || 0,
         status: "pending",
@@ -58,6 +61,10 @@ export function createOrdersRouter(
       });
 
       io.to(`user:${req.user!.id}`).emit("order:created", order);
+
+      if (notificationService && order.customerPhone) {
+        notificationService.notifyOrderPlaced(order, order.customerPhone).catch(() => {});
+      }
 
       res.status(201).json({ order, message: "Order placed successfully" });
     } catch {
@@ -105,11 +112,16 @@ export function createOrdersRouter(
           cancelled: "cancelled",
         };
         const messageText = `Hello ${existing.customerName}! Your order #${existing.id.slice(-6)} has been ${statusFriendlyNames[status]}. Total: ₹${existing.totalAmount}`;
-        waManager.sendMessage({
-          userId: existing.userId,
-          recipientPhone: existing.customerPhone,
-          messageText,
-        }).catch(() => {});
+        const merchantState = waManager.getSessionState(existing.userId);
+        if (merchantState.status === "connected") {
+          waManager.sendMessage({
+            userId: existing.userId,
+            recipientPhone: existing.customerPhone,
+            messageText,
+          }).catch(() => {});
+        } else if (notificationService) {
+          notificationService.sendSupportNotification(existing.customerPhone, messageText).catch(() => {});
+        }
       }
 
       res.json({ order: updated, message: `Order status updated to ${status}` });

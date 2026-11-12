@@ -4,14 +4,16 @@ import jwt from "jsonwebtoken";
 import { WhatsAppSessionManager, InboundMessageEvent } from "@giniespace/whatsapp-engine";
 import { IDatabase } from "@giniespace/sheets-db";
 import { AuthenticatedUser } from "../middleware/auth";
-import { SYSTEM_SUPPORT_SESSION_ID } from "../services/notification.service";
+import { NotificationService, SYSTEM_SUPPORT_SESSION_ID } from "../services/notification.service";
+import { normalizePhoneDigits, toE164 } from "../utils/phone";
 
 export function setupSocketServer(
   httpServer: HttpServer,
   jwtSecret: string,
   corsOrigin: string,
   waManager: WhatsAppSessionManager,
-  db: IDatabase
+  db: IDatabase,
+  notificationService: NotificationService
 ): SocketIOServer {
   const io = new SocketIOServer(httpServer, {
     cors: {
@@ -80,31 +82,70 @@ export function setupSocketServer(
   });
 
   waManager.on("message", async (event: InboundMessageEvent) => {
-    io.to("user:" + event.userId).emit("whatsapp:message", event);
-
-    if (event.userId === SYSTEM_SUPPORT_SESSION_ID) {
-      io.to("admin:support").emit("admin:whatsapp:message", event);
+    // Ignore status broadcasts and group noise
+    if (!event.senderJid || event.senderJid === "status@broadcast" || event.senderJid.endsWith("@g.us")) {
+      return;
     }
 
-    // Auto-discover or log customer
-    try {
-      const cleanPhone = event.senderJid.replace(/[^0-9]/g, "");
-      const existing = await db.customers.findOne({
-        userId: event.userId,
-        phone: cleanPhone,
-      });
+    const contactDigits = normalizePhoneDigits(event.senderJid);
+    const enrichedEvent = {
+      ...event,
+      contactPhone: contactDigits,
+    };
 
-      if (!existing && event.senderName) {
-        await db.customers.create({
+    io.to("user:" + event.userId).emit("whatsapp:message", enrichedEvent);
+
+    if (event.userId === SYSTEM_SUPPORT_SESSION_ID) {
+      io.to("admin:support").emit("admin:whatsapp:message", enrichedEvent);
+
+      if (!event.fromMe) {
+        notificationService
+          .handleSupportIncomingMessage(event.senderJid, event.senderName, event.messageText)
+          .catch(() => {});
+      }
+    }
+
+    // Persist message in DB (deduplicate by messageId if present)
+    try {
+      const existingMsg = event.messageId
+        ? await db.messages.findOne({ userId: event.userId, messageId: event.messageId })
+        : null;
+
+      if (!existingMsg) {
+        await db.messages.create({
           userId: event.userId,
-          name: event.senderName,
-          phone: cleanPhone,
-          notes: "First contacted via WhatsApp",
-          tags: "WhatsApp",
+          contactPhone: contactDigits,
+          contactName: event.senderName || "",
+          text: event.messageText,
+          fromMe: String(Boolean(event.fromMe)),
+          messageId: event.messageId || Date.now().toString(),
+          timestamp: event.timestamp || new Date().toISOString(),
         });
       }
     } catch {
-      // Background logging failsafe
+      // Non-fatal persistence safeguard
+    }
+
+    // Auto-discover customer on merchant WhatsApp using normalized phone matching
+    if (event.userId !== SYSTEM_SUPPORT_SESSION_ID && !event.fromMe && contactDigits) {
+      try {
+        const userCustomers = await db.customers.findMany({ userId: event.userId });
+        const matched = userCustomers.find(
+          (c) => normalizePhoneDigits(c.phone || "") === contactDigits
+        );
+
+        if (!matched) {
+          await db.customers.create({
+            userId: event.userId,
+            name: event.senderName || `+${contactDigits}`,
+            phone: toE164(contactDigits),
+            notes: "First contacted via WhatsApp",
+            tags: "WhatsApp",
+          });
+        }
+      } catch {
+        // Background logging failsafe
+      }
     }
   });
 

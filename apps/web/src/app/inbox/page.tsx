@@ -2,8 +2,26 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { AppLayout } from "../../components/AppLayout";
-import { Card, Input, Button, List, Avatar, Typography, Badge, Space, Empty, message } from "antd";
-import { SendOutlined, UserOutlined, WhatsAppOutlined } from "@ant-design/icons";
+import {
+  Card,
+  Input,
+  Button,
+  List,
+  Avatar,
+  Typography,
+  Badge,
+  Space,
+  Empty,
+  message,
+  Modal,
+  Tag,
+} from "antd";
+import {
+  SendOutlined,
+  UserOutlined,
+  WhatsAppOutlined,
+  AppstoreOutlined,
+} from "@ant-design/icons";
 import { getSocket } from "../../lib/socket";
 import { api } from "../../lib/api";
 
@@ -19,6 +37,7 @@ interface ChatMessage {
 }
 
 interface Conversation {
+  key: string;
   phone: string;
   name: string;
   lastMessage: string;
@@ -26,21 +45,48 @@ interface Conversation {
   messages: ChatMessage[];
 }
 
+interface ProductItem {
+  id: string;
+  name: string;
+  description?: string;
+  price: number;
+  unit: string;
+  stock: number;
+}
+
+function normalizePhoneKey(raw: string): string {
+  let digits = (raw || "").replace(/[^0-9]/g, "");
+  if (digits.startsWith("00")) digits = digits.slice(2);
+  if (digits.startsWith("0") && digits.length === 11) digits = digits.slice(1);
+  if (digits.length === 10) digits = `91${digits}`;
+  return digits;
+}
+
 export default function InboxPage() {
   const [conversations, setConversations] = useState<Map<string, Conversation>>(new Map());
-  const [activePhone, setActivePhone] = useState<string | null>(null);
+  const [activeKey, setActiveKey] = useState<string | null>(null);
   const [inputText, setInputText] = useState("");
   const [sending, setSending] = useState(false);
+  const [catalogModalVisible, setCatalogModalVisible] = useState(false);
+  const [products, setProducts] = useState<ProductItem[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Initial fetch of customers to populate conversations
-    api.get("/api/customers").then((res) => {
-      const custs = res.data.customers || [];
+    Promise.all([
+      api.get("/api/customers").catch(() => ({ data: { customers: [] } })),
+      api.get("/api/whatsapp/messages").catch(() => ({ data: { messages: [] } })),
+    ]).then(([custRes, msgRes]) => {
+      const custs = custRes.data.customers || [];
+      const savedMsgs = msgRes.data.messages || [];
       const map = new Map<string, Conversation>();
+
       for (const c of custs) {
         if (c.phone) {
-          map.set(c.phone, {
+          const key = normalizePhoneKey(c.phone);
+          if (!key) continue;
+          map.set(key, {
+            key,
             phone: c.phone,
             name: c.name,
             lastMessage: "No recent messages",
@@ -49,97 +95,170 @@ export default function InboxPage() {
           });
         }
       }
-      setConversations(new Map(map));
-      if (custs.length > 0 && !activePhone) {
-        setActivePhone(custs[0].phone);
-      }
-    }).catch(() => {});
 
-    // Listen to real-time WhatsApp incoming/outgoing messages
+      for (const m of savedMsgs) {
+        const key = normalizePhoneKey(m.contactPhone || "");
+        if (!key) continue;
+        const conv: Conversation = map.get(key) || {
+          key,
+          phone: `+${key}`,
+          name: m.contactName || `+${key}`,
+          lastMessage: m.text,
+          timestamp: m.timestamp,
+          messages: [],
+        };
+
+        const chatMsg: ChatMessage = {
+          id: m.messageId || m.id,
+          senderPhone: key,
+          senderName: m.contactName,
+          text: m.text,
+          timestamp: m.timestamp,
+          fromMe: m.fromMe === "true" || m.fromMe === true,
+        };
+
+        conv.messages.push(chatMsg);
+        conv.lastMessage = m.text;
+        conv.timestamp = m.timestamp;
+        map.set(key, conv);
+      }
+
+      setConversations(new Map(map));
+      const keys = Array.from(map.keys());
+      if (keys.length > 0 && !activeKey) {
+        setActiveKey(keys[0]);
+      }
+    });
+
     const socket = getSocket();
     if (socket) {
-      socket.on("whatsapp:message", (event: any) => {
-        const cleanPhone = event.senderJid.replace(/[^0-9]/g, "");
+      const handleIncoming = (event: any) => {
+        const key = normalizePhoneKey(event.contactPhone || event.senderJid || "");
+        if (!key) return;
+
+        const msgId = event.messageId || Date.now().toString();
         const newMsg: ChatMessage = {
-          id: event.messageId,
-          senderPhone: cleanPhone,
+          id: msgId,
+          senderPhone: key,
           senderName: event.senderName,
           text: event.messageText,
           timestamp: event.timestamp,
-          fromMe: event.fromMe,
+          fromMe: Boolean(event.fromMe),
         };
 
         setConversations((prev) => {
           const next = new Map(prev);
-          const existing = next.get(cleanPhone) || {
-            phone: cleanPhone,
-            name: event.senderName || cleanPhone,
+          const existing = next.get(key) || {
+            key,
+            phone: `+${key}`,
+            name: event.senderName || `+${key}`,
             lastMessage: event.messageText,
             timestamp: event.timestamp,
             messages: [],
           };
 
-          existing.lastMessage = event.messageText;
-          existing.timestamp = event.timestamp;
-          existing.messages = [...existing.messages, newMsg];
-          next.set(cleanPhone, existing);
+          if (existing.messages.some((m) => m.id === msgId)) {
+            return prev;
+          }
+
+          const updatedConv: Conversation = {
+            ...existing,
+            lastMessage: event.messageText,
+            timestamp: event.timestamp,
+            messages: [...existing.messages, newMsg],
+          };
+          next.set(key, updatedConv);
           return next;
         });
-      });
-    }
+      };
 
-    return () => {
-      if (socket) {
-        socket.off("whatsapp:message");
-      }
-    };
-  }, [activePhone]);
+      socket.on("whatsapp:message", handleIncoming);
+      return () => {
+        socket.off("whatsapp:message", handleIncoming);
+      };
+    }
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [conversations, activePhone]);
+  }, [conversations, activeKey]);
 
-  const handleSendMessage = async () => {
-    if (!activePhone || !inputText.trim()) return;
+  const sendTextMessage = async (textToSend: string) => {
+    if (!activeKey || !textToSend.trim()) return;
+    const conv = conversations.get(activeKey);
+    const targetPhone = conv?.phone || activeKey;
 
-    const messageText = inputText.trim();
-    setInputText("");
     setSending(true);
-
     try {
-      await api.post("/api/whatsapp/send", {
-        recipientPhone: activePhone,
-        messageText,
+      const res = await api.post("/api/whatsapp/send", {
+        recipientPhone: targetPhone,
+        messageText: textToSend.trim(),
+        contactName: conv?.name,
       });
 
+      const savedId = res.data?.saved?.messageId || Date.now().toString();
+      const now = res.data?.saved?.timestamp || new Date().toISOString();
+
       const outbound: ChatMessage = {
-        id: Date.now().toString(),
-        senderPhone: activePhone,
-        text: messageText,
-        timestamp: new Date().toISOString(),
+        id: savedId,
+        senderPhone: activeKey,
+        text: textToSend.trim(),
+        timestamp: now,
         fromMe: true,
       };
 
       setConversations((prev) => {
         const next = new Map(prev);
-        const existing = next.get(activePhone);
+        const existing = next.get(activeKey);
         if (existing) {
-          existing.lastMessage = messageText;
-          existing.timestamp = outbound.timestamp;
-          existing.messages = [...existing.messages, outbound];
-          next.set(activePhone, existing);
+          next.set(activeKey, {
+            ...existing,
+            lastMessage: textToSend.trim(),
+            timestamp: now,
+            messages: [...existing.messages, outbound],
+          });
         }
         return next;
       });
     } catch (err: any) {
-      message.error(err.message || "Failed to send message. Please ensure WhatsApp is linked.");
+      message.error(err.response?.data?.error || err.message || "Failed to send message. Please ensure WhatsApp is linked.");
     } finally {
       setSending(false);
     }
   };
 
-  const activeConv = activePhone ? conversations.get(activePhone) : null;
-  const conversationList = Array.from(conversations.values());
+  const handleSendMessage = async () => {
+    if (!inputText.trim()) return;
+    const txt = inputText.trim();
+    setInputText("");
+    await sendTextMessage(txt);
+  };
+
+  const handleOpenCatalog = async () => {
+    setCatalogModalVisible(true);
+    setLoadingProducts(true);
+    try {
+      const res = await api.get("/api/products");
+      setProducts(res.data.products || []);
+    } catch {
+      message.error("Could not load catalog items");
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  const handleSendProductQuote = async (p: ProductItem) => {
+    const activeConv = activeKey ? conversations.get(activeKey) : null;
+    const greeting = activeConv ? `Namaste ${activeConv.name},\n\n` : "";
+    const msg = `${greeting}📦 *${p.name}*\n💰 *Price:* ₹${p.price} / ${p.unit}\n📊 *Status:* ${p.stock > 0 ? `In Stock (${p.stock} ${p.unit})` : "Limited Stock"}${p.description ? `\n📝 ${p.description}` : ""}\n\nOrder karne ke liye reply karein!`;
+    setCatalogModalVisible(false);
+    await sendTextMessage(msg);
+  };
+
+  const activeConv = activeKey ? conversations.get(activeKey) : null;
+  const conversationList = Array.from(conversations.values()).sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  );
 
   return (
     <AppLayout>
@@ -151,7 +270,7 @@ export default function InboxPage() {
         >
           <div style={{ padding: "16px 20px", borderBottom: "1px solid #f0f0f0" }}>
             <Title level={5} style={{ margin: 0 }}>Conversations</Title>
-            <Text type="secondary" style={{ fontSize: 12 }}>Real-time WhatsApp messages</Text>
+            <Text type="secondary" style={{ fontSize: 12 }}>Real-time WhatsApp messages (Cloud Synced)</Text>
           </div>
 
           {conversationList.length === 0 ? (
@@ -164,12 +283,12 @@ export default function InboxPage() {
               dataSource={conversationList}
               renderItem={(item) => (
                 <List.Item
-                  onClick={() => setActivePhone(item.phone)}
+                  onClick={() => setActiveKey(item.key)}
                   style={{
                     padding: "12px 16px",
                     cursor: "pointer",
-                    background: activePhone === item.phone ? "#f0fdf4" : "transparent",
-                    borderLeft: activePhone === item.phone ? "3px solid #25D366" : "3px solid transparent",
+                    background: activeKey === item.key ? "#f0fdf4" : "transparent",
+                    borderLeft: activeKey === item.key ? "3px solid #25D366" : "3px solid transparent",
                     transition: "all 0.2s",
                   }}
                 >
@@ -228,12 +347,12 @@ export default function InboxPage() {
               <div style={{ flex: 1, overflowY: "auto", padding: 24, background: "#f8fafc" }}>
                 {activeConv.messages.length === 0 ? (
                   <div style={{ textAlign: "center", padding: "60px 0" }}>
-                    <Text type="secondary">Send a message to start conversation</Text>
+                    <Text type="secondary">Send a message or catalog item to start conversation</Text>
                   </div>
                 ) : (
                   activeConv.messages.map((m, idx) => (
                     <div
-                      key={idx}
+                      key={m.id || idx}
                       style={{
                         display: "flex",
                         justifyContent: m.fromMe ? "flex-end" : "flex-start",
@@ -248,6 +367,7 @@ export default function InboxPage() {
                           background: m.fromMe ? "#dcf8c6" : "#ffffff",
                           color: "#1f2937",
                           boxShadow: "0 1px 2px rgba(0,0,0,0.06)",
+                          whiteSpace: "pre-wrap",
                         }}
                       >
                         <div>{m.text}</div>
@@ -270,7 +390,15 @@ export default function InboxPage() {
 
               {/* Chat Input */}
               <div style={{ padding: 16, borderTop: "1px solid #f0f0f0", background: "#fff" }}>
-                <Space orientation="horizontal" style={{ width: "100%" }}>
+                <div style={{ display: "flex", gap: 8, width: "100%" }}>
+                  <Button
+                    icon={<AppstoreOutlined />}
+                    size="large"
+                    onClick={handleOpenCatalog}
+                    title="Share Product Quote from Catalog"
+                  >
+                    Catalog
+                  </Button>
                   <Input
                     placeholder="Type your WhatsApp message..."
                     value={inputText}
@@ -289,7 +417,7 @@ export default function InboxPage() {
                   >
                     Send
                   </Button>
-                </Space>
+                </div>
               </div>
             </>
           ) : (
@@ -299,6 +427,47 @@ export default function InboxPage() {
           )}
         </Card>
       </div>
+
+      {/* Quick Product Catalog Share Modal */}
+      <Modal
+        title="Share Product / Price on WhatsApp"
+        open={catalogModalVisible}
+        onCancel={() => setCatalogModalVisible(false)}
+        footer={null}
+        width={500}
+      >
+        <List
+          loading={loadingProducts}
+          dataSource={products}
+          locale={{ emptyText: "No products in catalog yet. Add items in Catalog & Items tab." }}
+          renderItem={(item) => (
+            <List.Item
+              actions={[
+                <Button
+                  key="send"
+                  type="primary"
+                  size="small"
+                  icon={<WhatsAppOutlined />}
+                  onClick={() => handleSendProductQuote(item)}
+                  style={{ background: "#25D366", borderColor: "#25D366" }}
+                >
+                  Send
+                </Button>,
+              ]}
+            >
+              <List.Item.Meta
+                title={<Text strong>{item.name}</Text>}
+                description={
+                  <Space size="small">
+                    <Tag color="green">₹{item.price} / {item.unit}</Tag>
+                    <Text type="secondary" style={{ fontSize: 12 }}>Stock: {item.stock}</Text>
+                  </Space>
+                }
+              />
+            </List.Item>
+          )}
+        />
+      </Modal>
     </AppLayout>
   );
 }

@@ -16,5 +16,6 @@ export interface IDatabase {
   leads: IRepository<import("../types").Lead>;
   settings: IRepository<import("../types").Setting>;
   whatsappSessions: IRepository<import("../types").WhatsAppSession>;
+  messages: IRepository<import("../types").ChatMessage>;
   initializeSchema(): Promise<void>;
 }

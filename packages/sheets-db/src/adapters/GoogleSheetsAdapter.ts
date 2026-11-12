@@ -10,7 +10,8 @@ import {
   Order,
   Lead,
   Setting,
-  WhatsAppSession
+  WhatsAppSession,
+  ChatMessage
 } from "../types";
 
 export interface GoogleSheetsConfig {
@@ -270,6 +271,7 @@ export class GoogleSheetsDatabase implements IDatabase {
   public leads!: IRepository<Lead>;
   public settings!: IRepository<Setting>;
   public whatsappSessions!: IRepository<WhatsAppSession>;
+  public messages!: IRepository<ChatMessage>;
 
   private sheets: sheets_v4.Sheets;
   private spreadsheetId: string;
@@ -360,6 +362,14 @@ export class GoogleSheetsDatabase implements IDatabase {
       ["id", "userId", "status", "qrCode", "phoneNumber", "credentialsZip", "lastSeen", "createdAt", "updatedAt"],
       this.throttler
     );
+
+    this.messages = new GoogleSheetsRepository<ChatMessage>(
+      this.sheets,
+      this.spreadsheetId,
+      "Messages",
+      ["id", "userId", "contactPhone", "contactName", "text", "fromMe", "messageId", "timestamp", "createdAt", "updatedAt"],
+      this.throttler
+    );
   }
 
   async initializeSchema(): Promise<void> {
@@ -379,6 +389,7 @@ export class GoogleSheetsDatabase implements IDatabase {
         { name: "Leads", headers: ["id", "userId", "placeId", "name", "phone", "address", "website", "rating", "ratingCount", "category", "status", "notes", "createdAt", "updatedAt"] },
         { name: "Settings", headers: ["id", "userId", "key", "value", "createdAt", "updatedAt"] },
         { name: "WhatsAppSessions", headers: ["id", "userId", "status", "qrCode", "phoneNumber", "credentialsZip", "lastSeen", "createdAt", "updatedAt"] },
+        { name: "Messages", headers: ["id", "userId", "contactPhone", "contactName", "text", "fromMe", "messageId", "timestamp", "createdAt", "updatedAt"] },
       ];
 
       const requests: sheets_v4.Schema$Request[] = [];

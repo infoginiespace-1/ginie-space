@@ -2,11 +2,14 @@ import { Router, Request, Response } from "express";
 import { IDatabase, LeadStatus } from "@giniespace/sheets-db";
 import { GooglePlacesClient } from "@giniespace/places-client";
 import { Server } from "socket.io";
+import { NotificationService } from "../services/notification.service";
+import { toE164 } from "../utils/phone";
 
 export function createLeadsRouter(
   db: IDatabase,
   placesClient: GooglePlacesClient,
-  io: Server
+  io: Server,
+  notificationService?: NotificationService
 ): Router {
   const router = Router();
 
@@ -98,7 +101,7 @@ export function createLeadsRouter(
         return;
       }
 
-      const cleanPhone = phoneToUse.replace(/[^0-9+]/g, "");
+      const cleanPhone = toE164(phoneToUse) || phoneToUse.replace(/[^0-9+]/g, "");
 
       const customer = await db.customers.create({
         userId: lead.userId,
@@ -114,6 +117,14 @@ export function createLeadsRouter(
 
       io.to(`user:${lead.userId}`).emit("lead:converted", { leadId: lead.id, customer });
       io.to(`user:${lead.userId}`).emit("customer:created", customer);
+
+      if (notificationService) {
+        db.businesses.findOne({ userId: lead.userId }).then((biz) => {
+          if (biz?.phone) {
+            notificationService.notifyLeadConverted(biz.name || "Merchant", lead.name, biz.phone).catch(() => {});
+          }
+        }).catch(() => {});
+      }
 
       res.json({
         customer,
