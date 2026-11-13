@@ -66,6 +66,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useRouter } from "next/navigation";
 import { getSocket } from "../../lib/socket";
 import { downloadCsv } from "../../lib/csv";
+import { formatDisplayPhone } from "../../lib/phone";
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -997,7 +998,9 @@ export default function AdminPage() {
                             <Text strong>{r.name}</Text>
                             <div style={{ fontSize: 12, color: "#595959" }}>{r.email}</div>
                             {r.business?.phone && (
-                              <div style={{ fontSize: 11, color: "#8c8c8c" }}>📞 {r.business.phone}</div>
+                              <div style={{ fontSize: 11, color: "#047857", fontWeight: 600 }}>
+                                📞 {formatDisplayPhone(r.business.phone)}
+                              </div>
                             )}
                           </div>
                         ),
@@ -1389,7 +1392,9 @@ export default function AdminPage() {
                         render: (_: any, t: any) => (
                           <div>
                             <Text strong>{t.name}</Text>
-                            <div style={{ fontSize: 12, color: "#8c8c8c" }}>+{t.phone}</div>
+                            <div style={{ fontSize: 12, color: "#047857", fontWeight: 600 }}>
+                              📞 {formatDisplayPhone(t.phone)}
+                            </div>
                           </div>
                         ),
                       },
@@ -1762,7 +1767,9 @@ export default function AdminPage() {
               </div>
               <div style={{ marginBottom: 8 }}>
                 <Text strong>WhatsApp Phone: </Text>
-                <Text>{selectedMerchant.business?.phone ? `+${selectedMerchant.business.phone}` : "Not Set"}</Text>
+                <Text strong style={{ color: "#047857" }}>
+                  {selectedMerchant.business?.phone ? `📱 ${formatDisplayPhone(selectedMerchant.business.phone)}` : "Not Set"}
+                </Text>
               </div>
               <div style={{ marginBottom: 8 }}>
                 <Text strong>Custom Link Slug: </Text>
@@ -1888,7 +1895,7 @@ export default function AdminPage() {
         title={
           <Space>
             <MessageOutlined style={{ color: "#25D366" }} />
-            <span>Chat History: {activeThread?.name} (+{activeChatPhone})</span>
+            <span>Chat History: {activeThread?.name} ({formatDisplayPhone(activeChatPhone || "")})</span>
           </Space>
         }
         open={Boolean(activeChatPhone)}
@@ -1922,7 +1929,7 @@ export default function AdminPage() {
                       }}
                     >
                       <div style={{ fontSize: 11, fontWeight: 700, color: isOut ? "#059669" : "#3b82f6", marginBottom: 2 }}>
-                        {isOut ? "Official Support (+91 9279259690)" : activeThread?.name}
+                        {isOut ? "Official Support (+91 92792 59690)" : `${activeThread?.name || "Customer"} (📱 ${formatDisplayPhone(activeThread?.phone || activeChatPhone || "")})`}
                       </div>
                       <div style={{ fontSize: 13, whiteSpace: "pre-wrap", color: "#1f2937" }}>{m.text}</div>
                       <div style={{ fontSize: 10, color: "#9ca3af", textAlign: "right", marginTop: 4 }}>

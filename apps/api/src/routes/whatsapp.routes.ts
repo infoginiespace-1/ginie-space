@@ -59,6 +59,10 @@ export function createWhatsAppRouter(
         recipientPhone: recipientPhone.trim(),
         messageText: (messageText || "").trim(),
         mediaDataUrl: typeof mediaDataUrl === "string" ? mediaDataUrl.trim() : undefined,
+        antiBan: {
+          simulateTyping: true,
+          randomizeHash: true,
+        },
       });
 
       const now = new Date().toISOString();

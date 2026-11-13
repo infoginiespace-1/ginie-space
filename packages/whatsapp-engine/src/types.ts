@@ -19,11 +19,18 @@ export interface InboundMessageEvent {
   fromMe: boolean;
 }
 
+export interface AntiBanOptions {
+  simulateTyping?: boolean;
+  typingDurationMs?: number;
+  randomizeHash?: boolean;
+}
+
 export interface OutboundMessageRequest {
   userId: string;
   recipientPhone: string;
   messageText: string;
   mediaDataUrl?: string;
+  antiBan?: AntiBanOptions;
 }
 
 export interface AuthStateProvider {

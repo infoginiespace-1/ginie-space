@@ -1,4 +1,4 @@
-import { WhatsAppSessionManager } from "@giniespace/whatsapp-engine";
+import { WhatsAppSessionManager, AntiBanOptions } from "@giniespace/whatsapp-engine";
 import { IDatabase } from "@giniespace/sheets-db";
 import { normalizePhoneDigits } from "../utils/phone";
 
@@ -37,7 +37,11 @@ export class NotificationService {
     return DEFAULT_RULES;
   }
 
-  async sendSupportNotification(recipientPhone: string, messageText: string): Promise<boolean> {
+  async sendSupportNotification(
+    recipientPhone: string,
+    messageText: string,
+    antiBanOptions?: AntiBanOptions
+  ): Promise<boolean> {
     try {
       const state = this.waManager.getSessionState(SYSTEM_SUPPORT_SESSION_ID);
       if (state.status !== "connected") {
@@ -51,6 +55,11 @@ export class NotificationService {
         userId: SYSTEM_SUPPORT_SESSION_ID,
         recipientPhone: digits,
         messageText,
+        antiBan: antiBanOptions || {
+          simulateTyping: true,
+          typingDurationMs: Math.min(1800, Math.max(600, messageText.length * 12)),
+          randomizeHash: true,
+        },
       });
       return true;
     } catch (err: any) {

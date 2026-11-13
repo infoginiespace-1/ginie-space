@@ -33,6 +33,7 @@ import {
 } from "@ant-design/icons";
 import { getSocket } from "../../lib/socket";
 import { api } from "../../lib/api";
+import { formatDisplayPhone } from "../../lib/phone";
 
 const { Text, Title } = Typography;
 
@@ -509,12 +510,24 @@ export default function InboxPage() {
                         />
                       </Badge>
                     }
-                    title={<Text strong>{item.name}</Text>}
+                    title={
+                      <div style={{ display: "flex", flexDirection: "column" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <Text strong ellipsis style={{ maxWidth: 140 }}>{item.name}</Text>
+                          <span style={{ fontSize: 10, color: "#9ca3af" }}>
+                            {item.timestamp ? new Date(item.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: 11, color: "#059669", fontWeight: 600, marginTop: 1 }}>
+                          📞 {formatDisplayPhone(item.phone)}
+                        </div>
+                      </div>
+                    }
                     description={
                       <Text
                         type="secondary"
                         ellipsis
-                        style={{ fontSize: 12, maxWidth: 180, display: "inline-block" }}
+                        style={{ fontSize: 12, maxWidth: 180, display: "inline-block", marginTop: 2 }}
                       >
                         {item.lastMessage}
                       </Text>
@@ -553,8 +566,15 @@ export default function InboxPage() {
                   )}
                   <Avatar style={{ background: "#25D366" }} icon={<UserOutlined />} />
                   <div>
-                    <div style={{ fontWeight: 600, fontSize: 15 }}>{activeConv.name}</div>
-                    <Text type="secondary" style={{ fontSize: 12 }}>+{activeConv.phone.replace(/^\+/, "")}</Text>
+                    <div style={{ fontWeight: 600, fontSize: 15, display: "flex", alignItems: "center", gap: 8 }}>
+                      <span>{activeConv.name}</span>
+                      <Tag color="success" style={{ margin: 0, fontSize: 11, padding: "0 6px" }}>
+                        Real Mobile
+                      </Tag>
+                    </div>
+                    <Text strong style={{ fontSize: 13, color: "#047857" }}>
+                      📱 {formatDisplayPhone(activeConv.phone)}
+                    </Text>
                   </div>
                 </Space>
                 <Space>
@@ -596,6 +616,9 @@ export default function InboxPage() {
                           whiteSpace: "pre-wrap",
                         }}
                       >
+                        <div style={{ fontSize: 10, fontWeight: 700, color: m.fromMe ? "#059669" : "#2563eb", marginBottom: 3 }}>
+                          {m.fromMe ? "You (Merchant)" : `📱 ${formatDisplayPhone(activeConv.phone)}`}
+                        </div>
                         <div>{m.text}</div>
                         <div
                           style={{

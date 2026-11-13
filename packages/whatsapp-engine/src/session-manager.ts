@@ -7,11 +7,19 @@ import makeWASocket, {
   useMultiFileAuthState,
   WASocket,
   proto,
+  makeCacheableSignalKeyStore,
+  Browsers,
 } from "@whiskeysockets/baileys";
 import { Boom } from "@hapi/boom";
 const QRCode: any = require("qrcode");
 import pino from "pino";
 import { SessionState, InboundMessageEvent, OutboundMessageRequest, AuthStateProvider } from "./types";
+
+function randomizeMessageHash(text: string): string {
+  const zeroWidth = ["\u200B", "\u200C", "\u200D", "\uFEFF"];
+  const suffix = Array.from({ length: 3 }, () => zeroWidth[Math.floor(Math.random() * zeroWidth.length)]).join("");
+  return `${text}${suffix}`;
+}
 
 export class WhatsAppSessionManager extends EventEmitter {
   private sockets: Map<string, WASocket> = new Map();
@@ -20,6 +28,10 @@ export class WhatsAppSessionManager extends EventEmitter {
   private authProvider?: AuthStateProvider;
   private syncDebounceTimers: Map<string, NodeJS.Timeout> = new Map();
   private logger = pino({ level: "silent" });
+
+  // In-memory message store for E2EE retry requests ("Waiting for this message" fix)
+  private recentMessages: Map<string, proto.IMessage> = new Map();
+  private maxCachedMessages = 1000;
 
   constructor(baseStoragePath = "/tmp/giniespace-sessions", authProvider?: AuthStateProvider) {
     super();
@@ -34,6 +46,15 @@ export class WhatsAppSessionManager extends EventEmitter {
         status: "disconnected",
       }
     );
+  }
+
+  private cacheMessage(id?: string, msg?: proto.IMessage): void {
+    if (!id || !msg) return;
+    if (this.recentMessages.size >= this.maxCachedMessages) {
+      const oldestKey = this.recentMessages.keys().next().value;
+      if (oldestKey) this.recentMessages.delete(oldestKey);
+    }
+    this.recentMessages.set(id, msg);
   }
 
   private async restoreSessionFromCloud(userId: string, sessionDir: string): Promise<boolean> {
@@ -56,7 +77,7 @@ export class WhatsAppSessionManager extends EventEmitter {
         fs.writeFileSync(path.join(sessionDir, filename), content, "utf-8");
       }
 
-      console.log(`[WhatsAppManager] Successfully restored session credentials from cloud for ${userId}`);
+      console.log(`[WhatsAppManager] Successfully restored session credentials from cloud for ${userId} (${Object.keys(files).length} files)`);
       return true;
     } catch (err: any) {
       console.warn(`[WhatsAppManager] Failed to restore session from cloud for ${userId}:`, err.message);
@@ -106,12 +127,25 @@ export class WhatsAppSessionManager extends EventEmitter {
 
     const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
 
+    // Initialise WASocket with Signal Key Caching, Official Browser signature and getMessage retry handler
     const sock = makeWASocket({
-      auth: state,
+      auth: {
+        creds: state.creds,
+        keys: makeCacheableSignalKeyStore(state.keys, this.logger),
+      },
       logger: this.logger,
       printQRInTerminal: false,
-      browser: ["GinieSpace", "Chrome", "1.0.0"],
-      keepAliveIntervalMs: 25000,
+      browser: Browsers.macOS("Desktop"),
+      markOnlineOnConnect: true,
+      syncFullHistory: false,
+      getMessage: async (key) => {
+        if (key?.id && this.recentMessages.has(key.id)) {
+          return this.recentMessages.get(key.id);
+        }
+        return { conversation: "" };
+      },
+      defaultQueryTimeoutMs: undefined,
+      keepAliveIntervalMs: 30000,
       connectTimeoutMs: 60000,
     });
 
@@ -181,6 +215,11 @@ export class WhatsAppSessionManager extends EventEmitter {
       for (const msg of messages) {
         if (!msg.message) continue;
 
+        // Cache incoming message for E2EE decryption retry handling
+        if (msg.key?.id) {
+          this.cacheMessage(msg.key.id, msg.message);
+        }
+
         const senderJid = msg.key.remoteJid || "";
         const fromMe = msg.key.fromMe || false;
         const text =
@@ -222,26 +261,53 @@ export class WhatsAppSessionManager extends EventEmitter {
     }
 
     const defaultJid = `${digits}@s.whatsapp.net`;
-    let payload: any = { text: req.messageText };
-    if (req.mediaDataUrl && req.mediaDataUrl.startsWith("data:image/")) {
-      const commaIdx = req.mediaDataUrl.indexOf(",");
-      if (commaIdx !== -1) {
-        const imgBuffer = Buffer.from(req.mediaDataUrl.slice(commaIdx + 1), "base64");
-        payload = { image: imgBuffer, caption: req.messageText };
-      }
-    }
+    let targetJid = defaultJid;
 
+    // 1. Strict onWhatsApp validation check
     try {
       const results = await sock.onWhatsApp(digits);
       if (results && results.length > 0 && results[0].exists) {
-        const sent = await sock.sendMessage(results[0].jid, payload);
-        return sent || null;
+        targetJid = results[0].jid;
       }
     } catch (err: any) {
       console.warn(`[WhatsAppManager] onWhatsApp query warning: ${err.message}`);
     }
 
-    const result = await sock.sendMessage(defaultJid, payload);
+    // 2. Anti-Ban Human Simulation: Typing (composing) presence
+    if (req.antiBan?.simulateTyping !== false) {
+      try {
+        await sock.sendPresenceUpdate("composing", targetJid);
+        const typingDelay = req.antiBan?.typingDurationMs || Math.min(1800, Math.max(700, req.messageText.length * 15));
+        await new Promise((resolve) => setTimeout(resolve, typingDelay));
+        await sock.sendPresenceUpdate("paused", targetJid);
+      } catch {}
+    }
+
+    // 3. Anti-Ban Unique Hash Randomization (Zero-Width suffix to prevent bulk spam hash matching)
+    const outboundText =
+      req.antiBan?.randomizeHash !== false && !req.mediaDataUrl
+        ? randomizeMessageHash(req.messageText)
+        : req.messageText;
+
+    let payload: any = { text: outboundText };
+    if (req.mediaDataUrl && req.mediaDataUrl.startsWith("data:image/")) {
+      const commaIdx = req.mediaDataUrl.indexOf(",");
+      if (commaIdx !== -1) {
+        const imgBuffer = Buffer.from(req.mediaDataUrl.slice(commaIdx + 1), "base64");
+        payload = { image: imgBuffer, caption: outboundText };
+      }
+    }
+
+    const result = await sock.sendMessage(targetJid, payload);
+
+    // Cache outbound message in memory for E2EE Retry responses ("Waiting for this message" fix)
+    if (result?.key?.id && result.message) {
+      this.cacheMessage(result.key.id, result.message);
+    }
+
+    // Trigger cloud sync
+    const sessionDir = path.join(this.baseStoragePath, req.userId);
+    this.scheduleCloudSync(req.userId, sessionDir);
 
     return result || null;
   }

@@ -235,8 +235,15 @@ export function createAdminRouter(
 
       for (const r of recipients) {
         try {
-          const text = messageText.replace(/{{name}}/g, r.name).trim();
-          const ok = await notificationService.sendSupportNotification(r.phone, text);
+          let text = messageText.replace(/{{name}}/g, r.name).trim();
+          // Anti-Ban: Include polite opt-out footer if not already included
+          if (!text.toLowerCase().includes("stop") && !text.toLowerCase().includes("opt out")) {
+            text += "\n\n_Reply STOP to opt out._";
+          }
+          const ok = await notificationService.sendSupportNotification(r.phone, text, {
+            simulateTyping: true,
+            randomizeHash: true,
+          });
           if (ok) {
             sentCount++;
             await db.messages.create({
@@ -254,7 +261,9 @@ export function createAdminRouter(
         } catch {
           failedCount++;
         }
-        await new Promise((resolve) => setTimeout(resolve, 350));
+        // Anti-Ban: Humanized randomized delay (1.5s - 3.2s) between broadcast messages to avoid spam triggers
+        const jitterMs = Math.floor(Math.random() * 1700) + 1500;
+        await new Promise((resolve) => setTimeout(resolve, jitterMs));
       }
 
       const adminEmail = req.user?.email || "admin";
