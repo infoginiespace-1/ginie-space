@@ -807,6 +807,7 @@ export default function OrdersPage() {
           rowKey="id"
           loading={loading}
           pagination={{ pageSize: 10 }}
+          scroll={{ x: 1000 }}
         />
       </Card>
 

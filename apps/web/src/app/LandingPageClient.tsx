@@ -20,6 +20,9 @@ import {
   message,
   Rate,
   Modal,
+  Drawer,
+  Grid,
+  Segmented,
 } from "antd";
 import {
   WhatsAppOutlined,
@@ -50,6 +53,8 @@ import {
   ShoppingOutlined,
   ClockCircleOutlined,
   SendOutlined,
+  MenuOutlined,
+  CloseOutlined,
 } from "@ant-design/icons";
 
 const { Title, Text, Paragraph } = Typography;
@@ -57,6 +62,13 @@ const { Title, Text, Paragraph } = Typography;
 export default function LandingPageClient() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const screens = Grid.useBreakpoint();
+  const isMobile = screens.md === false;
+
+  // Mobile drawer state
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  // Mobile twin device preview toggle
+  const [deviceMockupView, setDeviceMockupView] = useState<"store" | "merchant">("store");
 
   // Redirect logged-in merchant directly to their dashboard
   useEffect(() => {
@@ -87,7 +99,7 @@ export default function LandingPageClient() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f8fafc", color: "#0f172a", overflowX: "hidden" }}>
+    <div style={{ minHeight: "100vh", background: "#f8fafc", color: "#0f172a", overflowX: "hidden", paddingBottom: isMobile ? 64 : 0 }}>
       {/* Top Banner Notice */}
       <div
         style={{
@@ -117,11 +129,10 @@ export default function LandingPageClient() {
           style={{
             maxWidth: 1200,
             margin: "0 auto",
-            padding: "14px 24px",
+            padding: isMobile ? "10px 16px" : "14px 24px",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            flexWrap: "wrap",
             gap: 12,
           }}
         >
@@ -132,8 +143,8 @@ export default function LandingPageClient() {
           >
             <div
               style={{
-                width: 38,
-                height: 38,
+                width: isMobile ? 34 : 38,
+                height: isMobile ? 34 : 38,
                 borderRadius: 10,
                 background: "linear-gradient(135deg, #25D366 0%, #128C7E 100%)",
                 display: "flex",
@@ -141,23 +152,23 @@ export default function LandingPageClient() {
                 justifyContent: "center",
                 color: "#fff",
                 fontWeight: 800,
-                fontSize: 20,
+                fontSize: isMobile ? 18 : 20,
                 boxShadow: "0 4px 12px rgba(37, 211, 102, 0.3)",
               }}
             >
               G
             </div>
             <div>
-              <div style={{ fontWeight: 800, fontSize: 19, color: "#0f172a", lineHeight: 1.1, letterSpacing: "-0.02em" }}>
+              <div style={{ fontWeight: 800, fontSize: isMobile ? 18 : 19, color: "#0f172a", lineHeight: 1.1, letterSpacing: "-0.02em" }}>
                 GinieSpace
               </div>
-              <div style={{ fontSize: 11, color: "#64748b", fontWeight: 500 }}>
+              <div style={{ fontSize: 10, color: "#64748b", fontWeight: 500 }}>
                 Smart WhatsApp Commerce Hub
               </div>
             </div>
           </div>
 
-          {/* Nav Links */}
+          {/* Desktop Nav Links */}
           <div style={{ display: "flex", alignItems: "center", gap: 24 }} className="hide-on-mobile">
             <a href="#how-it-works" style={{ color: "#475569", textDecoration: "none", fontWeight: 500, fontSize: 14 }}>
               How It Works
@@ -179,8 +190,8 @@ export default function LandingPageClient() {
             </a>
           </div>
 
-          {/* Action CTAs */}
-          <Space size="middle">
+          {/* Desktop Action CTAs */}
+          <Space size="middle" className="hide-on-mobile">
             <Button
               onClick={() => router.push("/login")}
               style={{ fontWeight: 600, borderColor: "#cbd5e1", borderRadius: 8 }}
@@ -201,22 +212,171 @@ export default function LandingPageClient() {
               Start Free (₹0)
             </Button>
           </Space>
+
+          {/* Mobile Right Controls (Sign In + Hamburger) */}
+          <div className="show-on-mobile" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Button
+              size="small"
+              onClick={() => router.push("/login")}
+              style={{ fontWeight: 600, borderColor: "#cbd5e1", borderRadius: 6, fontSize: 13 }}
+            >
+              Sign In
+            </Button>
+            <Button
+              type="text"
+              icon={<MenuOutlined style={{ fontSize: 20, color: "#0f172a" }} />}
+              onClick={() => setMobileMenuOpen(true)}
+              aria-label="Open navigation menu"
+              style={{ padding: "4px 8px" }}
+            />
+          </div>
         </div>
       </header>
 
+      {/* Mobile Slide-Over Navigation Drawer */}
+      <Drawer
+        title={
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 8,
+                background: "linear-gradient(135deg, #25D366 0%, #128C7E 100%)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#fff",
+                fontWeight: 800,
+                fontSize: 18,
+              }}
+            >
+              G
+            </div>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 16, color: "#0f172a", lineHeight: 1.1 }}>GinieSpace</div>
+              <div style={{ fontSize: 11, color: "#64748b" }}>WhatsApp Commerce Hub</div>
+            </div>
+          </div>
+        }
+        placement="right"
+        width={300}
+        open={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
+        styles={{ body: { padding: "16px 20px" } }}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <a
+            href="#how-it-works"
+            onClick={() => setMobileMenuOpen(false)}
+            style={{ color: "#1e293b", fontWeight: 600, fontSize: 15, textDecoration: "none", padding: "10px 0", borderBottom: "1px solid #f1f5f9" }}
+          >
+            ⚡ How It Works (3 Steps)
+          </a>
+          <a
+            href="#demo-tour"
+            onClick={() => setMobileMenuOpen(false)}
+            style={{ color: "#1e293b", fontWeight: 600, fontSize: 15, textDecoration: "none", padding: "10px 0", borderBottom: "1px solid #f1f5f9" }}
+          >
+            🎮 Interactive Feature Tour
+          </a>
+          <a
+            href="#solutions"
+            onClick={() => setMobileMenuOpen(false)}
+            style={{ color: "#1e293b", fontWeight: 600, fontSize: 15, textDecoration: "none", padding: "10px 0", borderBottom: "1px solid #f1f5f9" }}
+          >
+            📦 Retail, Wholesale &amp; Services
+          </a>
+          <a
+            href="#pricing"
+            onClick={() => setMobileMenuOpen(false)}
+            style={{ color: "#1e293b", fontWeight: 600, fontSize: 15, textDecoration: "none", padding: "10px 0", borderBottom: "1px solid #f1f5f9" }}
+          >
+            👑 Transparent Pricing (₹99 PRO)
+          </a>
+          <a
+            href="#calculator"
+            onClick={() => setMobileMenuOpen(false)}
+            style={{ color: "#1e293b", fontWeight: 600, fontSize: 15, textDecoration: "none", padding: "10px 0", borderBottom: "1px solid #f1f5f9" }}
+          >
+            💰 Zero Commission Savings
+          </a>
+          <a
+            href="#faqs"
+            onClick={() => setMobileMenuOpen(false)}
+            style={{ color: "#1e293b", fontWeight: 600, fontSize: 15, textDecoration: "none", padding: "10px 0", borderBottom: "1px solid #f1f5f9" }}
+          >
+            ❓ Merchant FAQs
+          </a>
+
+          <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 10 }}>
+            <Button
+              type="primary"
+              block
+              size="large"
+              style={{
+                background: "#25D366",
+                borderColor: "#25D366",
+                fontWeight: 700,
+                height: 46,
+                borderRadius: 10,
+                boxShadow: "0 4px 14px rgba(37, 211, 102, 0.35)",
+              }}
+              onClick={() => {
+                setMobileMenuOpen(false);
+                router.push("/signup");
+              }}
+            >
+              Start Free (₹0)
+            </Button>
+            <Button
+              block
+              size="large"
+              style={{ fontWeight: 600, height: 46, borderRadius: 10, borderColor: "#cbd5e1" }}
+              onClick={() => {
+                setMobileMenuOpen(false);
+                router.push("/login");
+              }}
+            >
+              Merchant Sign In
+            </Button>
+            <Button
+              block
+              size="large"
+              icon={<WhatsAppOutlined />}
+              style={{
+                background: "#f0fdf4",
+                borderColor: "#86efac",
+                color: "#166534",
+                fontWeight: 600,
+                height: 46,
+                borderRadius: 10,
+              }}
+              href="https://wa.me/919279259690"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              WhatsApp Us (+91 92792 59690)
+            </Button>
+          </div>
+        </div>
+      </Drawer>
+
       {/* Hero Section */}
-      <section style={{ maxWidth: 1200, margin: "0 auto", padding: "64px 24px 32px", textAlign: "center" }}>
+      <section style={{ maxWidth: 1200, margin: "0 auto", padding: isMobile ? "36px 16px 24px" : "64px 24px 32px", textAlign: "center" }}>
         <div style={{ display: "inline-block", marginBottom: 16 }}>
           <Tag
             color="success"
             style={{
-              padding: "6px 16px",
+              padding: "6px 14px",
               borderRadius: 999,
-              fontSize: 13,
+              fontSize: isMobile ? 12 : 13,
               fontWeight: 600,
               background: "#ecfdf5",
               borderColor: "#a7f3d0",
               color: "#065f46",
+              whiteSpace: "normal",
+              lineHeight: 1.4,
             }}
           >
             🚀 Zero Payment Gateway Commissions • 100% Direct Bank UPI
@@ -226,13 +386,13 @@ export default function LandingPageClient() {
         <Title
           level={1}
           style={{
-            fontSize: "clamp(2.1rem, 4.8vw, 3.8rem)",
+            fontSize: isMobile ? "1.85rem" : "clamp(2.1rem, 4.8vw, 3.8rem)",
             fontWeight: 800,
             color: "#0f172a",
-            lineHeight: 1.15,
+            lineHeight: 1.2,
             letterSpacing: "-0.03em",
             maxWidth: 960,
-            margin: "0 auto 20px",
+            margin: "0 auto 18px",
           }}
         >
           Turn WhatsApp Into Your Complete{" "}
@@ -243,10 +403,10 @@ export default function LandingPageClient() {
 
         <Paragraph
           style={{
-            fontSize: "clamp(1rem, 2vw, 1.25rem)",
+            fontSize: isMobile ? "0.95rem" : "clamp(1rem, 2vw, 1.25rem)",
             color: "#475569",
             maxWidth: 780,
-            margin: "0 auto 32px",
+            margin: "0 auto 28px",
             lineHeight: 1.6,
           }}
         >
@@ -254,58 +414,98 @@ export default function LandingPageClient() {
         </Paragraph>
 
         {/* Hero CTAs */}
-        <Space size="middle" wrap style={{ justifyContent: "center", marginBottom: 28 }}>
-          <Button
-            type="primary"
-            size="large"
-            icon={<ArrowRightOutlined />}
-            style={{
-              background: "#25D366",
-              borderColor: "#25D366",
-              height: 52,
-              paddingInline: 32,
-              fontWeight: 700,
-              fontSize: 16,
-              borderRadius: 10,
-              boxShadow: "0 8px 24px rgba(37, 211, 102, 0.4)",
-            }}
-            onClick={() => router.push("/signup")}
-          >
-            Create Free Business Account
-          </Button>
+        {isMobile ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 340, margin: "0 auto 28px" }}>
+            <Button
+              type="primary"
+              size="large"
+              block
+              icon={<ArrowRightOutlined />}
+              style={{
+                background: "#25D366",
+                borderColor: "#25D366",
+                height: 48,
+                fontWeight: 700,
+                fontSize: 16,
+                borderRadius: 10,
+                boxShadow: "0 6px 20px rgba(37, 211, 102, 0.4)",
+              }}
+              onClick={() => router.push("/signup")}
+            >
+              Create Free Account (₹0)
+            </Button>
+            <Button
+              size="large"
+              block
+              icon={<PlayCircleOutlined style={{ color: "#059669", fontSize: 18 }} />}
+              style={{
+                height: 48,
+                fontWeight: 600,
+                fontSize: 15,
+                borderRadius: 10,
+                borderColor: "#cbd5e1",
+                background: "#fff",
+              }}
+              onClick={() => setVideoModalOpen(true)}
+            >
+              Watch 45-Sec Demo
+            </Button>
+          </div>
+        ) : (
+          <Space size="middle" wrap style={{ justifyContent: "center", marginBottom: 28 }}>
+            <Button
+              type="primary"
+              size="large"
+              icon={<ArrowRightOutlined />}
+              style={{
+                background: "#25D366",
+                borderColor: "#25D366",
+                height: 52,
+                paddingInline: 32,
+                fontWeight: 700,
+                fontSize: 16,
+                borderRadius: 10,
+                boxShadow: "0 8px 24px rgba(37, 211, 102, 0.4)",
+              }}
+              onClick={() => router.push("/signup")}
+            >
+              Create Free Business Account
+            </Button>
 
-          <Button
-            size="large"
-            icon={<PlayCircleOutlined style={{ color: "#059669", fontSize: 18 }} />}
-            style={{
-              height: 52,
-              paddingInline: 24,
-              fontWeight: 600,
-              fontSize: 15,
-              borderRadius: 10,
-              borderColor: "#cbd5e1",
-              background: "#fff",
-            }}
-            onClick={() => setVideoModalOpen(true)}
-          >
-            Watch 45-Sec Demo
-          </Button>
-        </Space>
+            <Button
+              size="large"
+              icon={<PlayCircleOutlined style={{ color: "#059669", fontSize: 18 }} />}
+              style={{
+                height: 52,
+                paddingInline: 24,
+                fontWeight: 600,
+                fontSize: 15,
+                borderRadius: 10,
+                borderColor: "#cbd5e1",
+                background: "#fff",
+              }}
+              onClick={() => setVideoModalOpen(true)}
+            >
+              Watch 45-Sec Demo
+            </Button>
+          </Space>
+        )}
 
         {/* Direct UPI Ecosystem Trust Strip */}
         <div
           style={{
             maxWidth: 920,
-            margin: "0 auto 40px",
+            margin: "0 auto 36px",
             background: "#ffffff",
             borderRadius: 14,
-            padding: "14px 20px",
+            padding: isMobile ? "12px 14px" : "14px 20px",
             border: "1px solid #e2e8f0",
             display: "flex",
             alignItems: "center",
-            justifyContent: "space-between",
+            justifyContent: isMobile ? "center" : "space-between",
+            flexDirection: isMobile ? "column" : "row",
             flexWrap: "wrap",
-            gap: 16,
+            gap: 12,
             boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
           }}
         >
@@ -316,20 +516,20 @@ export default function LandingPageClient() {
             </Text>
           </div>
 
-          <Space size="middle" wrap>
-            <Tag color="blue" style={{ fontWeight: 600, padding: "3px 10px", borderRadius: 6 }}>
+          <Space size="small" wrap style={{ justifyContent: "center" }}>
+            <Tag color="blue" style={{ fontWeight: 600, padding: "2px 8px", borderRadius: 6 }}>
               PhonePe
             </Tag>
-            <Tag color="cyan" style={{ fontWeight: 600, padding: "3px 10px", borderRadius: 6 }}>
+            <Tag color="cyan" style={{ fontWeight: 600, padding: "2px 8px", borderRadius: 6 }}>
               Google Pay
             </Tag>
-            <Tag color="geekblue" style={{ fontWeight: 600, padding: "3px 10px", borderRadius: 6 }}>
+            <Tag color="geekblue" style={{ fontWeight: 600, padding: "2px 8px", borderRadius: 6 }}>
               Paytm UPI
             </Tag>
-            <Tag color="green" style={{ fontWeight: 600, padding: "3px 10px", borderRadius: 6 }}>
+            <Tag color="green" style={{ fontWeight: 600, padding: "2px 8px", borderRadius: 6 }}>
               BHIM UPI
             </Tag>
-            <Tag color="purple" style={{ fontWeight: 600, padding: "3px 10px", borderRadius: 6 }}>
+            <Tag color="purple" style={{ fontWeight: 600, padding: "2px 8px", borderRadius: 6 }}>
               Any Bank Account
             </Tag>
           </Space>
@@ -341,222 +541,244 @@ export default function LandingPageClient() {
       </section>
 
       {/* TWIN DEVICE SHOWCASE (Desktop Dashboard + Mobile Customer Storefront) */}
-      <section style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px 64px" }}>
-        <div style={{ textAlign: "center", marginBottom: 24 }}>
+      <section style={{ maxWidth: 1200, margin: "0 auto", padding: isMobile ? "0 16px 48px" : "0 24px 64px" }}>
+        <div style={{ textAlign: "center", marginBottom: 20 }}>
           <Tag color="purple" style={{ padding: "4px 12px", borderRadius: 999, fontWeight: 600 }}>
             ✨ COMPLETE OMNI-CHANNEL PERSPECTIVE
           </Tag>
-          <Title level={3} style={{ marginTop: 8, color: "#0f172a" }}>
+          <Title level={3} style={{ marginTop: 8, color: "#0f172a", fontSize: isMobile ? "1.3rem" : undefined }}>
             Merchant Ka Control Panel • Grahak Ka Fast Mobile Store
           </Title>
         </div>
 
-        <Row gutter={[24, 24]} align="stretch">
-          {/* Left Side: Desktop Merchant Portal Mockup (65%) */}
-          <Col xs={24} lg={15}>
-            <div
-              style={{
-                background: "#ffffff",
-                borderRadius: 18,
-                border: "1px solid #cbd5e1",
-                boxShadow: "0 20px 48px -12px rgba(15, 23, 42, 0.12)",
-                overflow: "hidden",
-                height: "100%",
-                display: "flex",
-                flexDirection: "column",
-              }}
-            >
-              {/* Window Header */}
-              <div
-                style={{
-                  background: "#0f172a",
-                  padding: "12px 18px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#ef4444" }} />
-                  <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#f59e0b" }} />
-                  <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#10b981" }} />
-                  <Text strong style={{ color: "#94a3b8", fontSize: 12, marginLeft: 8 }}>
-                    <LaptopOutlined /> GinieSpace Merchant Hub
-                  </Text>
-                </div>
-                <Tag color="success" icon={<CheckCircleOutlined />} style={{ fontWeight: 600 }}>
-                  WhatsApp Connected (+91 92792 59690)
-                </Tag>
-              </div>
+        {/* Mobile Switcher Toggle */}
+        {isMobile && (
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
+            <Segmented
+              value={deviceMockupView}
+              onChange={(val) => setDeviceMockupView(val as "store" | "merchant")}
+              options={[
+                { label: "📱 Customer Storefront", value: "store" },
+                { label: "💻 Merchant Hub", value: "merchant" },
+              ]}
+              size="large"
+              style={{ background: "#e2e8f0", padding: 4, borderRadius: 10, fontWeight: 600 }}
+            />
+          </div>
+        )}
 
-              {/* Top Stats */}
-              <div style={{ padding: "16px 20px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
-                <Row gutter={[12, 12]}>
-                  <Col xs={8}>
-                    <div style={{ background: "#fff", padding: "10px 12px", borderRadius: 8, border: "1px solid #e2e8f0" }}>
-                      <Text type="secondary" style={{ fontSize: 11 }}>Today&apos;s Revenue</Text>
-                      <div style={{ fontSize: 17, fontWeight: 800, color: "#059669" }}>₹18,450</div>
-                    </div>
-                  </Col>
-                  <Col xs={8}>
-                    <div style={{ background: "#fff", padding: "10px 12px", borderRadius: 8, border: "1px solid #e2e8f0" }}>
-                      <Text type="secondary" style={{ fontSize: 11 }}>Active Products</Text>
-                      <div style={{ fontSize: 17, fontWeight: 800, color: "#0f172a" }}>142 Items</div>
-                    </div>
-                  </Col>
-                  <Col xs={8}>
-                    <div style={{ background: "#fff", padding: "10px 12px", borderRadius: 8, border: "1px solid #e2e8f0" }}>
-                      <Text type="secondary" style={{ fontSize: 11 }}>Local Leads</Text>
-                      <div style={{ fontSize: 17, fontWeight: 800, color: "#2563eb" }}>48 Found</div>
-                    </div>
-                  </Col>
-                </Row>
-              </div>
-
-              {/* Main Content inside Desktop View */}
-              <div style={{ padding: 20, flex: 1, display: "flex", flexDirection: "column", gap: 16 }}>
-                {/* Simulated Order Notification */}
-                <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", padding: 14, borderRadius: 10 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                    <Text strong style={{ color: "#065f46" }}>📦 New WhatsApp Order #09ef13</Text>
-                    <Tag color="green">INSTANT CONFIRMED</Tag>
-                  </div>
-                  <Text style={{ fontSize: 12, color: "#1e293b", display: "block" }}>
-                    Customer: <strong>Rahul Sharma</strong> (+91 98765 XXXXX)
-                  </Text>
-                  <div style={{ fontSize: 12, color: "#475569", marginTop: 4 }}>
-                    • 1x Premium Basmati Rice (1kg) - ₹110<br />
-                    • 1x Cold Pressed Mustard Oil (500ml) - ₹75
-                  </div>
-                  <div style={{ marginTop: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <Text strong style={{ color: "#059669" }}>Total: ₹185 (Direct Bank UPI)</Text>
-                    <Space size="small">
-                      <Button size="small" type="primary" style={{ background: "#25D366", borderColor: "#25D366" }}>
-                        Print Bill
-                      </Button>
-                      <Button size="small">Dispatch Alert</Button>
-                    </Space>
-                  </div>
-                </div>
-
-                {/* Hyperlocal Lead Card */}
-                <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", padding: 14, borderRadius: 10 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                    <Text strong style={{ color: "#1e3a8a" }}>Shree Krishna Kirana &amp; Retail Store</Text>
-                    <Tag color="blue">LOCAL RETAILER</Tag>
-                  </div>
-                  <Text type="secondary" style={{ fontSize: 11, display: "block" }}>
-                    <EnvironmentOutlined /> Sector 18, Noida • ⭐ 4.8 (142 reviews) • 📱 +91 98112 XXXXX
-                  </Text>
-                  <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
-                    <Button size="small" type="primary" icon={<WhatsAppOutlined />} style={{ background: "#25D366", borderColor: "#25D366" }}>
-                      Send WhatsApp Proposal
-                    </Button>
-                    <Button size="small">Save to CRM</Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Col>
-
-          {/* Right Side: Mobile Smartphone Mockup (Customer View) (35%) */}
-          <Col xs={24} lg={9}>
-            <div
-              style={{
-                background: "#0f172a",
-                borderRadius: 36,
-                padding: "12px",
-                boxShadow: "0 24px 60px -12px rgba(15, 23, 42, 0.25)",
-                border: "4px solid #334155",
-                height: "100%",
-                maxWidth: 360,
-                margin: "0 auto",
-                display: "flex",
-                flexDirection: "column",
-              }}
-            >
-              {/* Phone Speaker Notch */}
-              <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>
-                <div style={{ width: 64, height: 5, background: "#475569", borderRadius: 4 }} />
-              </div>
-
-              {/* Phone Screen Container */}
+        <Row gutter={[24, 24]} align="stretch" justify="center">
+          {/* Left Side: Desktop Merchant Portal Mockup (65% on Desktop) */}
+          {(!isMobile || deviceMockupView === "merchant") && (
+            <Col xs={24} lg={15}>
               <div
                 style={{
                   background: "#ffffff",
-                  borderRadius: 24,
+                  borderRadius: 18,
+                  border: "1px solid #cbd5e1",
+                  boxShadow: "0 20px 48px -12px rgba(15, 23, 42, 0.12)",
                   overflow: "hidden",
-                  flex: 1,
+                  height: "100%",
                   display: "flex",
                   flexDirection: "column",
                 }}
               >
-                {/* Store Header inside Phone */}
-                <div style={{ background: "#25D366", color: "#fff", padding: "14px 16px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div>
-                      <div style={{ fontWeight: 800, fontSize: 14 }}>Sharma General Store</div>
-                      <div style={{ fontSize: 10, opacity: 0.9 }}>app.ginie.space/shop/sharma-store</div>
-                    </div>
-                    <Tag color="gold" style={{ fontWeight: 700, margin: 0 }}>VERIFIED</Tag>
+                {/* Window Header */}
+                <div
+                  style={{
+                    background: "#0f172a",
+                    padding: isMobile ? "10px 14px" : "12px 18px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    flexWrap: "wrap",
+                    gap: 8,
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#ef4444" }} />
+                    <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#f59e0b" }} />
+                    <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#10b981" }} />
+                    <Text strong style={{ color: "#94a3b8", fontSize: 12, marginLeft: 6 }}>
+                      <LaptopOutlined /> GinieSpace Hub
+                    </Text>
                   </div>
+                  <Tag color="success" icon={<CheckCircleOutlined />} style={{ fontWeight: 600, margin: 0, fontSize: 11 }}>
+                    {isMobile ? "WhatsApp Live" : "WhatsApp Connected (+91 92792 59690)"}
+                  </Tag>
                 </div>
 
-                {/* Product Catalog Items inside Phone Screen */}
-                <div style={{ padding: "12px 14px", flex: 1, display: "flex", flexDirection: "column", gap: 10 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #f1f5f9", paddingBottom: 8 }}>
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: 13 }}>Premium Basmati Rice</div>
-                      <div style={{ fontSize: 11, color: "#64748b" }}>1 kg Pack • In Stock</div>
-                      <div style={{ fontWeight: 700, color: "#059669", fontSize: 13 }}>₹110</div>
-                    </div>
-                    <Button size="small" type="primary" style={{ background: "#25D366", borderColor: "#25D366" }}>
-                      + Add
-                    </Button>
-                  </div>
-
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #f1f5f9", paddingBottom: 8 }}>
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: 13 }}>Cold Pressed Mustard Oil</div>
-                      <div style={{ fontSize: 11, color: "#64748b" }}>500 ml Bottle • In Stock</div>
-                      <div style={{ fontWeight: 700, color: "#059669", fontSize: 13 }}>₹75</div>
-                    </div>
-                    <Button size="small" type="primary" style={{ background: "#25D366", borderColor: "#25D366" }}>
-                      + Add
-                    </Button>
-                  </div>
-
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: 13 }}>Organic Whole Wheat</div>
-                      <div style={{ fontSize: 11, color: "#64748b" }}>5 kg Bag • Fresh Milling</div>
-                      <div style={{ fontWeight: 700, color: "#059669", fontSize: 13 }}>₹240</div>
-                    </div>
-                    <Button size="small">+ Add</Button>
-                  </div>
+                {/* Top Stats */}
+                <div style={{ padding: isMobile ? "12px 14px" : "16px 20px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
+                  <Row gutter={[10, 10]}>
+                    <Col xs={12} sm={8}>
+                      <div style={{ background: "#fff", padding: "10px 12px", borderRadius: 8, border: "1px solid #e2e8f0" }}>
+                        <Text type="secondary" style={{ fontSize: 11 }}>Today&apos;s Revenue</Text>
+                        <div style={{ fontSize: 17, fontWeight: 800, color: "#059669" }}>₹18,450</div>
+                      </div>
+                    </Col>
+                    <Col xs={12} sm={8}>
+                      <div style={{ background: "#fff", padding: "10px 12px", borderRadius: 8, border: "1px solid #e2e8f0" }}>
+                        <Text type="secondary" style={{ fontSize: 11 }}>Active Products</Text>
+                        <div style={{ fontSize: 17, fontWeight: 800, color: "#0f172a" }}>142 Items</div>
+                      </div>
+                    </Col>
+                    <Col xs={24} sm={8}>
+                      <div style={{ background: "#fff", padding: "10px 12px", borderRadius: 8, border: "1px solid #e2e8f0" }}>
+                        <Text type="secondary" style={{ fontSize: 11 }}>Local Leads</Text>
+                        <div style={{ fontSize: 17, fontWeight: 800, color: "#2563eb" }}>48 Found</div>
+                      </div>
+                    </Col>
+                  </Row>
                 </div>
 
-                {/* Floating WhatsApp Checkout Button on Mobile */}
-                <div style={{ padding: "12px 14px", background: "#f8fafc", borderTop: "1px solid #e2e8f0" }}>
-                  <Button
-                    type="primary"
-                    block
-                    icon={<WhatsAppOutlined />}
-                    style={{
-                      background: "#25D366",
-                      borderColor: "#25D366",
-                      fontWeight: 700,
-                      height: 40,
-                      borderRadius: 10,
-                      boxShadow: "0 4px 12px rgba(37, 211, 102, 0.35)",
-                    }}
-                  >
-                    Order 2 Items (₹185) via WhatsApp
-                  </Button>
+                {/* Main Content inside Desktop View */}
+                <div style={{ padding: isMobile ? 14 : 20, flex: 1, display: "flex", flexDirection: "column", gap: 14 }}>
+                  {/* Simulated Order Notification */}
+                  <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", padding: 14, borderRadius: 10 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, flexWrap: "wrap", gap: 6 }}>
+                      <Text strong style={{ color: "#065f46", fontSize: 13 }}>📦 New WhatsApp Order #09ef13</Text>
+                      <Tag color="green" style={{ margin: 0, fontSize: 11 }}>INSTANT CONFIRMED</Tag>
+                    </div>
+                    <Text style={{ fontSize: 12, color: "#1e293b", display: "block" }}>
+                      Customer: <strong>Rahul Sharma</strong> (+91 98765 XXXXX)
+                    </Text>
+                    <div style={{ fontSize: 12, color: "#475569", marginTop: 4 }}>
+                      • 1x Premium Basmati Rice (1kg) - ₹110<br />
+                      • 1x Cold Pressed Mustard Oil (500ml) - ₹75
+                    </div>
+                    <div style={{ marginTop: 8, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                      <Text strong style={{ color: "#059669", fontSize: 13 }}>Total: ₹185 (Direct Bank UPI)</Text>
+                      <Space size="small">
+                        <Button size="small" type="primary" style={{ background: "#25D366", borderColor: "#25D366" }}>
+                          Print Bill
+                        </Button>
+                        <Button size="small">Dispatch Alert</Button>
+                      </Space>
+                    </div>
+                  </div>
+
+                  {/* Hyperlocal Lead Card */}
+                  <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", padding: 14, borderRadius: 10 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4, flexWrap: "wrap", gap: 6 }}>
+                      <Text strong style={{ color: "#1e3a8a", fontSize: 13 }}>Shree Krishna Kirana Store</Text>
+                      <Tag color="blue" style={{ margin: 0, fontSize: 11 }}>LOCAL RETAILER</Tag>
+                    </div>
+                    <Text type="secondary" style={{ fontSize: 11, display: "block" }}>
+                      <EnvironmentOutlined /> Sector 18, Noida • ⭐ 4.8 (142 reviews) • 📱 +91 98112 XXXXX
+                    </Text>
+                    <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <Button size="small" type="primary" icon={<WhatsAppOutlined />} style={{ background: "#25D366", borderColor: "#25D366" }}>
+                        WhatsApp Pitch
+                      </Button>
+                      <Button size="small">Save to CRM</Button>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </Col>
+            </Col>
+          )}
+
+          {/* Right Side: Mobile Smartphone Mockup (Customer View) (35% on Desktop) */}
+          {(!isMobile || deviceMockupView === "store") && (
+            <Col xs={24} lg={9}>
+              <div
+                style={{
+                  background: "#0f172a",
+                  borderRadius: 36,
+                  padding: "12px",
+                  boxShadow: "0 24px 60px -12px rgba(15, 23, 42, 0.25)",
+                  border: "4px solid #334155",
+                  height: "100%",
+                  maxWidth: 360,
+                  margin: "0 auto",
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
+                {/* Phone Speaker Notch */}
+                <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>
+                  <div style={{ width: 64, height: 5, background: "#475569", borderRadius: 4 }} />
+                </div>
+
+                {/* Phone Screen Container */}
+                <div
+                  style={{
+                    background: "#ffffff",
+                    borderRadius: 24,
+                    overflow: "hidden",
+                    flex: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                  }}
+                >
+                  {/* Store Header inside Phone */}
+                  <div style={{ background: "#25D366", color: "#fff", padding: "14px 16px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div>
+                        <div style={{ fontWeight: 800, fontSize: 14 }}>Sharma General Store</div>
+                        <div style={{ fontSize: 10, opacity: 0.9 }}>app.ginie.space/shop/sharma-store</div>
+                      </div>
+                      <Tag color="gold" style={{ fontWeight: 700, margin: 0 }}>VERIFIED</Tag>
+                    </div>
+                  </div>
+
+                  {/* Product Catalog Items inside Phone Screen */}
+                  <div style={{ padding: "12px 14px", flex: 1, display: "flex", flexDirection: "column", gap: 10 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #f1f5f9", paddingBottom: 8 }}>
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: 13 }}>Premium Basmati Rice</div>
+                        <div style={{ fontSize: 11, color: "#64748b" }}>1 kg Pack • In Stock</div>
+                        <div style={{ fontWeight: 700, color: "#059669", fontSize: 13 }}>₹110</div>
+                      </div>
+                      <Button size="small" type="primary" style={{ background: "#25D366", borderColor: "#25D366" }}>
+                        + Add
+                      </Button>
+                    </div>
+
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #f1f5f9", paddingBottom: 8 }}>
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: 13 }}>Cold Pressed Mustard Oil</div>
+                        <div style={{ fontSize: 11, color: "#64748b" }}>500 ml Bottle • In Stock</div>
+                        <div style={{ fontWeight: 700, color: "#059669", fontSize: 13 }}>₹75</div>
+                      </div>
+                      <Button size="small" type="primary" style={{ background: "#25D366", borderColor: "#25D366" }}>
+                        + Add
+                      </Button>
+                    </div>
+
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: 13 }}>Organic Whole Wheat</div>
+                        <div style={{ fontSize: 11, color: "#64748b" }}>5 kg Bag • Fresh Milling</div>
+                        <div style={{ fontWeight: 700, color: "#059669", fontSize: 13 }}>₹240</div>
+                      </div>
+                      <Button size="small">+ Add</Button>
+                    </div>
+                  </div>
+
+                  {/* Floating WhatsApp Checkout Button on Mobile */}
+                  <div style={{ padding: "12px 14px", background: "#f8fafc", borderTop: "1px solid #e2e8f0" }}>
+                    <Button
+                      type="primary"
+                      block
+                      icon={<WhatsAppOutlined />}
+                      style={{
+                        background: "#25D366",
+                        borderColor: "#25D366",
+                        fontWeight: 700,
+                        height: 40,
+                        borderRadius: 10,
+                        boxShadow: "0 4px 12px rgba(37, 211, 102, 0.35)",
+                      }}
+                    >
+                      Order 2 Items (₹185) via WhatsApp
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </Col>
+          )}
         </Row>
       </section>
 
@@ -736,20 +958,33 @@ export default function LandingPageClient() {
       </section>
 
       {/* INTERACTIVE DEMO TOUR / SIMULATOR SECTION */}
-      <section id="demo-tour" style={{ maxWidth: 1140, margin: "64px auto", padding: "0 24px" }}>
-        <div style={{ textAlign: "center", marginBottom: 36 }}>
+      <section id="demo-tour" style={{ maxWidth: 1140, margin: isMobile ? "40px auto" : "64px auto", padding: isMobile ? "0 16px" : "0 24px" }}>
+        <div style={{ textAlign: "center", marginBottom: isMobile ? 24 : 36 }}>
           <Tag color="blue" style={{ padding: "4px 14px", borderRadius: 999, fontWeight: 700, fontSize: 13 }}>
             🎮 INTERACTIVE FEATURE TOUR
           </Tag>
-          <Title level={2} style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)", fontWeight: 800, marginTop: 12, color: "#0f172a" }}>
+          <Title level={2} style={{ fontSize: isMobile ? "1.5rem" : "clamp(1.8rem, 3.5vw, 2.6rem)", fontWeight: 800, marginTop: 12, color: "#0f172a" }}>
             Dekhein GinieSpace Kaise Kaam Karta Hai
           </Title>
-          <Paragraph style={{ color: "#64748b", fontSize: 16 }}>
+          <Paragraph style={{ color: "#64748b", fontSize: isMobile ? 14 : 16 }}>
             Neeche diye gaye interactive tabs par click karein aur real feature previews check karein.
           </Paragraph>
 
-          {/* Tour Tabs Bar */}
-          <div style={{ display: "inline-flex", background: "#e2e8f0", padding: 4, borderRadius: 12, flexWrap: "wrap", gap: 4 }}>
+          {/* Tour Tabs Bar (Swipeable on Mobile) */}
+          <div
+            className={isMobile ? "mobile-swipe-tabs" : undefined}
+            style={{
+              display: isMobile ? "flex" : "inline-flex",
+              background: "#e2e8f0",
+              padding: 4,
+              borderRadius: 12,
+              gap: 4,
+              maxWidth: "100%",
+              overflowX: isMobile ? "auto" : undefined,
+              justifyContent: isMobile ? "flex-start" : "center",
+              margin: "0 auto",
+            }}
+          >
             <Button
               type={tourTab === "sync" ? "primary" : "text"}
               icon={<QrcodeOutlined />}
@@ -759,6 +994,7 @@ export default function LandingPageClient() {
                 color: tourTab === "sync" ? "#fff" : "#475569",
                 fontWeight: 600,
                 borderRadius: 8,
+                flexShrink: 0,
               }}
             >
               1. Multi-Device Sync
@@ -772,6 +1008,7 @@ export default function LandingPageClient() {
                 color: tourTab === "store" ? "#fff" : "#475569",
                 fontWeight: 600,
                 borderRadius: 8,
+                flexShrink: 0,
               }}
             >
               2. Digital Catalog Link
@@ -785,6 +1022,7 @@ export default function LandingPageClient() {
                 color: tourTab === "leads" ? "#fff" : "#475569",
                 fontWeight: 600,
                 borderRadius: 8,
+                flexShrink: 0,
               }}
             >
               3. Hyperlocal Leads
@@ -798,6 +1036,7 @@ export default function LandingPageClient() {
                 color: tourTab === "billing" ? "#fff" : "#475569",
                 fontWeight: 600,
                 borderRadius: 8,
+                flexShrink: 0,
               }}
             >
               4. 0% Fee UPI Bills
@@ -811,7 +1050,7 @@ export default function LandingPageClient() {
             borderRadius: 18,
             border: "1px solid #cbd5e1",
             boxShadow: "0 16px 40px rgba(15, 23, 42, 0.08)",
-            padding: 20,
+            padding: isMobile ? 12 : 20,
             background: "#ffffff",
           }}
         >
@@ -819,20 +1058,20 @@ export default function LandingPageClient() {
             <Row gutter={[24, 24]} align="middle">
               <Col xs={24} md={12}>
                 <Tag color="green" style={{ fontWeight: 700, marginBottom: 8 }}>PERSISTENT CLOUD LINK</Tag>
-                <Title level={3} style={{ color: "#0f172a" }}>Phone Se Sirf 1 Baar QR Scan Karein</Title>
-                <Paragraph style={{ color: "#64748b", lineHeight: 1.7, fontSize: 15 }}>
+                <Title level={3} style={{ color: "#0f172a", fontSize: isMobile ? "1.25rem" : undefined }}>Phone Se Sirf 1 Baar QR Scan Karein</Title>
+                <Paragraph style={{ color: "#64748b", lineHeight: 1.7, fontSize: 14 }}>
                   Aapko kisi complicated API setup ya coding ki zaroorat nahi hai. Apne official phone se <strong>Linked Devices</strong> me jakar scan karein. System background me cloud socket maintain karta hai jisse aapka WhatsApp 24/7 active rehta hai.
                 </Paragraph>
-                <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 16 }}>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 14 }}>
                   <Tag color="success">✓ Real Mobile Numbers</Tag>
                   <Tag color="blue">✓ Cloud Background Active</Tag>
                   <Tag color="cyan">✓ Multi-Device Protocol</Tag>
                 </div>
               </Col>
               <Col xs={24} md={12} style={{ textAlign: "center" }}>
-                <div style={{ background: "#f8fafc", padding: 24, borderRadius: 14, border: "2px dashed #cbd5e1", display: "inline-block" }}>
-                  <QrcodeOutlined style={{ fontSize: 120, color: "#25D366" }} />
-                  <div style={{ marginTop: 12, fontWeight: 700, color: "#065f46" }}>
+                <div style={{ background: "#f8fafc", padding: isMobile ? 16 : 24, borderRadius: 14, border: "2px dashed #cbd5e1", display: "inline-block" }}>
+                  <QrcodeOutlined style={{ fontSize: isMobile ? 80 : 120, color: "#25D366" }} />
+                  <div style={{ marginTop: 12, fontWeight: 700, color: "#065f46", fontSize: 14 }}>
                     Scan &amp; Link Your Business Phone
                   </div>
                   <Text type="secondary" style={{ fontSize: 12 }}>Safe Rate-Limited Delivery Active</Text>
@@ -845,27 +1084,27 @@ export default function LandingPageClient() {
             <Row gutter={[24, 24]} align="middle">
               <Col xs={24} md={12}>
                 <Tag color="blue" style={{ fontWeight: 700, marginBottom: 8 }}>SHAREABLE DIGITAL CATALOG</Tag>
-                <Title level={3} style={{ color: "#0f172a" }}>Aapki Apni Dukan Ka Public Web Link</Title>
-                <Paragraph style={{ color: "#64748b", lineHeight: 1.7, fontSize: 15 }}>
+                <Title level={3} style={{ color: "#0f172a", fontSize: isMobile ? "1.25rem" : undefined }}>Aapki Apni Dukan Ka Public Web Link</Title>
+                <Paragraph style={{ color: "#64748b", lineHeight: 1.7, fontSize: 14 }}>
                   Grahak ko koi app install nahi karni padegi. Wo aapke link <code>app.ginie.space/shop/{`{your-store}`}</code> par tap karke live catalog, wholesale MOQ ya service slots browse kar sakte hain.
                 </Paragraph>
-                <div style={{ background: "#f1f5f9", padding: "10px 14px", borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                  <Text strong style={{ fontSize: 13, color: "#0f172a" }}>app.ginie.space/shop/kirana-hub</Text>
+                <div style={{ background: "#f1f5f9", padding: "10px 14px", borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
+                  <Text strong style={{ fontSize: 13, color: "#0f172a", wordBreak: "break-all" }}>app.ginie.space/shop/kirana-hub</Text>
                   <Button size="small" icon={<CopyOutlined />} onClick={() => handleCopyLink("https://app.ginie.space/shop/demo")}>Copy Link</Button>
                 </div>
               </Col>
               <Col xs={24} md={12}>
-                <div style={{ background: "#f8fafc", padding: 20, borderRadius: 14, border: "1px solid #e2e8f0" }}>
+                <div style={{ background: "#f8fafc", padding: isMobile ? 14 : 20, borderRadius: 14, border: "1px solid #e2e8f0" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                     <Text strong>Live Catalog Preview</Text>
                     <Tag color="green">142 Items</Tag>
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    <div style={{ background: "#fff", padding: "8px 12px", borderRadius: 8, display: "flex", justifyContent: "space-between" }}>
+                    <div style={{ background: "#fff", padding: "8px 12px", borderRadius: 8, display: "flex", justifyContent: "space-between", fontSize: 13 }}>
                       <span>Premium Basmati Rice 1kg</span>
                       <strong style={{ color: "#059669" }}>₹110</strong>
                     </div>
-                    <div style={{ background: "#fff", padding: "8px 12px", borderRadius: 8, display: "flex", justifyContent: "space-between" }}>
+                    <div style={{ background: "#fff", padding: "8px 12px", borderRadius: 8, display: "flex", justifyContent: "space-between", fontSize: 13 }}>
                       <span>Cold Pressed Mustard Oil 500ml</span>
                       <strong style={{ color: "#059669" }}>₹75</strong>
                     </div>
@@ -1132,7 +1371,7 @@ export default function LandingPageClient() {
       </section>
 
       {/* Interactive Savings Calculator */}
-      <section id="calculator" style={{ maxWidth: 980, margin: "64px auto", padding: "0 24px" }}>
+      <section id="calculator" style={{ maxWidth: 980, margin: isMobile ? "40px auto" : "64px auto", padding: isMobile ? "0 16px" : "0 24px" }}>
         <Card
           style={{
             borderRadius: 20,
@@ -1140,25 +1379,25 @@ export default function LandingPageClient() {
             color: "#fff",
             border: "1px solid #334155",
             boxShadow: "0 20px 48px rgba(15, 23, 42, 0.25)",
-            padding: "16px 8px",
+            padding: isMobile ? "12px 6px" : "16px 8px",
           }}
         >
-          <div style={{ textAlign: "center", marginBottom: 28 }}>
+          <div style={{ textAlign: "center", marginBottom: isMobile ? 20 : 28 }}>
             <Tag color="warning" style={{ fontWeight: 700, padding: "4px 12px" }}>
               💰 SAVINGS CALCULATOR
             </Tag>
-            <Title level={3} style={{ color: "#fff", marginTop: 10 }}>
+            <Title level={3} style={{ color: "#fff", marginTop: 10, fontSize: isMobile ? "1.25rem" : undefined }}>
               GinieSpace Par Shifting Se Aapki Kitni Bachaat Hogi?
             </Title>
-            <Text style={{ color: "#94a3b8", fontSize: 14 }}>
+            <Text style={{ color: "#94a3b8", fontSize: isMobile ? 13 : 14 }}>
               Other e-commerce gateways har transaction par 2% to 3% cut lete hain. GinieSpace par payment 100% Direct UPI hoti hai.
             </Text>
           </div>
 
-          <div style={{ maxWidth: 650, margin: "0 auto", background: "rgba(255,255,255,0.05)", padding: 24, borderRadius: 14 }}>
+          <div style={{ maxWidth: 650, margin: "0 auto", background: "rgba(255,255,255,0.05)", padding: isMobile ? "16px 12px" : 24, borderRadius: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <span style={{ color: "#cbd5e1", fontSize: 14, fontWeight: 500 }}>Aapki Estimated Monthly Sales:</span>
-              <span style={{ color: "#38bdf8", fontSize: 20, fontWeight: 800 }}>
+              <span style={{ color: "#cbd5e1", fontSize: isMobile ? 13 : 14, fontWeight: 500 }}>Estimated Sales:</span>
+              <span style={{ color: "#38bdf8", fontSize: isMobile ? 18 : 20, fontWeight: 800 }}>
                 ₹{monthlySales.toLocaleString("en-IN")}
               </span>
             </div>
@@ -1172,34 +1411,34 @@ export default function LandingPageClient() {
               tooltip={{ formatter: (v) => `₹${Number(v).toLocaleString("en-IN")}` }}
             />
 
-            <Divider style={{ borderColor: "rgba(255,255,255,0.1)", margin: "20px 0" }} />
+            <Divider style={{ borderColor: "rgba(255,255,255,0.1)", margin: "18px 0" }} />
 
-            <Row gutter={[16, 16]} style={{ textAlign: "center" }}>
+            <Row gutter={[12, 12]} style={{ textAlign: "center" }}>
               <Col xs={12}>
-                <div style={{ color: "#94a3b8", fontSize: 12 }}>Standard 2.5% Gateway Fees</div>
-                <div style={{ color: "#f87171", fontSize: 18, fontWeight: 700, textDecoration: "line-through" }}>
+                <div style={{ color: "#94a3b8", fontSize: isMobile ? 11 : 12 }}>Standard 2.5% Fee</div>
+                <div style={{ color: "#f87171", fontSize: isMobile ? 15 : 18, fontWeight: 700, textDecoration: "line-through" }}>
                   ₹{traditionalGatewayFee.toLocaleString("en-IN")}/mo
                 </div>
               </Col>
               <Col xs={12}>
-                <div style={{ color: "#94a3b8", fontSize: 12 }}>GinieSpace PRO Flat Fee</div>
-                <div style={{ color: "#34d399", fontSize: 18, fontWeight: 700 }}>
-                  ₹{ginieSpaceFee}/mo (Zero Commission)
+                <div style={{ color: "#94a3b8", fontSize: isMobile ? 11 : 12 }}>GinieSpace Flat Fee</div>
+                <div style={{ color: "#34d399", fontSize: isMobile ? 15 : 18, fontWeight: 700 }}>
+                  ₹{ginieSpaceFee}/mo (0% Cut)
                 </div>
               </Col>
             </Row>
 
             <div
               style={{
-                marginTop: 20,
+                marginTop: 18,
                 background: "rgba(16, 185, 129, 0.15)",
                 border: "1px solid rgba(16, 185, 129, 0.3)",
-                padding: "12px 16px",
+                padding: "10px 14px",
                 borderRadius: 10,
                 textAlign: "center",
               }}
             >
-              <Text strong style={{ color: "#6ee7b7", fontSize: 15 }}>
+              <Text strong style={{ color: "#6ee7b7", fontSize: isMobile ? 13 : 15 }}>
                 🎉 Aapki Seedhi Bachaat: ₹{monthlySavings.toLocaleString("en-IN")} har mahine (₹{(monthlySavings * 12).toLocaleString("en-IN")}/saal)!
               </Text>
             </div>
@@ -1208,7 +1447,7 @@ export default function LandingPageClient() {
       </section>
 
       {/* Transparent Pricing Section (FREE vs PRO ₹99) */}
-      <section id="pricing" style={{ maxWidth: 1080, margin: "64px auto", padding: "0 24px" }}>
+      <section id="pricing" style={{ maxWidth: 1080, margin: isMobile ? "40px auto" : "64px auto", padding: isMobile ? "0 16px" : "0 24px" }}>
         <div style={{ textAlign: "center", marginBottom: 36 }}>
           <Tag color="gold" style={{ padding: "4px 14px", borderRadius: 999, fontWeight: 700, fontSize: 13 }}>
             TRANSPARENT &amp; AFFORDABLE PRICING
@@ -1436,59 +1675,98 @@ export default function LandingPageClient() {
       </section>
 
       {/* High-Converting Pre-Footer CTA */}
-      <section style={{ maxWidth: 1080, margin: "40px auto 64px", padding: "0 24px" }}>
+      <section style={{ maxWidth: 1080, margin: isMobile ? "32px auto 48px" : "40px auto 64px", padding: isMobile ? "0 16px" : "0 24px" }}>
         <div
           style={{
             background: "linear-gradient(135deg, #059669 0%, #10b981 100%)",
             borderRadius: 20,
-            padding: "48px 32px",
+            padding: isMobile ? "32px 18px" : "48px 32px",
             textAlign: "center",
             color: "#fff",
             boxShadow: "0 16px 40px rgba(5, 150, 105, 0.3)",
           }}
         >
-          <Title level={2} style={{ color: "#fff", fontWeight: 800, margin: "0 0 12px" }}>
+          <Title level={2} style={{ color: "#fff", fontWeight: 800, margin: "0 0 12px", fontSize: isMobile ? "1.45rem" : undefined }}>
             Apne Vyapar Ko Aaj Hi Digital Aur WhatsApp-Automated Banayein!
           </Title>
-          <Paragraph style={{ color: "#ecfdf5", fontSize: 16, maxWidth: 640, margin: "0 auto 28px" }}>
+          <Paragraph style={{ color: "#ecfdf5", fontSize: isMobile ? 14 : 16, maxWidth: 640, margin: "0 auto 24px" }}>
             Bina kisi monthly contract ya hidden fees ke abhi Free account create karein. Sirf 2 minute me aapka catalog online live hoga.
           </Paragraph>
-          <Space size="middle" wrap style={{ justifyContent: "center" }}>
-            <Button
-              type="primary"
-              size="large"
-              style={{
-                background: "#0f172a",
-                borderColor: "#0f172a",
-                color: "#fff",
-                height: 50,
-                paddingInline: 32,
-                fontWeight: 700,
-                borderRadius: 10,
-              }}
-              onClick={() => router.push("/signup")}
-            >
-              Get Started Free Now
-            </Button>
-            <Button
-              size="large"
-              icon={<WhatsAppOutlined />}
-              style={{
-                background: "#fff",
-                borderColor: "#fff",
-                color: "#059669",
-                height: 50,
-                paddingInline: 24,
-                fontWeight: 600,
-                borderRadius: 10,
-              }}
-              href="https://wa.me/919279259690"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              WhatsApp Us (+91 92792 59690)
-            </Button>
-          </Space>
+          {isMobile ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 340, margin: "0 auto" }}>
+              <Button
+                type="primary"
+                size="large"
+                block
+                style={{
+                  background: "#0f172a",
+                  borderColor: "#0f172a",
+                  color: "#fff",
+                  height: 48,
+                  fontWeight: 700,
+                  borderRadius: 10,
+                }}
+                onClick={() => router.push("/signup")}
+              >
+                Get Started Free Now
+              </Button>
+              <Button
+                size="large"
+                block
+                icon={<WhatsAppOutlined />}
+                style={{
+                  background: "#fff",
+                  borderColor: "#fff",
+                  color: "#059669",
+                  height: 48,
+                  fontWeight: 600,
+                  borderRadius: 10,
+                }}
+                href="https://wa.me/919279259690"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                WhatsApp Us (+91 92792 59690)
+              </Button>
+            </div>
+          ) : (
+            <Space size="middle" wrap style={{ justifyContent: "center" }}>
+              <Button
+                type="primary"
+                size="large"
+                style={{
+                  background: "#0f172a",
+                  borderColor: "#0f172a",
+                  color: "#fff",
+                  height: 50,
+                  paddingInline: 32,
+                  fontWeight: 700,
+                  borderRadius: 10,
+                }}
+                onClick={() => router.push("/signup")}
+              >
+                Get Started Free Now
+              </Button>
+              <Button
+                size="large"
+                icon={<WhatsAppOutlined />}
+                style={{
+                  background: "#fff",
+                  borderColor: "#fff",
+                  color: "#059669",
+                  height: 50,
+                  paddingInline: 24,
+                  fontWeight: 600,
+                  borderRadius: 10,
+                }}
+                href="https://wa.me/919279259690"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                WhatsApp Us (+91 92792 59690)
+              </Button>
+            </Space>
+          )}
         </div>
       </section>
 
@@ -1679,6 +1957,59 @@ export default function LandingPageClient() {
           </div>
         </div>
       </footer>
+
+      {/* Mobile-Only Sticky Floating Conversion Bar */}
+      {isMobile && (
+        <div
+          className="no-print"
+          style={{
+            position: "fixed",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            zIndex: 999,
+            background: "rgba(255, 255, 255, 0.95)",
+            backdropFilter: "blur(12px)",
+            borderTop: "1px solid #e2e8f0",
+            padding: "10px 16px",
+            display: "flex",
+            gap: 10,
+            alignItems: "center",
+            boxShadow: "0 -4px 16px rgba(0, 0, 0, 0.08)",
+          }}
+        >
+          <Button
+            type="primary"
+            style={{
+              flex: 1,
+              background: "#25D366",
+              borderColor: "#25D366",
+              fontWeight: 700,
+              height: 44,
+              borderRadius: 8,
+              fontSize: 15,
+              boxShadow: "0 4px 12px rgba(37, 211, 102, 0.3)",
+            }}
+            onClick={() => router.push("/signup")}
+          >
+            Start Free (₹0)
+          </Button>
+          <Button
+            icon={<WhatsAppOutlined style={{ color: "#25D366", fontSize: 20 }} />}
+            style={{
+              height: 44,
+              paddingInline: 14,
+              borderColor: "#cbd5e1",
+              borderRadius: 8,
+              background: "#fff",
+            }}
+            href="https://wa.me/919279259690"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="WhatsApp Support"
+          />
+        </div>
+      )}
     </div>
   );
 }

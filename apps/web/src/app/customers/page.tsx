@@ -463,6 +463,7 @@ export default function CustomersPage() {
           rowKey="id"
           loading={loading}
           pagination={{ pageSize: 10 }}
+          scroll={{ x: 850 }}
           rowSelection={{
             selectedRowKeys: selectedCustomerKeys,
             onChange: (keys) => setSelectedCustomerKeys(keys),

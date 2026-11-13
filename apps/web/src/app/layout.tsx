@@ -3,6 +3,7 @@ import { AntdRegistry } from "@ant-design/nextjs-registry";
 import { ConfigProvider } from "antd";
 import { AuthProvider } from "../context/AuthContext";
 import React from "react";
+import "./globals.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://ginie.space"),
@@ -20,6 +21,9 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#25D366",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export default function RootLayout({

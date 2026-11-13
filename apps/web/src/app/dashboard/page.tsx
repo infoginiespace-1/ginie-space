@@ -520,6 +520,7 @@ export default function DashboardPage() {
               loading={loading}
               pagination={false}
               size="small"
+              scroll={{ x: 450 }}
               columns={[
                 {
                   title: "Customer",
@@ -575,6 +576,7 @@ export default function DashboardPage() {
               loading={loading}
               pagination={false}
               size="small"
+              scroll={{ x: 450 }}
               locale={{ emptyText: "All catalog products have healthy stock!" }}
               columns={[
                 {
@@ -627,6 +629,7 @@ export default function DashboardPage() {
               loading={loading}
               pagination={false}
               size="small"
+              scroll={{ x: 400 }}
               locale={{ emptyText: "Itemized order sales will appear here automatically." }}
               columns={[
                 { title: "Product", dataIndex: "name", key: "name", render: (n: string) => <Text strong>{n}</Text> },
@@ -658,6 +661,7 @@ export default function DashboardPage() {
               loading={loading}
               pagination={false}
               size="small"
+              scroll={{ x: 400 }}
               locale={{ emptyText: "Repeat buyer rankings appear as orders come in." }}
               columns={[
                 {

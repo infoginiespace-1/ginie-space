@@ -1,0 +1,80 @@
+/* GinieSpace Global & Mobile Responsive Stylesheet */
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: inherit;
+}
+
+/* Responsive Display Utilities */
+@media (max-width: 768px) {
+  .hide-on-mobile {
+    display: none !important;
+  }
+  .show-on-mobile {
+    display: block !important;
+  }
+  .mobile-flex-col {
+    flex-direction: column !important;
+  }
+  .mobile-w-full {
+    width: 100% !important;
+  }
+  .mobile-center {
+    text-align: center !important;
+    justify-content: center !important;
+  }
+  .mobile-p-12 {
+    padding: 12px !important;
+  }
+  .mobile-p-16 {
+    padding: 16px !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .show-on-mobile {
+    display: none !important;
+  }
+  .mobile-only-flex {
+    display: none !important;
+  }
+}
+
+/* Smooth Touch-Friendly Horizontal Swipe Tabs */
+.mobile-swipe-tabs {
+  display: flex !important;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  white-space: nowrap !important;
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE/Edge */
+  gap: 8px;
+  padding: 4px;
+}
+
+.mobile-swipe-tabs::-webkit-scrollbar {
+  display: none !important; /* Chrome, Safari */
+}
+
+/* Ensure images don't overflow on small screens */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Table mobile wrapper */
+.table-responsive-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}

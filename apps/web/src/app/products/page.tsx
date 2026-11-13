@@ -661,6 +661,7 @@ export default function ProductsPage() {
           rowKey="id"
           loading={loading}
           pagination={{ pageSize: 10 }}
+          scroll={{ x: 850 }}
         />
       </Card>
 

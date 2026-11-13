@@ -483,6 +483,7 @@ export default function LeadsPage() {
                     rowKey="id"
                     loading={searching}
                     pagination={{ pageSize: 10 }}
+                    scroll={{ x: 850 }}
                   />
                   {nextPageToken && (
                     <div style={{ textAlign: "center", marginTop: 14 }}>
@@ -570,6 +571,7 @@ export default function LeadsPage() {
                   rowKey="id"
                   loading={loadingSaved}
                   pagination={{ pageSize: 10 }}
+                  scroll={{ x: 850 }}
                   rowSelection={{
                     selectedRowKeys: selectedLeadKeys,
                     onChange: (keys) => setSelectedLeadKeys(keys),
