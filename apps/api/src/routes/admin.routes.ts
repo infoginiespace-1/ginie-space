@@ -803,5 +803,144 @@ export function createAdminRouter(
     }
   });
 
+  // 18. List Subscriptions & Upgrade Requests
+  router.get("/subscriptions", async (_req: Request, res: Response): Promise<void> => {
+    try {
+      const [users, businesses] = await Promise.all([
+        db.users.findMany(),
+        db.businesses.findMany(),
+      ]);
+
+      const bizMap = new Map<string, any>();
+      for (const b of businesses) {
+        bizMap.set(b.userId, b);
+      }
+
+      const subscriptions = users
+        .filter((u) => u.role !== "staff")
+        .map((u) => {
+          const biz = bizMap.get(u.id);
+          return {
+            userId: u.id,
+            name: u.name,
+            email: u.email,
+            storeName: biz?.name || "N/A",
+            phone: biz?.phone || "N/A",
+            plan: u.plan || "free",
+            subscriptionStatus: u.subscriptionStatus || (u.plan === "pro" ? "active" : "none"),
+            planPurchasedAt: u.planPurchasedAt || null,
+            planExpiresAt: u.planExpiresAt || null,
+            paymentUtr: u.paymentUtr || null,
+            createdAt: u.createdAt,
+          };
+        })
+        .sort((a, b) => {
+          if (a.subscriptionStatus === "pending" && b.subscriptionStatus !== "pending") return -1;
+          if (b.subscriptionStatus === "pending" && a.subscriptionStatus !== "pending") return 1;
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        });
+
+      res.json({ subscriptions });
+    } catch {
+      res.status(500).json({ error: "Failed to load subscriptions" });
+    }
+  });
+
+  // 19. Approve PRO Subscription (Activate 30 or 365 Days + WhatsApp Receipt)
+  router.post("/subscriptions/:userId/approve", async (req: Request, res: Response): Promise<void> => {
+    try {
+      const targetUserId = req.params.userId;
+      const { cycle = "monthly", amount = 99 } = req.body;
+      const targetUser = await db.users.findById(targetUserId);
+
+      if (!targetUser) {
+        res.status(404).json({ error: "User not found" });
+        return;
+      }
+
+      const days = cycle === "yearly" ? 365 : 30;
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + days * 86400000).toISOString();
+
+      await db.users.update(targetUserId, {
+        plan: "pro",
+        subscriptionStatus: "active",
+        planPurchasedAt: now.toISOString(),
+        planExpiresAt: expiresAt,
+        updatedAt: now.toISOString(),
+      });
+
+      const adminEmail = req.user?.email || "admin";
+      await recordAuditLog(
+        db,
+        adminEmail,
+        "APPROVE_SUBSCRIPTION",
+        `Approved PRO plan for ${targetUser.email} (Amount: ₹${amount}, UTR: ${targetUser.paymentUtr || "Manual"}, Valid till: ${expiresAt.split("T")[0]})`
+      );
+
+      // Send Congratulatory WhatsApp Invoice / Receipt to Merchant
+      const biz = await db.businesses.findOne({ userId: targetUserId }).catch(() => null);
+      if (biz?.phone && notificationService) {
+        const receiptMsg =
+          `🎉 *Mubarak Ho ${targetUser.name}!*\n\n` +
+          `Aapka *GinieSpace PRO Workspace* successfully activate ho gaya hai!\n\n` +
+          `👑 *Plan:* PRO Workspace (${String(cycle).toUpperCase()})\n` +
+          `💰 *Amount Paid:* ₹${amount}\n` +
+          `🔢 *Reference / UTR:* \`${targetUser.paymentUtr || "VERIFIED"}\`\n` +
+          `🗓️ *Valid Till:* ${new Date(expiresAt).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}\n\n` +
+          `*Aapke Liye Sabhi Unlocked Features:*\n` +
+          `✅ Unlimited Products & Services\n` +
+          `✅ Unlimited B2B Google Leads Finder\n` +
+          `✅ 5 Team Staff Accounts\n` +
+          `✅ Bulk WhatsApp Broadcasts Unlocked\n` +
+          `✅ Storefront Verified Merchant Badge\n\n` +
+          `GinieSpace ke sath apna vyapar aage badhayein! 🚀\n\n` +
+          `- GinieSpace Official Support (+91 92792 59690)`;
+
+        await notificationService.sendSupportNotification(biz.phone, receiptMsg).catch(() => {});
+      }
+
+      res.json({
+        success: true,
+        message: `PRO Subscription approved for ${targetUser.name}! Valid till ${expiresAt.split("T")[0]}.`,
+        expiresAt,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Failed to approve subscription" });
+    }
+  });
+
+  // 20. Reject / Reset Subscription Request
+  router.post("/subscriptions/:userId/reject", async (req: Request, res: Response): Promise<void> => {
+    try {
+      const targetUserId = req.params.userId;
+      const { reason = "Invalid UTR / Payment not received" } = req.body;
+      const targetUser = await db.users.findById(targetUserId);
+
+      if (!targetUser) {
+        res.status(404).json({ error: "User not found" });
+        return;
+      }
+
+      await db.users.update(targetUserId, {
+        subscriptionStatus: "none",
+        paymentUtr: "",
+        updatedAt: new Date().toISOString(),
+      });
+
+      const adminEmail = req.user?.email || "admin";
+      await recordAuditLog(
+        db,
+        adminEmail,
+        "REJECT_SUBSCRIPTION",
+        `Rejected subscription request for ${targetUser.email} (Reason: ${reason})`
+      );
+
+      res.json({ success: true, message: "Subscription request rejected." });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Failed to reject subscription" });
+    }
+  });
+
   return router;
 }

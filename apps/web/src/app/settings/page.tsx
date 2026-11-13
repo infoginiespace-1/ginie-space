@@ -43,6 +43,7 @@ import {
 } from "@ant-design/icons";
 import { api } from "../../lib/api";
 import { getSocket } from "../../lib/socket";
+import { UpgradeModal } from "../../components/UpgradeModal";
 import { useAuth } from "../../context/AuthContext";
 
 const { Title, Text, Paragraph } = Typography;
@@ -91,11 +92,21 @@ export default function SettingsPage() {
   const savedQuickRepliesRef = React.useRef<Array<{ label: string; text: string }> | undefined>(undefined);
   const [logoPreview, setLogoPreview] = useState<string>("");
   const [currentSlug, setCurrentSlug] = useState<string>("");
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [planUsage, setPlanUsage] = useState<{
     plan: "free" | "pro";
+    subscriptionStatus?: "active" | "pending" | "expired" | "none";
+    planExpiresAt?: string | null;
+    planPurchasedAt?: string | null;
+    paymentUtr?: string | null;
     usage: { productsCount: number; leadsCount: number; staffCount: number };
     limits: { maxProducts: number; maxLeads: number; maxStaff: number; allowBulkBroadcast: boolean };
+    pricing?: { monthly: number; yearly: number; upiId: string; supportPhone: string };
   } | null>(null);
+
+  const fetchPlanUsage = () => {
+    api.get("/api/settings/plan-usage").then((r) => setPlanUsage(r.data)).catch(() => {});
+  };
   const [staffList, setStaffList] = useState<any[]>([]);
   const [creatingStaff, setCreatingStaff] = useState(false);
 
@@ -632,7 +643,31 @@ export default function SettingsPage() {
               }
               style={{ borderRadius: 12, marginBottom: 20 }}
             >
-              <Space direction="vertical" style={{ width: "100%" }} size={10}>
+              <Space direction="vertical" style={{ width: "100%" }} size={12}>
+                {planUsage.subscriptionStatus === "pending" && (
+                  <Alert
+                    type="warning"
+                    showIcon
+                    message="PRO Upgrade Under Verification"
+                    description={
+                      <div style={{ fontSize: 12 }}>
+                        Aapka payment UTR <strong>{planUsage.paymentUtr}</strong> admin review me hai. Confirm hote hi PRO plan activate ho jayega!
+                      </div>
+                    }
+                  />
+                )}
+
+                {planUsage.plan === "pro" && planUsage.planExpiresAt && (
+                  <div style={{ background: "#fef3c7", padding: "8px 12px", borderRadius: 8, border: "1px solid #fde68a" }}>
+                    <Text strong style={{ color: "#92400e", fontSize: 13 }}>
+                      👑 PRO Plan Active
+                    </Text>
+                    <div style={{ fontSize: 12, color: "#b45309" }}>
+                      Valid Till: <strong>{new Date(planUsage.planExpiresAt).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</strong>
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
                     <span>Catalog Items</span>
@@ -657,10 +692,40 @@ export default function SettingsPage() {
                     <span>{planUsage.usage.staffCount} / {planUsage.limits.maxStaff}</span>
                   </div>
                 </div>
-                {planUsage.plan === "free" && (
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    Need unlimited products, leads &amp; 10 staff seats? Contact Support (+91 9279259690) to upgrade to <strong>PRO</strong>!
-                  </Text>
+
+                {planUsage.plan === "free" ? (
+                  <div>
+                    <Button
+                      type="primary"
+                      icon={<CrownOutlined />}
+                      block
+                      size="large"
+                      onClick={() => setUpgradeModalOpen(true)}
+                      style={{
+                        marginTop: 4,
+                        background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+                        borderColor: "#f59e0b",
+                        fontWeight: 700,
+                        boxShadow: "0 4px 12px rgba(245, 158, 11, 0.25)",
+                      }}
+                    >
+                      👑 Upgrade to PRO (₹99/month)
+                    </Button>
+                    <div style={{ textAlign: "center", marginTop: 8 }}>
+                      <Text type="secondary" style={{ fontSize: 11 }}>
+                        Unlock unlimited catalog, leads, 5 staff accounts &amp; verified badge!
+                      </Text>
+                    </div>
+                  </div>
+                ) : (
+                  <Button
+                    icon={<CrownOutlined />}
+                    block
+                    onClick={() => setUpgradeModalOpen(true)}
+                    style={{ borderColor: "#f59e0b", color: "#b45309" }}
+                  >
+                    Extend / Renew PRO Plan
+                  </Button>
                 )}
               </Space>
             </Card>
@@ -772,6 +837,16 @@ export default function SettingsPage() {
           </div>
         </div>
       </Modal>
+
+      <UpgradeModal
+        open={upgradeModalOpen}
+        onClose={() => setUpgradeModalOpen(false)}
+        onSuccess={() => {
+          setUpgradeModalOpen(false);
+          fetchPlanUsage();
+        }}
+        currentPlan={planUsage?.plan}
+      />
     </AppLayout>
   );
 }

@@ -32,11 +32,13 @@ import {
   DownloadOutlined,
   DeleteOutlined,
   CalendarOutlined,
+  CrownOutlined,
 } from "@ant-design/icons";
 import { api } from "../../lib/api";
 import { downloadCsv } from "../../lib/csv";
 import { getSocket } from "../../lib/socket";
 import { useAuth } from "../../context/AuthContext";
+import { UpgradeModal } from "../../components/UpgradeModal";
 
 const { Title, Text } = Typography;
 
@@ -91,6 +93,7 @@ export default function LeadsPage() {
   const [followUpTarget, setFollowUpTarget] = useState<SavedLead | null>(null);
   const [followUpDateVal, setFollowUpDateVal] = useState("");
   const [followUpNoteVal, setFollowUpNoteVal] = useState("");
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [savingFollowUp, setSavingFollowUp] = useState(false);
   const [selectedLeadKeys, setSelectedLeadKeys] = useState<React.Key[]>([]);
   const [campaignModalOpen, setCampaignModalOpen] = useState(false);
@@ -208,7 +211,11 @@ export default function LeadsPage() {
       });
       message.success(`${lead.name} saved to your leads book!`);
     } catch (err: any) {
-      message.error(err.message || "Could not save lead");
+      const errMsg = err.response?.data?.error || err.message || "Could not save lead";
+      if (errMsg.includes("Upgrade to Pro") || err.response?.status === 403) {
+        setUpgradeModalOpen(true);
+      }
+      message.error(errMsg);
     } finally {
       setSavingId(null);
     }
@@ -718,6 +725,12 @@ export default function LeadsPage() {
           </div>
         </Space>
       </Modal>
+
+      <UpgradeModal
+        open={upgradeModalOpen}
+        onClose={() => setUpgradeModalOpen(false)}
+        currentPlan={user?.plan}
+      />
     </AppLayout>
   );
 }

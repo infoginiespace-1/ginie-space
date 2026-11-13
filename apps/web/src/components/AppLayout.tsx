@@ -19,11 +19,13 @@ import {
   MenuOutlined,
   WhatsAppOutlined,
   BellOutlined,
+  CrownOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "../context/AuthContext";
 import { usePathname, useRouter } from "next/navigation";
 import { getSocket } from "../lib/socket";
 import { api } from "../lib/api";
+import { UpgradeModal } from "./UpgradeModal";
 
 const { Header, Content, Sider } = Layout;
 const { Text } = Typography;
@@ -46,6 +48,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [unreadChatsCount, setUnreadChatsCount] = useState(0);
   const [announcement, setAnnouncement] = useState<{ message: string; title?: string; type?: "info" | "warning" | "success" | "error" } | null>(null);
   const [announcementDismissed, setAnnouncementDismissed] = useState(false);
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -320,6 +323,39 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </Space>
 
           <Space size="small">
+            {user?.role !== "admin" && user?.role !== "staff" && (
+              user?.plan === "pro" ? (
+                <Tag
+                  icon={<CrownOutlined style={{ color: "#d97706" }} />}
+                  color="gold"
+                  style={{
+                    fontWeight: 700,
+                    padding: isMobile ? "2px 6px" : "3px 10px",
+                    fontSize: 12,
+                    cursor: "pointer",
+                    borderRadius: 6,
+                  }}
+                  onClick={() => setUpgradeModalOpen(true)}
+                >
+                  👑 PRO
+                </Tag>
+              ) : (
+                <Button
+                  size={isMobile ? "small" : "middle"}
+                  icon={<CrownOutlined style={{ color: "#b45309" }} />}
+                  onClick={() => setUpgradeModalOpen(true)}
+                  style={{
+                    background: "linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)",
+                    borderColor: "#f59e0b",
+                    color: "#92400e",
+                    fontWeight: 700,
+                    boxShadow: "0 2px 8px rgba(245, 158, 11, 0.18)",
+                  }}
+                >
+                  {isMobile ? "PRO ₹99" : "👑 Upgrade to PRO (₹99)"}
+                </Button>
+              )
+            )}
             <Popover
               placement="bottomRight"
               trigger="click"
@@ -456,6 +492,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </Modal>
+
+      {/* PRO Upgrade Modal */}
+      <UpgradeModal
+        open={upgradeModalOpen}
+        onClose={() => setUpgradeModalOpen(false)}
+        currentPlan={user?.plan}
+      />
     </Layout>
   );
 }

@@ -16,6 +16,10 @@ export interface User {
   plan?: "free" | "pro";
   ownerId?: string;
   staffPermissions?: string;
+  planPurchasedAt?: string;
+  planExpiresAt?: string;
+  paymentUtr?: string;
+  subscriptionStatus?: "active" | "pending" | "expired" | "none";
   createdAt: string;
   updatedAt: string;
 }

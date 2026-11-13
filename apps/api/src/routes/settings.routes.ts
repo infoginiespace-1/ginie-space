@@ -4,7 +4,7 @@ import { IDatabase } from "@giniespace/sheets-db";
 import { requireAdmin, requireOwnerOrAdmin } from "../middleware/auth";
 import { NotificationService } from "../services/notification.service";
 import { normalizePhoneDigits } from "../utils/phone";
-import { FREE_PLAN_LIMITS, getEffectivePlan } from "../utils/plan";
+import { FREE_PLAN_LIMITS, PRO_PLAN_LIMITS, PRO_PRICING, getEffectivePlan } from "../utils/plan";
 
 export function createSettingsRouter(
   db: IDatabase,
@@ -96,20 +96,23 @@ export function createSettingsRouter(
   router.get("/plan-usage", async (req: Request, res: Response): Promise<void> => {
     try {
       const userId = req.user!.id;
-      const [plan, products, leads, allUsers] = await Promise.all([
+      const [plan, products, leads, allUsers, dbUser] = await Promise.all([
         getEffectivePlan(db, req.user),
         db.products.findMany({ userId }),
         db.leads.findMany({ userId }),
         db.users.findMany({ ownerId: userId }).catch(() => []),
+        db.users.findById(userId).catch(() => null),
       ]);
 
-      const limits =
-        plan === "pro"
-          ? { maxProducts: 10000, maxLeads: 10000, maxStaff: 10, allowBulkBroadcast: true }
-          : { ...FREE_PLAN_LIMITS, allowBulkBroadcast: false };
+      const limits = plan === "pro" ? PRO_PLAN_LIMITS : FREE_PLAN_LIMITS;
 
       res.json({
         plan,
+        subscriptionStatus: dbUser?.subscriptionStatus || (plan === "pro" ? "active" : "none"),
+        planExpiresAt: dbUser?.planExpiresAt || null,
+        planPurchasedAt: dbUser?.planPurchasedAt || null,
+        paymentUtr: dbUser?.paymentUtr || null,
+        pricing: PRO_PRICING,
         usage: {
           productsCount: products.length,
           leadsCount: leads.length,
@@ -119,6 +122,57 @@ export function createSettingsRouter(
       });
     } catch {
       res.status(500).json({ error: "Could not load plan usage" });
+    }
+  });
+
+  // Submit ₹99 PRO Upgrade Request with UPI UTR
+  router.post("/upgrade-request", async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = req.user!.id;
+      const { utrNumber, billingCycle = "monthly", amount = 99 } = req.body;
+
+      if (!utrNumber || String(utrNumber).trim().length < 6) {
+        res.status(400).json({ error: "Please enter a valid 12-digit UPI UTR / Transaction Reference Number." });
+        return;
+      }
+
+      const cleanUtr = String(utrNumber).trim();
+      const user = await db.users.findById(userId);
+      if (!user) {
+        res.status(404).json({ error: "User account not found" });
+        return;
+      }
+
+      const now = new Date().toISOString();
+      await db.users.update(userId, {
+        paymentUtr: cleanUtr,
+        subscriptionStatus: "pending",
+        updatedAt: now,
+      });
+
+      // Send Instant WhatsApp Alert to Admin Bot (+91 92792 59690)
+      if (notificationService) {
+        const biz = await db.businesses.findOne({ userId }).catch(() => null);
+        const adminMsg = `🔔 *New PRO Subscription Upgrade Request!*\n\n` +
+          `👤 *Merchant:* ${user.name} (${user.email})\n` +
+          `🏪 *Store:* ${biz?.name || "N/A"}\n` +
+          `📞 *Phone:* ${biz?.phone || "N/A"}\n` +
+          `💰 *Amount:* ₹${amount} (${billingCycle})\n` +
+          `🔢 *UPI UTR:* \`${cleanUtr}\`\n\n` +
+          `Admin panel me jakar Subscriptions tab se Verify & 1-Click Approve karein:\n` +
+          `https://app.ginie.space/admin`;
+
+        await notificationService.sendSupportNotification(PRO_PRICING.supportPhone, adminMsg).catch(() => {});
+      }
+
+      res.json({
+        success: true,
+        message: "Your ₹99 PRO Upgrade request has been submitted! It will be verified and activated shortly.",
+        subscriptionStatus: "pending",
+        utr: cleanUtr,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Failed to submit upgrade request" });
     }
   });
 

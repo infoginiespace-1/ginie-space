@@ -198,6 +198,14 @@ export default function AdminPage() {
   const [downloadingBackup, setDownloadingBackup] = useState(false);
   const [resettingRatchets, setResettingRatchets] = useState(false);
 
+  // Subscriptions & PRO Upgrade Requests State
+  const [subscriptions, setSubscriptions] = useState<any[]>([]);
+  const [loadingSubscriptions, setLoadingSubscriptions] = useState(false);
+  const [subscriptionSearch, setSubscriptionSearch] = useState("");
+  const [subscriptionFilter, setSubscriptionFilter] = useState<string>("all");
+  const [approvingUserId, setApprovingUserId] = useState<string | null>(null);
+  const [rejectingUserId, setRejectingUserId] = useState<string | null>(null);
+
   // Load All Data
   const loadAnalytics = async () => {
     try {
@@ -255,6 +263,46 @@ export default function AdminPage() {
     }
   };
 
+  const loadSubscriptions = async () => {
+    try {
+      setLoadingSubscriptions(true);
+      const res = await api.get("/api/admin/subscriptions");
+      setSubscriptions(res.data?.subscriptions || []);
+    } catch {
+      // ignore
+    } finally {
+      setLoadingSubscriptions(false);
+    }
+  };
+
+  const handleApproveSubscription = async (userId: string, cycle: "monthly" | "yearly" = "monthly") => {
+    try {
+      setApprovingUserId(userId);
+      const res = await api.post(`/api/admin/subscriptions/${userId}/approve`, { cycle });
+      message.success(res.data?.message || "PRO Plan activated successfully!");
+      loadSubscriptions();
+      loadMerchants();
+    } catch (err: any) {
+      message.error(err.response?.data?.error || err.message || "Failed to approve subscription");
+    } finally {
+      setApprovingUserId(null);
+    }
+  };
+
+  const handleRejectSubscription = async (userId: string) => {
+    try {
+      setRejectingUserId(userId);
+      await api.post(`/api/admin/subscriptions/${userId}/reject`, { reason: "Payment UTR not verified" });
+      message.info("Subscription request rejected.");
+      loadSubscriptions();
+      loadMerchants();
+    } catch (err: any) {
+      message.error(err.message || "Failed to reject subscription");
+    } finally {
+      setRejectingUserId(null);
+    }
+  };
+
   useEffect(() => {
     if (user && user.role !== "admin") {
       router.replace("/inbox");
@@ -263,6 +311,7 @@ export default function AdminPage() {
 
     loadAnalytics();
     loadMerchants();
+    loadSubscriptions();
     loadSupportMessages();
     loadAnnouncement();
     loadAuditLogs();
@@ -1171,7 +1220,285 @@ export default function AdminPage() {
             ),
           },
 
-          // TAB 3: BROADCAST & PLATFORM NOTICES
+          // TAB 3: SUBSCRIPTIONS & PRO UPGRADES (₹99 MRR)
+          {
+            key: "subscriptions",
+            label: (
+              <span>
+                <CrownOutlined style={{ color: "#d97706" }} /> Subscriptions &amp; Revenue
+                {subscriptions.filter((s) => s.subscriptionStatus === "pending").length > 0 && (
+                  <Badge
+                    count={subscriptions.filter((s) => s.subscriptionStatus === "pending").length}
+                    style={{ marginLeft: 6, backgroundColor: "#f59e0b" }}
+                  />
+                )}
+              </span>
+            ),
+            children: (
+              <div>
+                {/* Revenue & Subscription KPIs */}
+                <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
+                  <Col xs={24} sm={12} lg={6}>
+                    <Card style={{ borderRadius: 12, background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", color: "#fff" }}>
+                      <Statistic
+                        title={<span style={{ color: "rgba(255,255,255,0.85)" }}>Active PRO Merchants</span>}
+                        value={subscriptions.filter((s) => s.plan === "pro").length}
+                        prefix={<CrownOutlined style={{ color: "#fff" }} />}
+                        valueStyle={{ color: "#fff", fontWeight: 700 }}
+                      />
+                      <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: 12 }}>
+                        Unlimited Catalog &amp; B2B Leads Active
+                      </Text>
+                    </Card>
+                  </Col>
+
+                  <Col xs={24} sm={12} lg={6}>
+                    <Card style={{ borderRadius: 12, background: subscriptions.filter((s) => s.subscriptionStatus === "pending").length > 0 ? "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)" : "linear-gradient(135deg, #10b981 0%, #059669 100%)", color: "#fff" }}>
+                      <Statistic
+                        title={<span style={{ color: "rgba(255,255,255,0.85)" }}>Pending Upgrade Verifications</span>}
+                        value={subscriptions.filter((s) => s.subscriptionStatus === "pending").length}
+                        prefix={<CheckCircleOutlined style={{ color: "#fff" }} />}
+                        valueStyle={{ color: "#fff", fontWeight: 700 }}
+                      />
+                      <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: 12 }}>
+                        {subscriptions.filter((s) => s.subscriptionStatus === "pending").length > 0 ? "⚠️ Requires admin approval" : "All payments verified"}
+                      </Text>
+                    </Card>
+                  </Col>
+
+                  <Col xs={24} sm={12} lg={6}>
+                    <Card style={{ borderRadius: 12, background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)", color: "#fff" }}>
+                      <Statistic
+                        title={<span style={{ color: "rgba(255,255,255,0.85)" }}>Estimated Monthly Run Rate (MRR)</span>}
+                        value={subscriptions.filter((s) => s.plan === "pro").length * 99}
+                        precision={0}
+                        prefix={<DollarOutlined style={{ color: "#fff" }} />}
+                        formatter={(val) => `₹${Number(val).toLocaleString("en-IN")}`}
+                        valueStyle={{ color: "#fff", fontWeight: 700 }}
+                      />
+                      <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: 12 }}>
+                        At ₹99/mo per PRO subscriber
+                      </Text>
+                    </Card>
+                  </Col>
+
+                  <Col xs={24} sm={12} lg={6}>
+                    <Card style={{ borderRadius: 12, background: "linear-gradient(135deg, #64748b 0%, #475569 100%)", color: "#fff" }}>
+                      <Statistic
+                        title={<span style={{ color: "rgba(255,255,255,0.85)" }}>Free Tier Conversion Pool</span>}
+                        value={subscriptions.filter((s) => s.plan !== "pro").length}
+                        prefix={<TeamOutlined style={{ color: "#fff" }} />}
+                        valueStyle={{ color: "#fff", fontWeight: 700 }}
+                      />
+                      <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: 12 }}>
+                        Potential upgrades to ₹99 PRO plan
+                      </Text>
+                    </Card>
+                  </Col>
+                </Row>
+
+                {/* Subscriptions Table */}
+                <Card style={{ borderRadius: 12 }}>
+                  <Row gutter={[16, 12]} align="middle" style={{ marginBottom: 16 }}>
+                    <Col xs={24} md={10}>
+                      <Input
+                        placeholder="Search merchant, phone, or 12-digit UTR..."
+                        prefix={<SearchOutlined style={{ color: "#8c8c8c" }} />}
+                        value={subscriptionSearch}
+                        onChange={(e) => setSubscriptionSearch(e.target.value)}
+                        allowClear
+                      />
+                    </Col>
+                    <Col xs={24} md={10}>
+                      <Radio.Group
+                        value={subscriptionFilter}
+                        onChange={(e) => setSubscriptionFilter(e.target.value)}
+                        optionType="button"
+                        buttonStyle="solid"
+                      >
+                        <Radio.Button value="all">All ({subscriptions.length})</Radio.Button>
+                        <Radio.Button value="pending">
+                          Pending ({subscriptions.filter((s) => s.subscriptionStatus === "pending").length})
+                        </Radio.Button>
+                        <Radio.Button value="pro">
+                          PRO Active ({subscriptions.filter((s) => s.plan === "pro").length})
+                        </Radio.Button>
+                        <Radio.Button value="free">
+                          Free ({subscriptions.filter((s) => s.plan !== "pro").length})
+                        </Radio.Button>
+                      </Radio.Group>
+                    </Col>
+                    <Col xs={24} md={4} style={{ textAlign: "right" }}>
+                      <Button icon={<SyncOutlined />} onClick={loadSubscriptions} loading={loadingSubscriptions}>
+                        Refresh
+                      </Button>
+                    </Col>
+                  </Row>
+
+                  <Table
+                    dataSource={subscriptions
+                      .filter((s) => {
+                        if (subscriptionFilter === "pending") return s.subscriptionStatus === "pending";
+                        if (subscriptionFilter === "pro") return s.plan === "pro";
+                        if (subscriptionFilter === "free") return s.plan !== "pro";
+                        return true;
+                      })
+                      .filter((s) => {
+                        if (!subscriptionSearch.trim()) return true;
+                        const q = subscriptionSearch.toLowerCase();
+                        return (
+                          s.name?.toLowerCase().includes(q) ||
+                          s.email?.toLowerCase().includes(q) ||
+                          s.storeName?.toLowerCase().includes(q) ||
+                          s.phone?.includes(q) ||
+                          s.paymentUtr?.toLowerCase().includes(q)
+                        );
+                      })}
+                    rowKey="userId"
+                    loading={loadingSubscriptions}
+                    pagination={{ pageSize: 10 }}
+                    locale={{ emptyText: "No subscription records found." }}
+                    columns={[
+                      {
+                        title: "Merchant & Store",
+                        key: "merchant",
+                        render: (_: any, r: any) => (
+                          <div>
+                            <Text strong style={{ fontSize: 13 }}>{r.name}</Text>
+                            <div style={{ fontSize: 12, color: "#64748b" }}>🏬 {r.storeName}</div>
+                            <div style={{ fontSize: 11, color: "#8c8c8c" }}>{r.email}</div>
+                          </div>
+                        ),
+                      },
+                      {
+                        title: "WhatsApp Phone",
+                        key: "phone",
+                        render: (_: any, r: any) => (
+                          <Text strong style={{ color: "#047857" }}>
+                            📱 {formatDisplayPhone(r.phone)}
+                          </Text>
+                        ),
+                      },
+                      {
+                        title: "Plan",
+                        key: "plan",
+                        render: (_: any, r: any) =>
+                          r.plan === "pro" ? (
+                            <Tag color="gold" style={{ fontWeight: 700 }}>👑 PRO</Tag>
+                          ) : (
+                            <Tag>FREE</Tag>
+                          ),
+                      },
+                      {
+                        title: "Status",
+                        key: "status",
+                        render: (_: any, r: any) => {
+                          const status = r.subscriptionStatus;
+                          if (status === "pending") return <Tag color="orange" style={{ fontWeight: 700 }}>PENDING VERIFICATION</Tag>;
+                          if (status === "active") return <Tag color="green">ACTIVE</Tag>;
+                          if (status === "expired") return <Tag color="red">EXPIRED</Tag>;
+                          return <Tag color="default">FREE TIER</Tag>;
+                        },
+                      },
+                      {
+                        title: "Payment UTR",
+                        key: "utr",
+                        render: (_: any, r: any) =>
+                          r.paymentUtr ? (
+                            <Tag color="blue" style={{ fontFamily: "monospace", fontSize: 12 }}>
+                              {r.paymentUtr}
+                            </Tag>
+                          ) : (
+                            <Text type="secondary" style={{ fontSize: 12 }}>-</Text>
+                          ),
+                      },
+                      {
+                        title: "Expiry Date",
+                        key: "expires",
+                        render: (_: any, r: any) =>
+                          r.planExpiresAt ? (
+                            <Text style={{ fontSize: 12 }}>
+                              {new Date(r.planExpiresAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                            </Text>
+                          ) : (
+                            <Text type="secondary" style={{ fontSize: 12 }}>-</Text>
+                          ),
+                      },
+                      {
+                        title: "Actions",
+                        key: "actions",
+                        align: "right",
+                        render: (_: any, r: any) => (
+                          <Space size="small">
+                            {r.subscriptionStatus === "pending" ? (
+                              <>
+                                <Button
+                                  type="primary"
+                                  size="small"
+                                  icon={<CheckCircleOutlined />}
+                                  loading={approvingUserId === r.userId}
+                                  onClick={() => handleApproveSubscription(r.userId, "monthly")}
+                                  style={{ background: "#10b981", borderColor: "#10b981", fontWeight: 600 }}
+                                >
+                                  Approve (₹99 / 1 Mo)
+                                </Button>
+                                <Button
+                                  size="small"
+                                  loading={approvingUserId === r.userId}
+                                  onClick={() => handleApproveSubscription(r.userId, "yearly")}
+                                >
+                                  Approve (₹999 / 1 Yr)
+                                </Button>
+                                <Popconfirm
+                                  title="Reject upgrade request?"
+                                  description="Aapka decision audit log me save hoga aur merchant ko re-submit karna hoga."
+                                  onConfirm={() => handleRejectSubscription(r.userId)}
+                                >
+                                  <Button size="small" danger loading={rejectingUserId === r.userId}>
+                                    Reject
+                                  </Button>
+                                </Popconfirm>
+                              </>
+                            ) : r.plan === "pro" ? (
+                              <>
+                                <Button
+                                  size="small"
+                                  icon={<CrownOutlined />}
+                                  loading={approvingUserId === r.userId}
+                                  onClick={() => handleApproveSubscription(r.userId, "monthly")}
+                                >
+                                  +30 Days
+                                </Button>
+                                <Popconfirm
+                                  title="Downgrade user to Free tier?"
+                                  onConfirm={() => handleRejectSubscription(r.userId)}
+                                >
+                                  <Button size="small" danger>
+                                    Downgrade
+                                  </Button>
+                                </Popconfirm>
+                              </>
+                            ) : (
+                              <Button
+                                size="small"
+                                icon={<CrownOutlined style={{ color: "#d97706" }} />}
+                                loading={approvingUserId === r.userId}
+                                onClick={() => handleApproveSubscription(r.userId, "monthly")}
+                              >
+                                Grant 30D PRO
+                              </Button>
+                            )}
+                          </Space>
+                        ),
+                      },
+                    ]}
+                  />
+                </Card>
+              </div>
+            ),
+          },
+
+          // TAB 4: BROADCAST & PLATFORM NOTICES
           {
             key: "broadcast",
             label: (
@@ -1320,11 +1647,11 @@ export default function AdminPage() {
                           size="small"
                           onClick={() =>
                             setBroadcastText(
-                              "🌟 Special Pro Upgrade Offer for {{name}}! Unlimited products, Google Maps leads aur 10 team staff accounts unlock karein only ₹499/month me. UPI ID: info.giniespace@okaxis par pay karein aur screenshot share karein!\n\n- GinieSpace Support"
+                              "🌟 Special Pro Upgrade Offer for {{name}}! Unlimited catalog, B2B leads aur 5 team staff accounts unlock karein only ₹99/month me. UPI ID: 9279259690@fam par pay karein aur app me 12-digit UTR submit karein!\n\n- GinieSpace Official Support (+91 92792 59690)"
                             )
                           }
                         >
-                          Template: Pro Offer
+                          Template: Pro Offer (₹99)
                         </Button>
                       </Space>
 

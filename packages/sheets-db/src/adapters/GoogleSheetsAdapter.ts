@@ -303,7 +303,7 @@ export class GoogleSheetsDatabase implements IDatabase {
       this.sheets,
       this.spreadsheetId,
       "Users",
-      ["id", "email", "passwordHash", "name", "role", "businessType", "createdAt", "updatedAt", "status", "plan", "ownerId", "staffPermissions"],
+      ["id", "email", "passwordHash", "name", "role", "businessType", "createdAt", "updatedAt", "status", "plan", "ownerId", "staffPermissions", "planPurchasedAt", "planExpiresAt", "paymentUtr", "subscriptionStatus"],
       this.throttler
     );
 
@@ -381,7 +381,7 @@ export class GoogleSheetsDatabase implements IDatabase {
       const existingSheets = (meta.data.sheets || []).map((s) => s.properties?.title || "");
 
       const schemas = [
-        { name: "Users", headers: ["id", "email", "passwordHash", "name", "role", "businessType", "createdAt", "updatedAt"] },
+        { name: "Users", headers: ["id", "email", "passwordHash", "name", "role", "businessType", "createdAt", "updatedAt", "status", "plan", "ownerId", "staffPermissions", "planPurchasedAt", "planExpiresAt", "paymentUtr", "subscriptionStatus"] },
         { name: "Businesses", headers: ["id", "userId", "name", "phone", "address", "settingsJson", "createdAt", "updatedAt"] },
         { name: "Customers", headers: ["id", "userId", "name", "phone", "email", "notes", "tags", "createdAt", "updatedAt"] },
         { name: "Products", headers: ["id", "userId", "name", "description", "price", "unit", "stock", "imageUrl", "createdAt", "updatedAt"] },
