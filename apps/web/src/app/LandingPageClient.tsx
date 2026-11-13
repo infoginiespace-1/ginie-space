@@ -74,14 +74,6 @@ export default function LandingPageClient() {
     message.success("Link copied to clipboard!");
   };
 
-  if (loading || user) {
-    return (
-      <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <Spin size="large" />
-      </div>
-    );
-  }
-
   return (
     <div style={{ minHeight: "100vh", background: "#f8fafc", color: "#0f172a", overflowX: "hidden" }}>
       {/* Top Banner Notice */}
