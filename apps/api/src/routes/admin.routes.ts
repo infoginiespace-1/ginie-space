@@ -88,6 +88,18 @@ export function createAdminRouter(
     }
   });
 
+  // 3b. Reset E2EE Contact Ratchets without log out
+  router.post("/whatsapp/reset-ratchets", async (req: Request, res: Response): Promise<void> => {
+    try {
+      const state = await waManager.restartClean(SYSTEM_SUPPORT_SESSION_ID);
+      const adminEmail = req.user?.email || "admin";
+      await recordAuditLog(db, adminEmail, "RESET_E2EE_RATCHETS", "Purged stale contact ratchet sessions to fix Bad MAC");
+      res.json({ message: "Stale contact ratchets cleared. Fresh Signal handshake active.", session: state });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Failed to reset ratchets" });
+    }
+  });
+
   // 4. Send Test Message from Support WhatsApp
   router.post("/whatsapp/send-test", async (req: Request, res: Response): Promise<void> => {
     try {

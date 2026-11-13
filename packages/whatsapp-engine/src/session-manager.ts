@@ -74,6 +74,9 @@ export class WhatsAppSessionManager extends EventEmitter {
       }
 
       for (const [filename, content] of Object.entries(files)) {
+        // Exclude stale contact-specific ratchet files (session-*.json)
+        // These dynamic ratchets cause "Bad MAC" and "Waiting for this message" when restored from old snapshots
+        if (filename.startsWith("session-")) continue;
         fs.writeFileSync(path.join(sessionDir, filename), content, "utf-8");
       }
 
@@ -97,7 +100,9 @@ export class WhatsAppSessionManager extends EventEmitter {
         const files: Record<string, string> = {};
         const entries = fs.readdirSync(sessionDir);
         for (const entry of entries) {
-          if (entry.endsWith(".json")) {
+          // Never backup contact session ratchets (session-*.json)
+          // Master login is preserved via creds.json, pre-key-*.json, app-state-*.json
+          if (entry.endsWith(".json") && !entry.startsWith("session-")) {
             files[entry] = fs.readFileSync(path.join(sessionDir, entry), "utf-8");
           }
         }
@@ -124,6 +129,20 @@ export class WhatsAppSessionManager extends EventEmitter {
 
     const sessionDir = path.join(this.baseStoragePath, userId);
     await this.restoreSessionFromCloud(userId, sessionDir);
+
+    // Purge any local session-*.json files to eliminate stale Signal ratchets that cause Bad MAC
+    try {
+      if (fs.existsSync(sessionDir)) {
+        const localEntries = fs.readdirSync(sessionDir);
+        for (const entry of localEntries) {
+          if (entry.startsWith("session-") && entry.endsWith(".json")) {
+            try {
+              fs.unlinkSync(path.join(sessionDir, entry));
+            } catch {}
+          }
+        }
+      }
+    } catch {}
 
     const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
 
@@ -343,6 +362,30 @@ export class WhatsAppSessionManager extends EventEmitter {
     }
     this.updateState(userId, { status: "disconnected", qrCode: undefined, phoneNumber: undefined });
     this.emit("status", { userId, status: "disconnected" });
+  }
+
+  async restartClean(userId: string): Promise<SessionState> {
+    const sock = this.sockets.get(userId);
+    if (sock) {
+      try {
+        sock.end(undefined);
+      } catch {}
+      this.sockets.delete(userId);
+    }
+    const sessionDir = path.join(this.baseStoragePath, userId);
+    try {
+      if (fs.existsSync(sessionDir)) {
+        const localEntries = fs.readdirSync(sessionDir);
+        for (const entry of localEntries) {
+          if (entry.startsWith("session-") && entry.endsWith(".json")) {
+            try {
+              fs.unlinkSync(path.join(sessionDir, entry));
+            } catch {}
+          }
+        }
+      }
+    } catch {}
+    return this.startSession(userId);
   }
 
   private updateState(userId: string, partial: Partial<SessionState>) {

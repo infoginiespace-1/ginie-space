@@ -196,6 +196,7 @@ export default function AdminPage() {
 
   // Backup Download State
   const [downloadingBackup, setDownloadingBackup] = useState(false);
+  const [resettingRatchets, setResettingRatchets] = useState(false);
 
   // Load All Data
   const loadAnalytics = async () => {
@@ -359,6 +360,19 @@ export default function AdminPage() {
       message.error(err.response?.data?.error || err.message || "Failed to disconnect support WhatsApp");
     } finally {
       setDisconnecting(false);
+    }
+  };
+
+  const handleResetRatchets = async () => {
+    try {
+      setResettingRatchets(true);
+      await api.post("/api/admin/whatsapp/reset-ratchets");
+      message.success("E2EE Contact ratchets reset cleanly! Fresh encryption keys active.");
+      loadAuditLogs();
+    } catch (err: any) {
+      message.error(err.response?.data?.error || err.message || "Failed to reset ratchets");
+    } finally {
+      setResettingRatchets(false);
     }
   };
 
@@ -1511,18 +1525,28 @@ export default function AdminPage() {
 
                       <Space wrap>
                         {supportStatus === "connected" ? (
-                          <Popconfirm
-                            title="Disconnect Official Support WhatsApp?"
-                            description="Disconnect karne par 9279259690 se system alerts aur notifications pause ho jayenge jab tak dobara QR scan na kiya jaye."
-                            onConfirm={handleDisconnectSupport}
-                            okText="Yes, Disconnect"
-                            cancelText="Cancel"
-                            okButtonProps={{ danger: true }}
-                          >
-                            <Button danger loading={disconnecting}>
-                              Disconnect Session
+                          <>
+                            <Popconfirm
+                              title="Disconnect Official Support WhatsApp?"
+                              description="Disconnect karne par 9279259690 se system alerts aur notifications pause ho jayenge jab tak dobara QR scan na kiya jaye."
+                              onConfirm={handleDisconnectSupport}
+                              okText="Yes, Disconnect"
+                              cancelText="Cancel"
+                              okButtonProps={{ danger: true }}
+                            >
+                              <Button danger loading={disconnecting}>
+                                Disconnect Session
+                              </Button>
+                            </Popconfirm>
+                            <Button
+                              icon={<SyncOutlined />}
+                              loading={resettingRatchets}
+                              onClick={handleResetRatchets}
+                              title="Purge stale contact encryption keys and re-sync fresh Signal ratchets"
+                            >
+                              Fix E2EE Keys (Clear Bad MAC)
                             </Button>
-                          </Popconfirm>
+                          </>
                         ) : (
                           <Button
                             type="primary"
