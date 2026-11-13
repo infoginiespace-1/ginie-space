@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Layout, Menu, Button, Modal, Badge, Tag, Space, Typography, Spin, message, Drawer, Grid, Tooltip, Popover, List } from "antd";
+import { Layout, Menu, Button, Modal, Badge, Tag, Space, Typography, Spin, message, Drawer, Grid, Tooltip, Popover, List, Alert } from "antd";
 import {
   DashboardOutlined,
   MessageOutlined,
@@ -44,6 +44,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [pendingOrdersCount, setPendingOrdersCount] = useState(0);
   const [lowStockItems, setLowStockItems] = useState<Array<{ id: string; name: string; stock: number; unit?: string }>>([]);
   const [unreadChatsCount, setUnreadChatsCount] = useState(0);
+  const [announcement, setAnnouncement] = useState<{ message: string; title?: string; type?: "info" | "warning" | "success" | "error" } | null>(null);
+  const [announcementDismissed, setAnnouncementDismissed] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -55,6 +57,17 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       const prods = prodRes.data?.products || [];
       setLowStockItems(prods.filter((p: any) => p.itemType !== "service" && Number(p.stock) <= 5));
     });
+
+    // Fetch active platform announcement
+    api.get("/api/settings/announcement")
+      .then((res) => {
+        if (res.data?.announcement?.enabled && res.data.announcement.message) {
+          setAnnouncement(res.data.announcement);
+        } else {
+          setAnnouncement(null);
+        }
+      })
+      .catch(() => {});
 
     // Initial fetch of WhatsApp Status
     api.get("/api/whatsapp/status")
@@ -364,6 +377,20 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </Button>
           </Space>
         </Header>
+
+        {announcement && !announcementDismissed && (
+          <div style={{ padding: isMobile ? "10px 12px 0 12px" : "14px 24px 0 24px" }} className="no-print">
+            <Alert
+              message={announcement.title || "Platform Announcement"}
+              description={announcement.message}
+              type={announcement.type || "info"}
+              showIcon
+              closable
+              onClose={() => setAnnouncementDismissed(true)}
+              style={{ borderRadius: 8, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}
+            />
+          </div>
+        )}
 
         <Content style={{ padding: isMobile ? 12 : 24, background: "#f8fafc" }}>{children}</Content>
       </Layout>

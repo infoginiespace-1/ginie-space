@@ -223,6 +223,23 @@ export function createSettingsRouter(
     }
   });
 
+  // Active Platform Announcement Banner for all users
+  router.get("/announcement", async (_req: Request, res: Response): Promise<void> => {
+    try {
+      const setting = await db.settings.findOne({ userId: "admin", key: "platform_announcement" }).catch(() => null);
+      if (setting?.value) {
+        const parsed = JSON.parse(setting.value);
+        if (parsed.enabled && parsed.message) {
+          res.json({ announcement: parsed });
+          return;
+        }
+      }
+      res.json({ announcement: null });
+    } catch {
+      res.json({ announcement: null });
+    }
+  });
+
   // Admin-only user management
   router.get("/users", requireAdmin, async (_req: Request, res: Response): Promise<void> => {
     try {

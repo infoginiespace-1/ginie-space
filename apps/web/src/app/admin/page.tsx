@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { AppLayout } from "../../components/AppLayout";
 import {
   Card,
@@ -23,6 +23,13 @@ import {
   Spin,
   Divider,
   Select,
+  Drawer,
+  Badge,
+  Tooltip,
+  Dropdown,
+  Radio,
+  Progress,
+  List,
 } from "antd";
 import {
   UserOutlined,
@@ -37,36 +44,108 @@ import {
   BellOutlined,
   MessageOutlined,
   DownloadOutlined,
+  EyeOutlined,
+  KeyOutlined,
+  DeleteOutlined,
+  DisconnectOutlined,
+  CrownOutlined,
+  NotificationOutlined,
+  HistoryOutlined,
+  SearchOutlined,
+  FilterOutlined,
+  DashboardOutlined,
+  ThunderboltOutlined,
+  LinkOutlined,
+  DollarOutlined,
+  ShoppingOutlined,
+  TeamOutlined,
+  CheckOutlined,
 } from "@ant-design/icons";
 import { api } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import { useRouter } from "next/navigation";
 import { getSocket } from "../../lib/socket";
+import { downloadCsv } from "../../lib/csv";
 
 const { Title, Text, Paragraph } = Typography;
 
-interface AdminUser {
+export interface MerchantItem {
   id: string;
   name: string;
   email: string;
-  role: "admin" | "user";
+  role: "admin" | "user" | "staff";
   businessType: "retail" | "wholesale" | "services";
-  status?: "active" | "suspended";
-  plan?: "free" | "pro";
+  status: "active" | "suspended";
+  plan: "free" | "pro";
+  ownerId?: string;
   createdAt: string;
+  business: {
+    name: string;
+    phone: string;
+    slug?: string;
+    address?: string;
+  };
+  counts: {
+    products: number;
+    orders: number;
+    customers: number;
+    leads: number;
+    staff: number;
+    revenue: number;
+  };
+  whatsapp: {
+    status: "disconnected" | "connecting" | "connected";
+    phone?: string;
+  };
+}
+
+export interface SupportMessage {
+  id: string;
+  messageId?: string;
+  contactPhone: string;
+  contactName?: string;
+  text: string;
+  fromMe: string | boolean;
+  timestamp: string;
+}
+
+export interface AuditLog {
+  id: string;
+  adminEmail: string;
+  action: string;
+  details: string;
+  timestamp: string;
 }
 
 export default function AdminPage() {
   const { user } = useAuth();
   const router = useRouter();
 
-  // Users Management State
-  const [users, setUsers] = useState<AdminUser[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState(true);
-  const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
-  const [downloadingBackup, setDownloadingBackup] = useState(false);
+  // Navigation
+  const [activeTab, setActiveTab] = useState("overview");
 
-  // WhatsApp Support Bot State
+  // Analytics & KPIs
+  const [analytics, setAnalytics] = useState<any>(null);
+  const [loadingAnalytics, setLoadingAnalytics] = useState(true);
+
+  // Merchants State
+  const [merchants, setMerchants] = useState<MerchantItem[]>([]);
+  const [loadingMerchants, setLoadingMerchants] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [planFilter, setPlanFilter] = useState<"all" | "free" | "pro">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "suspended">("all");
+  const [typeFilter, setTypeFilter] = useState<"all" | "retail" | "wholesale" | "services">("all");
+  const [selectedMerchant, setSelectedMerchant] = useState<MerchantItem | null>(null);
+  const [merchantDrawerOpen, setMerchantDrawerOpen] = useState(false);
+
+  // User Actions State
+  const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
+  const [resetPassModalUser, setResetPassModalUser] = useState<MerchantItem | null>(null);
+  const [tempPassword, setTempPassword] = useState("");
+  const [notifyOnWhatsApp, setNotifyOnWhatsApp] = useState(true);
+  const [resettingPassword, setResettingPassword] = useState(false);
+
+  // Official Support WhatsApp State
   const [supportStatus, setSupportStatus] = useState<"disconnected" | "connecting" | "connected">("disconnected");
   const [supportPhone, setSupportPhone] = useState<string>("919279259690");
   const [qrCode, setQrCode] = useState<string | null>(null);
@@ -74,11 +153,7 @@ export default function AdminPage() {
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
 
-  // Test Message Sender State
-  const [testForm] = Form.useForm();
-  const [sendingTest, setSendingTest] = useState(false);
-
-  // Notification Rules State
+  // Notification Rules
   const [rules, setRules] = useState({
     newUserWelcome: true,
     orderPlacedAlert: true,
@@ -87,12 +162,64 @@ export default function AdminPage() {
   });
   const [savingRules, setSavingRules] = useState(false);
 
-  // Support Queries / Messages State
-  const [supportMessages, setSupportMessages] = useState<any[]>([]);
+  // Direct Test Form
+  const [testForm] = Form.useForm();
+  const [sendingTest, setSendingTest] = useState(false);
+
+  // Broadcast State
+  const [broadcastSegment, setBroadcastSegment] = useState<"all" | "free" | "pro" | "retail" | "wholesale" | "services">("all");
+  const [broadcastText, setBroadcastText] = useState("");
+  const [sendingBroadcast, setSendingBroadcast] = useState(false);
+
+  // Platform Announcement State
+  const [announcement, setAnnouncement] = useState({
+    enabled: false,
+    title: "Platform Notice",
+    message: "",
+    type: "info" as "info" | "warning" | "success" | "error",
+  });
+  const [savingAnnouncement, setSavingAnnouncement] = useState(false);
+
+  // Support Queries / Smart Inbox State
+  const [supportMessages, setSupportMessages] = useState<SupportMessage[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
-  const [replyTargetPhone, setReplyTargetPhone] = useState<string | null>(null);
+  const [supportSearch, setSupportSearch] = useState("");
+  const [needsReplyOnly, setNeedsReplyOnly] = useState(false);
+  const [activeChatPhone, setActiveChatPhone] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
   const [sendingReply, setSendingReply] = useState(false);
+
+  // Audit Logs
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [loadingAuditLogs, setLoadingAuditLogs] = useState(false);
+
+  // Backup Download State
+  const [downloadingBackup, setDownloadingBackup] = useState(false);
+
+  // Load All Data
+  const loadAnalytics = async () => {
+    try {
+      setLoadingAnalytics(true);
+      const res = await api.get("/api/admin/analytics");
+      setAnalytics(res.data);
+    } catch {
+      // ignore
+    } finally {
+      setLoadingAnalytics(false);
+    }
+  };
+
+  const loadMerchants = async () => {
+    try {
+      setLoadingMerchants(true);
+      const res = await api.get("/api/admin/merchants");
+      setMerchants(res.data?.merchants || []);
+    } catch {
+      message.error("Could not load merchants");
+    } finally {
+      setLoadingMerchants(false);
+    }
+  };
 
   const loadSupportMessages = async () => {
     try {
@@ -100,9 +227,29 @@ export default function AdminPage() {
       const res = await api.get("/api/admin/whatsapp/messages");
       setSupportMessages(res.data?.messages || []);
     } catch {
-      // ignore initial error
+      // ignore
     } finally {
       setLoadingMessages(false);
+    }
+  };
+
+  const loadAnnouncement = async () => {
+    try {
+      const res = await api.get("/api/admin/announcement");
+      if (res.data?.announcement) {
+        setAnnouncement(res.data.announcement);
+      }
+    } catch {}
+  };
+
+  const loadAuditLogs = async () => {
+    try {
+      setLoadingAuditLogs(true);
+      const res = await api.get("/api/admin/audit-logs");
+      setAuditLogs(res.data?.logs || []);
+    } catch {}
+    finally {
+      setLoadingAuditLogs(false);
     }
   };
 
@@ -112,13 +259,13 @@ export default function AdminPage() {
       return;
     }
 
-    // 1. Load Registered Users
-    api.get("/api/settings/users")
-      .then((res) => setUsers(res.data.users || []))
-      .catch(() => message.error("Could not load users list"))
-      .finally(() => setLoadingUsers(false));
+    loadAnalytics();
+    loadMerchants();
+    loadSupportMessages();
+    loadAnnouncement();
+    loadAuditLogs();
 
-    // 2. Load Support WhatsApp Status
+    // Load Support WA Status
     api.get("/api/admin/whatsapp/status")
       .then((res) => {
         const s = res.data.session;
@@ -128,17 +275,14 @@ export default function AdminPage() {
       })
       .catch(() => {});
 
-    // 3. Load Notification Rules
+    // Load Notification Rules
     api.get("/api/admin/whatsapp/rules")
       .then((res) => {
-        if (res.data.rules) setRules(res.data.rules);
+        if (res.data?.rules) setRules(res.data.rules);
       })
       .catch(() => {});
 
-    // 3b. Load Support WhatsApp Messages
-    loadSupportMessages();
-
-    // 4. Real-time WebSocket Listeners
+    // WebSockets
     const socket = getSocket();
     if (socket) {
       socket.on("admin:whatsapp:status", (data: any) => {
@@ -147,7 +291,7 @@ export default function AdminPage() {
         if (data.status === "connected") {
           setQrModalVisible(false);
           setQrCode(null);
-          message.success("Official Support WhatsApp (+91 9279259690) connected & synced to cloud!");
+          message.success("Support WhatsApp (+91 9279259690) connected & synced to cloud!");
         }
       });
 
@@ -186,7 +330,7 @@ export default function AdminPage() {
     };
   }, [user, router]);
 
-  // Connect Support WhatsApp
+  // Support WhatsApp Connect / Disconnect
   const handleConnectSupport = async () => {
     try {
       setConnecting(true);
@@ -202,14 +346,14 @@ export default function AdminPage() {
     }
   };
 
-  // Disconnect Support WhatsApp (Strictly Admin Action)
   const handleDisconnectSupport = async () => {
     try {
       setDisconnecting(true);
       await api.post("/api/admin/whatsapp/disconnect");
       setSupportStatus("disconnected");
       setQrCode(null);
-      message.warning("Official Support WhatsApp disconnected and cloud credentials cleared");
+      message.warning("Official Support WhatsApp disconnected and credentials cleared");
+      loadAuditLogs();
     } catch (err: any) {
       message.error(err.response?.data?.error || err.message || "Failed to disconnect support WhatsApp");
     } finally {
@@ -217,7 +361,7 @@ export default function AdminPage() {
     }
   };
 
-  // Send Test Alert from 9279259690
+  // Direct Test Message
   const handleSendTest = async (values: any) => {
     try {
       setSendingTest(true);
@@ -234,7 +378,7 @@ export default function AdminPage() {
     }
   };
 
-  // Toggle Notification Rule
+  // Notification Rules Toggle
   const handleRuleToggle = async (ruleKey: string, checked: boolean) => {
     const updated = { ...rules, [ruleKey]: checked };
     setRules(updated);
@@ -249,14 +393,22 @@ export default function AdminPage() {
     }
   };
 
-  const handleUpdateUserAccount = async (targetUser: AdminUser, patch: { status?: "active" | "suspended"; plan?: "free" | "pro" }) => {
+  // User Actions
+  const handleUpdateMerchant = async (target: MerchantItem, patch: { status?: "active" | "suspended"; plan?: "free" | "pro"; businessType?: "retail" | "wholesale" | "services" }) => {
     try {
-      setUpdatingUserId(targetUser.id);
-      const res = await api.put(`/api/admin/users/${targetUser.id}`, patch);
+      setUpdatingUserId(target.id);
+      const res = await api.put(`/api/admin/users/${target.id}`, patch);
       if (res.data?.user) {
-        setUsers((prev) => prev.map((u) => (u.id === targetUser.id ? res.data.user : u)));
+        setMerchants((prev) =>
+          prev.map((m) => (m.id === target.id ? { ...m, ...res.data.user } : m))
+        );
+        if (selectedMerchant?.id === target.id) {
+          setSelectedMerchant((prev) => (prev ? { ...prev, ...res.data.user } : null));
+        }
       }
-      message.success(`Updated ${targetUser.name}'s account`);
+      message.success(`Updated ${target.name}'s account`);
+      loadAuditLogs();
+      loadAnalytics();
     } catch (err: any) {
       message.error(err.message || "Could not update user account");
     } finally {
@@ -264,6 +416,117 @@ export default function AdminPage() {
     }
   };
 
+  const handleResetPassword = async () => {
+    if (!resetPassModalUser) return;
+    try {
+      setResettingPassword(true);
+      const res = await api.post(`/api/admin/users/${resetPassModalUser.id}/reset-password`, {
+        newPassword: tempPassword.trim() || undefined,
+        notifyWhatsApp: notifyOnWhatsApp,
+      });
+      message.success(res.data.message);
+      if (res.data.temporaryPassword) {
+        Modal.info({
+          title: "Temporary Password Generated",
+          content: (
+            <div>
+              <Paragraph>New password for <strong>{resetPassModalUser.email}</strong>:</Paragraph>
+              <Input.TextArea readOnly value={res.data.temporaryPassword} rows={1} style={{ fontSize: 16, fontWeight: 700 }} />
+              <Paragraph type="secondary" style={{ marginTop: 8 }}>
+                {res.data.notifiedOnWhatsApp
+                  ? "✅ This temporary password was sent to the user on WhatsApp."
+                  : "Share this temporary password with the user so they can sign in."}
+              </Paragraph>
+            </div>
+          ),
+        });
+      }
+      setResetPassModalUser(null);
+      setTempPassword("");
+      loadAuditLogs();
+    } catch (err: any) {
+      message.error(err.message || "Failed to reset password");
+    } finally {
+      setResettingPassword(false);
+    }
+  };
+
+  const handleDisconnectMerchantWhatsApp = async (target: MerchantItem) => {
+    try {
+      await api.post(`/api/admin/users/${target.id}/disconnect-whatsapp`);
+      message.info(`WhatsApp session disconnected for ${target.name}`);
+      setMerchants((prev) =>
+        prev.map((m) => (m.id === target.id ? { ...m, whatsapp: { status: "disconnected" } } : m))
+      );
+      loadAuditLogs();
+    } catch (err: any) {
+      message.error(err.message || "Failed to disconnect WhatsApp");
+    }
+  };
+
+  const handleDeleteUser = async (target: MerchantItem) => {
+    try {
+      await api.delete(`/api/admin/users/${target.id}`);
+      message.success(`Account ${target.email} removed`);
+      setMerchants((prev) => prev.filter((m) => m.id !== target.id));
+      if (selectedMerchant?.id === target.id) {
+        setMerchantDrawerOpen(false);
+      }
+      loadAuditLogs();
+      loadAnalytics();
+    } catch (err: any) {
+      message.error(err.message || "Could not delete user account");
+    }
+  };
+
+  const handleSendProPitch = async (target: MerchantItem) => {
+    try {
+      const res = await api.post(`/api/admin/users/${target.id}/send-pro-pitch`);
+      message.success(res.data.message);
+      loadSupportMessages();
+    } catch (err: any) {
+      message.error(err.message || "Could not send Pro upgrade message");
+    }
+  };
+
+  // Broadcast Handler
+  const handleSendBroadcast = async () => {
+    if (!broadcastText.trim()) {
+      message.warning("Please enter broadcast message content");
+      return;
+    }
+    try {
+      setSendingBroadcast(true);
+      const res = await api.post("/api/admin/whatsapp/broadcast", {
+        segment: broadcastSegment,
+        messageText: broadcastText.trim(),
+      });
+      message.success(res.data.message);
+      setBroadcastText("");
+      loadAuditLogs();
+      loadSupportMessages();
+    } catch (err: any) {
+      message.error(err.message || "Failed to send broadcast");
+    } finally {
+      setSendingBroadcast(false);
+    }
+  };
+
+  // Announcement Handler
+  const handleSaveAnnouncement = async () => {
+    try {
+      setSavingAnnouncement(true);
+      const res = await api.post("/api/admin/announcement", announcement);
+      message.success(res.data.message);
+      loadAuditLogs();
+    } catch (err: any) {
+      message.error(err.message || "Failed to save announcement");
+    } finally {
+      setSavingAnnouncement(false);
+    }
+  };
+
+  // Full Backup Download
   const handleDownloadBackup = async () => {
     try {
       setDownloadingBackup(true);
@@ -285,121 +548,919 @@ export default function AdminPage() {
     }
   };
 
-  const columns = [
+  // Export Merchants CSV
+  const handleExportMerchantsCSV = () => {
+    if (merchants.length === 0) {
+      message.info("No merchants to export");
+      return;
+    }
+    const headers = [
+      "User ID",
+      "Owner Name",
+      "Email",
+      "Role",
+      "Business Type",
+      "Store Name",
+      "Phone",
+      "Plan",
+      "Status",
+      "Orders Count",
+      "Total Revenue (INR)",
+      "Products Count",
+      "Customers Count",
+      "Leads Count",
+      "Joined Date",
+    ];
+    const rows = filteredMerchants.map((m) => [
+      m.id,
+      m.name,
+      m.email,
+      m.role,
+      m.businessType,
+      m.business?.name || "",
+      m.business?.phone || "",
+      m.plan,
+      m.status,
+      m.counts?.orders || 0,
+      m.counts?.revenue || 0,
+      m.counts?.products || 0,
+      m.counts?.customers || 0,
+      m.counts?.leads || 0,
+      m.createdAt ? new Date(m.createdAt).toLocaleDateString() : "",
+    ]);
+    downloadCsv(`giniespace-merchants-${new Date().toISOString().slice(0, 10)}.csv`, headers, rows);
+    message.success("Merchants list exported as CSV!");
+  };
+
+  // Filtered Merchants
+  const filteredMerchants = useMemo(() => {
+    return merchants.filter((m) => {
+      if (planFilter !== "all" && m.plan !== planFilter) return false;
+      if (statusFilter !== "all" && m.status !== statusFilter) return false;
+      if (typeFilter !== "all" && m.businessType !== typeFilter) return false;
+
+      if (!searchTerm.trim()) return true;
+      const q = searchTerm.toLowerCase().trim();
+      return (
+        m.name?.toLowerCase().includes(q) ||
+        m.email?.toLowerCase().includes(q) ||
+        m.business?.name?.toLowerCase().includes(q) ||
+        m.business?.phone?.includes(q) ||
+        m.business?.slug?.toLowerCase().includes(q)
+      );
+    });
+  }, [merchants, searchTerm, planFilter, statusFilter, typeFilter]);
+
+  // Target count for selected broadcast segment
+  const broadcastTargetCount = useMemo(() => {
+    const targets = merchants.filter((m) => m.role !== "staff" && m.status !== "suspended");
+    if (broadcastSegment === "free") return targets.filter((m) => m.plan === "free").length;
+    if (broadcastSegment === "pro") return targets.filter((m) => m.plan === "pro").length;
+    if (broadcastSegment === "retail" || broadcastSegment === "wholesale" || broadcastSegment === "services") {
+      return targets.filter((m) => m.businessType === broadcastSegment).length;
+    }
+    return targets.length;
+  }, [merchants, broadcastSegment]);
+
+  // Grouped Support Conversations (1 thread per phone number)
+  const conversationThreads = useMemo(() => {
+    const threadMap: Record<string, { phone: string; name: string; messages: SupportMessage[] }> = {};
+    for (const msg of supportMessages) {
+      const phone = msg.contactPhone || "unknown";
+      if (!threadMap[phone]) {
+        threadMap[phone] = {
+          phone,
+          name: msg.contactName || `+${phone}`,
+          messages: [],
+        };
+      }
+      threadMap[phone].messages.push(msg);
+    }
+
+    const threads = Object.values(threadMap).map((t) => {
+      const sorted = [...t.messages].sort(
+        (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      );
+      const latest = sorted[0];
+      const isOut = latest?.fromMe === "true" || latest?.fromMe === true;
+      return {
+        phone: t.phone,
+        name: t.name,
+        latestText: latest?.text || "",
+        latestTimestamp: latest?.timestamp || "",
+        lastFromMe: isOut,
+        messageCount: t.messages.length,
+        messages: sorted,
+      };
+    });
+
+    threads.sort((a, b) => new Date(b.latestTimestamp).getTime() - new Date(a.latestTimestamp).getTime());
+
+    return threads.filter((t) => {
+      if (needsReplyOnly && t.lastFromMe) return false;
+      if (!supportSearch.trim()) return true;
+      const q = supportSearch.toLowerCase().trim();
+      return t.phone.includes(q) || t.name.toLowerCase().includes(q) || t.latestText.toLowerCase().includes(q);
+    });
+  }, [supportMessages, needsReplyOnly, supportSearch]);
+
+  const activeThread = useMemo(() => {
+    if (!activeChatPhone) return null;
+    return conversationThreads.find((t) => t.phone === activeChatPhone) || null;
+  }, [conversationThreads, activeChatPhone]);
+
+  // Canned Quick Reply Templates
+  const CANNED_REPLIES = [
     {
-      title: "Name",
-      dataIndex: "name",
-      key: "name",
-      render: (name: string) => <Text strong>{name}</Text>,
+      title: "Store Setup Help",
+      text: "Namaste! GinieSpace support team me aapka swagat hai. Aapka online storefront setup karne me hum aapki madad kar sakte hain. Aapka kya query hai?",
     },
     {
-      title: "Email",
-      dataIndex: "email",
-      key: "email",
+      title: "WhatsApp QR Link Guide",
+      text: "WhatsApp link karne ke liye: WhatsApp open karein $\\rightarrow$ Settings / 3-dots $\\rightarrow$ 'Linked Devices' $\\rightarrow$ 'Link a Device' par click karein aur dashboard par dikh rahe QR code ko scan karein.",
     },
     {
-      title: "Business Type",
-      dataIndex: "businessType",
-      key: "businessType",
-      render: (type: string) => (
-        <Tag color={type === "wholesale" ? "blue" : type === "services" ? "purple" : "green"}>
-          {type?.toUpperCase() || "RETAIL"}
-        </Tag>
-      ),
+      title: "PRO Plan Upgrade Details",
+      text: "GinieSpace PRO plan me aapko Unlimited Catalog, Unlimited Leads Finder, 10 Staff Accounts aur Bulk WhatsApp alerts milte hain. Upgrade ke liye UPI ID: info.giniespace@okaxis par ₹499 pay karke screenshot bhej sakte hain.",
     },
     {
-      title: "Role",
-      dataIndex: "role",
-      key: "role",
-      render: (role: string) => (
-        <Tag color={role === "admin" ? "purple" : "default"}>
-          {role?.toUpperCase()}
-        </Tag>
-      ),
-    },
-    {
-      title: "Joined On",
-      dataIndex: "createdAt",
-      key: "createdAt",
-      render: (date: string) => new Date(date).toLocaleDateString(),
-    },
-    {
-      title: "Plan",
-      dataIndex: "plan",
-      key: "plan",
-      render: (plan: string | undefined, record: AdminUser) => (
-        <Select
-          size="small"
-          value={plan || "free"}
-          style={{ width: 95 }}
-          loading={updatingUserId === record.id}
-          onChange={(val) => handleUpdateUserAccount(record, { plan: val as "free" | "pro" })}
-          options={[
-            { value: "free", label: "FREE" },
-            { value: "pro", label: "PRO" },
-          ]}
-        />
-      ),
-    },
-    {
-      title: "Status & Access",
-      dataIndex: "status",
-      key: "status",
-      render: (status: string | undefined, record: AdminUser) => {
-        const isSuspended = status === "suspended";
-        return (
-          <Space>
-            <Tag color={isSuspended ? "red" : "green"}>{isSuspended ? "SUSPENDED" : "ACTIVE"}</Tag>
-            {record.role !== "admin" && (
-              <Button
-                size="small"
-                danger={!isSuspended}
-                loading={updatingUserId === record.id}
-                onClick={() => handleUpdateUserAccount(record, { status: isSuspended ? "active" : "suspended" })}
-              >
-                {isSuspended ? "Activate" : "Suspend"}
-              </Button>
-            )}
-          </Space>
-        );
-      },
+      title: "Order Processed Update",
+      text: "Aapka order receive ho gaya hai aur store owner ise dispatch ke liye ready kar rahe hain. Kisi bhi sahayata ke liye aap hume yahan text kar sakte hain.",
     },
   ];
 
-  const totalUsers = users.length;
-  const retailUsers = users.filter((u) => u.businessType === "retail").length;
-  const wholesaleUsers = users.filter((u) => u.businessType === "wholesale").length;
-  const serviceUsers = users.filter((u) => u.businessType === "services").length;
-
   return (
     <AppLayout>
-      <div style={{ marginBottom: 20 }}>
-        <Title level={4} style={{ margin: 0 }}>Platform Administration</Title>
-        <Text type="secondary">Central control for GinieSpace Official Bot (+91 9279259690), notifications, and user workspaces</Text>
+      <div style={{ marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <Title level={4} style={{ margin: 0 }}>GinieSpace Platform Administration</Title>
+          <Text type="secondary">Central management for merchant workspaces, analytics, WhatsApp engine, and support operations</Text>
+        </div>
+        <Space wrap>
+          <Button icon={<DownloadOutlined />} loading={downloadingBackup} onClick={handleDownloadBackup}>
+            Full Backup (JSON)
+          </Button>
+          <Button type="primary" icon={<SyncOutlined />} onClick={() => { loadAnalytics(); loadMerchants(); loadSupportMessages(); loadAuditLogs(); }}>
+            Refresh Data
+          </Button>
+        </Space>
       </div>
 
       <Tabs
-        defaultActiveKey="whatsapp"
+        activeKey={activeTab}
+        onChange={setActiveTab}
         items={[
+          // TAB 1: PLATFORM OVERVIEW (Analytics & KPIs)
           {
-            key: "whatsapp",
+            key: "overview",
             label: (
               <span>
-                <PhoneOutlined /> Official Support WhatsApp (+91 9279259690)
+                <DashboardOutlined /> Platform Overview
               </span>
             ),
             children: (
               <div>
-                <Alert
-                  type="info"
-                  showIcon
-                  message="GinieSpace Central Support & Notification Engine"
-                  description="Ye helpline (+91 9279259690) poore system ke notifications, naye users ke alerts, order confirmations, aur customer queries ke liye use hoti hai. Cloud Session Sync ke kaaran server restart hone par bhi ye kabhi disconnect nahi hoga."
-                  style={{ marginBottom: 20, borderRadius: 8 }}
-                />
+                {loadingAnalytics ? (
+                  <div style={{ textAlign: "center", padding: "60px 0" }}>
+                    <Spin size="large" />
+                  </div>
+                ) : (
+                  <div>
+                    {/* Top KPI Cards */}
+                    <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                      <Col xs={24} sm={12} lg={6}>
+                        <Card style={{ borderRadius: 12, background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", color: "#fff" }}>
+                          <Statistic
+                            title={<span style={{ color: "rgba(255,255,255,0.85)" }}>Total Platform GMV</span>}
+                            value={analytics?.overview?.totalRevenue || 0}
+                            precision={0}
+                            prefix={<DollarOutlined style={{ color: "#fff" }} />}
+                            formatter={(val) => `₹${Number(val).toLocaleString("en-IN")}`}
+                            valueStyle={{ color: "#fff", fontWeight: 700 }}
+                          />
+                          <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: 12 }}>
+                            From {analytics?.overview?.totalOrders || 0} customer orders
+                          </Text>
+                        </Card>
+                      </Col>
 
-                <Row gutter={[20, 20]}>
-                  {/* Connection Status Card */}
+                      <Col xs={24} sm={12} lg={6}>
+                        <Card style={{ borderRadius: 12, background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)", color: "#fff" }}>
+                          <Statistic
+                            title={<span style={{ color: "rgba(255,255,255,0.85)" }}>Active Business Accounts</span>}
+                            value={analytics?.overview?.totalMerchants || 0}
+                            prefix={<ShopOutlined style={{ color: "#fff" }} />}
+                            valueStyle={{ color: "#fff", fontWeight: 700 }}
+                          />
+                          <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: 12 }}>
+                            + {analytics?.overview?.totalStaff || 0} team staff accounts
+                          </Text>
+                        </Card>
+                      </Col>
+
+                      <Col xs={24} sm={12} lg={6}>
+                        <Card style={{ borderRadius: 12, background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)", color: "#fff" }}>
+                          <Statistic
+                            title={<span style={{ color: "rgba(255,255,255,0.85)" }}>Active WhatsApp Sessions</span>}
+                            value={analytics?.overview?.activeWhatsAppSessions || 0}
+                            prefix={<PhoneOutlined style={{ color: "#fff" }} />}
+                            valueStyle={{ color: "#fff", fontWeight: 700 }}
+                          />
+                          <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: 12 }}>
+                            Official Bot: {supportStatus === "connected" ? "ONLINE" : "OFFLINE"}
+                          </Text>
+                        </Card>
+                      </Col>
+
+                      <Col xs={24} sm={12} lg={6}>
+                        <Card style={{ borderRadius: 12, background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", color: "#fff" }}>
+                          <Statistic
+                            title={<span style={{ color: "rgba(255,255,255,0.85)" }}>Catalog & Leads Engine</span>}
+                            value={(analytics?.overview?.totalProducts || 0) + (analytics?.overview?.totalLeads || 0)}
+                            prefix={<ThunderboltOutlined style={{ color: "#fff" }} />}
+                            valueStyle={{ color: "#fff", fontWeight: 700 }}
+                          />
+                          <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: 12 }}>
+                            {analytics?.overview?.totalProducts || 0} products | {analytics?.overview?.totalLeads || 0} leads
+                          </Text>
+                        </Card>
+                      </Col>
+                    </Row>
+
+                    {/* Breakdown & Leaderboard */}
+                    <Row gutter={[20, 20]} style={{ marginBottom: 24 }}>
+                      <Col xs={24} lg={12}>
+                        <Card title="Business Mode & Plan Distribution" style={{ borderRadius: 12, height: "100%" }}>
+                          <div style={{ marginBottom: 16 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                              <Text strong>Retail Stores ({analytics?.overview?.businessTypeBreakdown?.retail || 0})</Text>
+                              <Text type="secondary">
+                                {Math.round(((analytics?.overview?.businessTypeBreakdown?.retail || 0) / Math.max(1, analytics?.overview?.totalMerchants || 1)) * 100)}%
+                              </Text>
+                            </div>
+                            <Progress percent={Math.round(((analytics?.overview?.businessTypeBreakdown?.retail || 0) / Math.max(1, analytics?.overview?.totalMerchants || 1)) * 100)} strokeColor="#10b981" />
+                          </div>
+
+                          <div style={{ marginBottom: 16 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                              <Text strong>Wholesale Hubs ({analytics?.overview?.businessTypeBreakdown?.wholesale || 0})</Text>
+                              <Text type="secondary">
+                                {Math.round(((analytics?.overview?.businessTypeBreakdown?.wholesale || 0) / Math.max(1, analytics?.overview?.totalMerchants || 1)) * 100)}%
+                              </Text>
+                            </div>
+                            <Progress percent={Math.round(((analytics?.overview?.businessTypeBreakdown?.wholesale || 0) / Math.max(1, analytics?.overview?.totalMerchants || 1)) * 100)} strokeColor="#3b82f6" />
+                          </div>
+
+                          <div style={{ marginBottom: 20 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                              <Text strong>Services & Appointments ({analytics?.overview?.businessTypeBreakdown?.services || 0})</Text>
+                              <Text type="secondary">
+                                {Math.round(((analytics?.overview?.businessTypeBreakdown?.services || 0) / Math.max(1, analytics?.overview?.totalMerchants || 1)) * 100)}%
+                              </Text>
+                            </div>
+                            <Progress percent={Math.round(((analytics?.overview?.businessTypeBreakdown?.services || 0) / Math.max(1, analytics?.overview?.totalMerchants || 1)) * 100)} strokeColor="#8b5cf6" />
+                          </div>
+
+                          <Divider style={{ margin: "16px 0" }} />
+
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <div>
+                              <Text type="secondary">Free vs Pro Subscribers</Text>
+                              <div>
+                                <Tag color="gold" style={{ fontSize: 13, padding: "2px 8px" }}>
+                                  PRO: {analytics?.overview?.planBreakdown?.pro || 0}
+                                </Tag>
+                                <Tag color="default" style={{ fontSize: 13, padding: "2px 8px" }}>
+                                  FREE: {analytics?.overview?.planBreakdown?.free || 0}
+                                </Tag>
+                              </div>
+                            </div>
+                            <Button size="small" type="primary" onClick={() => setActiveTab("merchants")}>
+                              Manage Users
+                            </Button>
+                          </div>
+                        </Card>
+                      </Col>
+
+                      <Col xs={24} lg={12}>
+                        <Card title="Top Performing Businesses" style={{ borderRadius: 12, height: "100%" }}>
+                          <Table
+                            dataSource={analytics?.topMerchants || []}
+                            rowKey="id"
+                            pagination={false}
+                            size="small"
+                            columns={[
+                              {
+                                title: "Store & Owner",
+                                key: "store",
+                                render: (_: any, r: any) => (
+                                  <div>
+                                    <Text strong>{r.businessName}</Text>
+                                    <div style={{ fontSize: 11, color: "#8c8c8c" }}>{r.name} ({r.email})</div>
+                                  </div>
+                                ),
+                              },
+                              {
+                                title: "Mode",
+                                dataIndex: "businessType",
+                                key: "mode",
+                                render: (t: string) => (
+                                  <Tag color={t === "wholesale" ? "blue" : t === "services" ? "purple" : "green"}>
+                                    {t?.toUpperCase()}
+                                  </Tag>
+                                ),
+                              },
+                              {
+                                title: "Orders",
+                                dataIndex: "orders",
+                                key: "orders",
+                                align: "center",
+                              },
+                              {
+                                title: "Revenue",
+                                dataIndex: "revenue",
+                                key: "revenue",
+                                align: "right",
+                                render: (rev: number) => <Text strong style={{ color: "#10b981" }}>₹{Number(rev || 0).toLocaleString("en-IN")}</Text>,
+                              },
+                            ]}
+                          />
+                        </Card>
+                      </Col>
+                    </Row>
+
+                    {/* System Status Card */}
+                    <Card style={{ borderRadius: 12 }}>
+                      <Row gutter={[16, 16]} align="middle">
+                        <Col xs={24} md={8}>
+                          <Space>
+                            <Badge status="processing" color="#10b981" />
+                            <Text strong>API & WebSocket Server Status:</Text>
+                            <Tag color="success">HEALTHY & OPERATIONAL</Tag>
+                          </Space>
+                        </Col>
+                        <Col xs={24} md={8}>
+                          <Text type="secondary">Process Uptime: </Text>
+                          <Text strong>{Math.floor((analytics?.systemHealth?.uptimeSeconds || 0) / 3600)}h {Math.floor(((analytics?.systemHealth?.uptimeSeconds || 0) % 3600) / 60)}m</Text>
+                        </Col>
+                        <Col xs={24} md={8} style={{ textAlign: "right" }}>
+                          <Text type="secondary">Last Sync: {analytics?.systemHealth?.timestamp ? new Date(analytics.systemHealth.timestamp).toLocaleTimeString() : "Live"}</Text>
+                        </Col>
+                      </Row>
+                    </Card>
+                  </div>
+                )}
+              </div>
+            ),
+          },
+
+          // TAB 2: MERCHANTS & USERS (360° Management)
+          {
+            key: "merchants",
+            label: (
+              <span>
+                <UserOutlined /> Merchants & Workspaces ({filteredMerchants.length})
+              </span>
+            ),
+            children: (
+              <div>
+                {/* Search & Filters */}
+                <Card style={{ marginBottom: 16, borderRadius: 12 }}>
+                  <Row gutter={[16, 12]} align="middle">
+                    <Col xs={24} md={8}>
+                      <Input
+                        placeholder="Search by merchant name, email, store, or phone..."
+                        prefix={<SearchOutlined style={{ color: "#8c8c8c" }} />}
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        allowClear
+                      />
+                    </Col>
+                    <Col xs={12} md={4}>
+                      <Select
+                        style={{ width: "100%" }}
+                        value={planFilter}
+                        onChange={setPlanFilter}
+                        options={[
+                          { value: "all", label: "All Plans" },
+                          { value: "free", label: "FREE Plan" },
+                          { value: "pro", label: "PRO Plan" },
+                        ]}
+                      />
+                    </Col>
+                    <Col xs={12} md={4}>
+                      <Select
+                        style={{ width: "100%" }}
+                        value={typeFilter}
+                        onChange={setTypeFilter}
+                        options={[
+                          { value: "all", label: "All Modes" },
+                          { value: "retail", label: "Retail Stores" },
+                          { value: "wholesale", label: "Wholesale Hubs" },
+                          { value: "services", label: "Service Hubs" },
+                        ]}
+                      />
+                    </Col>
+                    <Col xs={12} md={4}>
+                      <Select
+                        style={{ width: "100%" }}
+                        value={statusFilter}
+                        onChange={setStatusFilter}
+                        options={[
+                          { value: "all", label: "All Status" },
+                          { value: "active", label: "Active" },
+                          { value: "suspended", label: "Suspended" },
+                        ]}
+                      />
+                    </Col>
+                    <Col xs={12} md={4} style={{ textAlign: "right" }}>
+                      <Button icon={<DownloadOutlined />} onClick={handleExportMerchantsCSV}>
+                        Export CSV
+                      </Button>
+                    </Col>
+                  </Row>
+                </Card>
+
+                {/* Merchants Table */}
+                <Card style={{ borderRadius: 12 }}>
+                  <Table
+                    dataSource={filteredMerchants}
+                    rowKey="id"
+                    loading={loadingMerchants}
+                    pagination={{ pageSize: 10, showTotal: (total) => `Total ${total} merchants` }}
+                    columns={[
+                      {
+                        title: "Merchant / Owner",
+                        key: "merchant",
+                        render: (_: any, r: MerchantItem) => (
+                          <div>
+                            <Text strong>{r.name}</Text>
+                            <div style={{ fontSize: 12, color: "#595959" }}>{r.email}</div>
+                            {r.business?.phone && (
+                              <div style={{ fontSize: 11, color: "#8c8c8c" }}>📞 {r.business.phone}</div>
+                            )}
+                          </div>
+                        ),
+                      },
+                      {
+                        title: "Storefront",
+                        key: "store",
+                        render: (_: any, r: MerchantItem) => (
+                          <div>
+                            <div style={{ fontWeight: 600 }}>{r.business?.name || "No Store Name"}</div>
+                            <Tag color={r.businessType === "wholesale" ? "blue" : r.businessType === "services" ? "purple" : "green"}>
+                              {r.businessType?.toUpperCase()}
+                            </Tag>
+                            {r.role === "admin" && <Tag color="purple">ADMIN</Tag>}
+                            {r.role === "staff" && <Tag color="cyan">STAFF</Tag>}
+                          </div>
+                        ),
+                      },
+                      {
+                        title: "Plan",
+                        key: "plan",
+                        render: (_: any, r: MerchantItem) => (
+                          <Select
+                            size="small"
+                            value={r.plan || "free"}
+                            style={{ width: 88 }}
+                            loading={updatingUserId === r.id}
+                            onChange={(val) => handleUpdateMerchant(r, { plan: val as "free" | "pro" })}
+                            options={[
+                              { value: "free", label: "FREE" },
+                              { value: "pro", label: "PRO" },
+                            ]}
+                          />
+                        ),
+                      },
+                      {
+                        title: "WA Status",
+                        key: "waStatus",
+                        render: (_: any, r: MerchantItem) => {
+                          const status = r.whatsapp?.status;
+                          return status === "connected" ? (
+                            <Tag icon={<CheckCircleOutlined />} color="success">LINKED</Tag>
+                          ) : status === "connecting" ? (
+                            <Tag icon={<SyncOutlined spin />} color="warning">SCANNING</Tag>
+                          ) : (
+                            <Tag color="default">OFFLINE</Tag>
+                          );
+                        },
+                      },
+                      {
+                        title: "Usage & Activity",
+                        key: "activity",
+                        render: (_: any, r: MerchantItem) => (
+                          <div style={{ fontSize: 12 }}>
+                            <div>📦 {r.counts?.products || 0} items | 🛒 {r.counts?.orders || 0} orders</div>
+                            <div style={{ color: "#10b981", fontWeight: 600 }}>
+                              ₹{Number(r.counts?.revenue || 0).toLocaleString("en-IN")} sales
+                            </div>
+                          </div>
+                        ),
+                      },
+                      {
+                        title: "Status",
+                        key: "status",
+                        render: (_: any, r: MerchantItem) => {
+                          const isSuspended = r.status === "suspended";
+                          return (
+                            <Tag color={isSuspended ? "red" : "green"}>
+                              {isSuspended ? "SUSPENDED" : "ACTIVE"}
+                            </Tag>
+                          );
+                        },
+                      },
+                      {
+                        title: "Actions",
+                        key: "actions",
+                        align: "right",
+                        render: (_: any, r: MerchantItem) => (
+                          <Space size="small">
+                            <Tooltip title="View 360° Profile & Stats">
+                              <Button
+                                size="small"
+                                icon={<EyeOutlined />}
+                                onClick={() => {
+                                  setSelectedMerchant(r);
+                                  setMerchantDrawerOpen(true);
+                                }}
+                              />
+                            </Tooltip>
+
+                            <Dropdown
+                              menu={{
+                                items: [
+                                  {
+                                    key: "pro-pitch",
+                                    label: "Send Pro Upgrade on WhatsApp",
+                                    icon: <CrownOutlined style={{ color: "#f59e0b" }} />,
+                                    disabled: r.plan === "pro" || !r.business?.phone,
+                                    onClick: () => handleSendProPitch(r),
+                                  },
+                                  {
+                                    key: "reset-pass",
+                                    label: "Reset Password",
+                                    icon: <KeyOutlined />,
+                                    onClick: () => {
+                                      setResetPassModalUser(r);
+                                      setTempPassword("");
+                                    },
+                                  },
+                                  {
+                                    key: "disconnect-wa",
+                                    label: "Force Disconnect WhatsApp",
+                                    icon: <DisconnectOutlined style={{ color: "#ff4d4f" }} />,
+                                    disabled: r.whatsapp?.status === "disconnected",
+                                    onClick: () => handleDisconnectMerchantWhatsApp(r),
+                                  },
+                                  {
+                                    type: "divider",
+                                  },
+                                  {
+                                    key: "toggle-status",
+                                    label: r.status === "suspended" ? "Reactivate Account" : "Suspend Account",
+                                    danger: r.status !== "suspended",
+                                    disabled: r.role === "admin",
+                                    onClick: () => handleUpdateMerchant(r, { status: r.status === "suspended" ? "active" : "suspended" }),
+                                  },
+                                  {
+                                    key: "delete-user",
+                                    label: "Delete User",
+                                    danger: true,
+                                    disabled: r.role === "admin",
+                                    onClick: () => {
+                                      Modal.confirm({
+                                        title: `Delete ${r.name}'s account?`,
+                                        content: `Are you sure you want to delete ${r.email}? This cannot be undone.`,
+                                        okText: "Delete Account",
+                                        okButtonProps: { danger: true },
+                                        onOk: () => handleDeleteUser(r),
+                                      });
+                                    },
+                                  },
+                                ],
+                              }}
+                            >
+                              <Button size="small">Manage ▾</Button>
+                            </Dropdown>
+                          </Space>
+                        ),
+                      },
+                    ]}
+                  />
+                </Card>
+              </div>
+            ),
+          },
+
+          // TAB 3: BROADCAST & PLATFORM NOTICES
+          {
+            key: "broadcast",
+            label: (
+              <span>
+                <NotificationOutlined /> Broadcast & Notices
+              </span>
+            ),
+            children: (
+              <Row gutter={[24, 24]}>
+                {/* Platform Announcement Banner Manager */}
+                <Col xs={24} lg={12}>
+                  <Card
+                    title={
+                      <Space>
+                        <BellOutlined style={{ color: "#faad14" }} />
+                        <span>Platform Announcement Banner</span>
+                      </Space>
+                    }
+                    style={{ borderRadius: 12, height: "100%" }}
+                  >
+                    <Paragraph type="secondary" style={{ fontSize: 13 }}>
+                      Ye banner sabhi users ke dashboard aur app header me top par real-time me display hota hai. System maintenance ya offers ke liye use karein.
+                    </Paragraph>
+
+                    <div style={{ marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <Text strong>Active Banner Status:</Text>
+                      <Switch
+                        checked={announcement.enabled}
+                        onChange={(val) => setAnnouncement((prev) => ({ ...prev, enabled: val }))}
+                      />
+                    </div>
+
+                    <Form layout="vertical">
+                      <Form.Item label="Banner Type">
+                        <Radio.Group
+                          value={announcement.type}
+                          onChange={(e) => setAnnouncement((prev) => ({ ...prev, type: e.target.value }))}
+                        >
+                          <Radio.Button value="info">Info</Radio.Button>
+                          <Radio.Button value="warning">Warning</Radio.Button>
+                          <Radio.Button value="success">Success</Radio.Button>
+                          <Radio.Button value="error">Critical</Radio.Button>
+                        </Radio.Group>
+                      </Form.Item>
+
+                      <Form.Item label="Banner Headline">
+                        <Input
+                          placeholder="e.g. Scheduled System Upgrade"
+                          value={announcement.title}
+                          onChange={(e) => setAnnouncement((prev) => ({ ...prev, title: e.target.value }))}
+                        />
+                      </Form.Item>
+
+                      <Form.Item label="Banner Message Content">
+                        <Input.TextArea
+                          rows={3}
+                          placeholder="Type notice message visible to all logged-in users..."
+                          value={announcement.message}
+                          onChange={(e) => setAnnouncement((prev) => ({ ...prev, message: e.target.value }))}
+                        />
+                      </Form.Item>
+
+                      {announcement.message && (
+                        <div style={{ marginBottom: 16 }}>
+                          <Text type="secondary" style={{ display: "block", marginBottom: 6 }}>Live Preview:</Text>
+                          <Alert
+                            message={announcement.title || "Platform Notice"}
+                            description={announcement.message}
+                            type={announcement.type}
+                            showIcon
+                          />
+                        </div>
+                      )}
+
+                      <Button
+                        type="primary"
+                        icon={<CheckOutlined />}
+                        loading={savingAnnouncement}
+                        onClick={handleSaveAnnouncement}
+                      >
+                        Publish Announcement
+                      </Button>
+                    </Form>
+                  </Card>
+                </Col>
+
+                {/* Bulk WhatsApp Broadcast Sender */}
+                <Col xs={24} lg={12}>
+                  <Card
+                    title={
+                      <Space>
+                        <SendOutlined style={{ color: "#25D366" }} />
+                        <span>Bulk WhatsApp Broadcast (+91 9279259690)</span>
+                      </Space>
+                    }
+                    style={{ borderRadius: 12, height: "100%" }}
+                  >
+                    <Paragraph type="secondary" style={{ fontSize: 13 }}>
+                      Official GinieSpace bot (+91 9279259690) se sabhi merchants ko ek saath message ya offers bhejein. Message me <code>{"{{name}}"}</code> merchant ke real name se replace ho jayega.
+                    </Paragraph>
+
+                    <Form layout="vertical">
+                      <Form.Item label="Target Audience Segment">
+                        <Select
+                          value={broadcastSegment}
+                          onChange={setBroadcastSegment}
+                          options={[
+                            { value: "all", label: `All Active Businesses (${merchants.filter((m) => m.role !== "staff" && m.status !== "suspended").length} users)` },
+                            { value: "free", label: `Free Plan Users Only (${merchants.filter((m) => m.role !== "staff" && m.status !== "suspended" && m.plan === "free").length} users)` },
+                            { value: "pro", label: `Pro Subscribers Only (${merchants.filter((m) => m.role !== "staff" && m.status !== "suspended" && m.plan === "pro").length} users)` },
+                            { value: "retail", label: "Retail Stores" },
+                            { value: "wholesale", label: "Wholesale Businesses" },
+                            { value: "services", label: "Service Providers" },
+                          ]}
+                        />
+                      </Form.Item>
+
+                      <div style={{ marginBottom: 12 }}>
+                        <Tag color="cyan">Estimated WhatsApp Recipients: {broadcastTargetCount} businesses</Tag>
+                        {supportStatus !== "connected" && (
+                          <Tag color="error">⚠️ Support Bot Disconnected</Tag>
+                        )}
+                      </div>
+
+                      <Form.Item label="Broadcast Message">
+                        <Input.TextArea
+                          rows={5}
+                          placeholder="Namaste {{name}}! GinieSpace has introduced new service features to help your business grow..."
+                          value={broadcastText}
+                          onChange={(e) => setBroadcastText(e.target.value)}
+                        />
+                      </Form.Item>
+
+                      <Space wrap>
+                        <Button
+                          size="small"
+                          onClick={() =>
+                            setBroadcastText(
+                              "Namaste {{name}}! 🚀 GinieSpace par ab naye Services aur Booking features live ho chuke hain. Aap apne catalog me services add kar sakte hain aur Google Maps leads search kar sakte hain!\n\n- GinieSpace Official Support (+91 9279259690)"
+                            )
+                          }
+                        >
+                          Template: New Features
+                        </Button>
+                        <Button
+                          size="small"
+                          onClick={() =>
+                            setBroadcastText(
+                              "🌟 Special Pro Upgrade Offer for {{name}}! Unlimited products, Google Maps leads aur 10 team staff accounts unlock karein only ₹499/month me. UPI ID: info.giniespace@okaxis par pay karein aur screenshot share karein!\n\n- GinieSpace Support"
+                            )
+                          }
+                        >
+                          Template: Pro Offer
+                        </Button>
+                      </Space>
+
+                      <Divider style={{ margin: "16px 0" }} />
+
+                      <Popconfirm
+                        title="Send Broadcast Message?"
+                        description={`Ye message ${broadcastTargetCount} active users ke WhatsApp par bheja jayega.`}
+                        okText="Yes, Send Broadcast"
+                        onConfirm={handleSendBroadcast}
+                        disabled={supportStatus !== "connected" || !broadcastText.trim()}
+                      >
+                        <Button
+                          type="primary"
+                          icon={<SendOutlined />}
+                          loading={sendingBroadcast}
+                          disabled={supportStatus !== "connected" || !broadcastText.trim()}
+                          style={{
+                            background: supportStatus === "connected" && broadcastText.trim() ? "#25D366" : undefined,
+                            borderColor: supportStatus === "connected" && broadcastText.trim() ? "#25D366" : undefined,
+                          }}
+                        >
+                          Send WhatsApp Broadcast
+                        </Button>
+                      </Popconfirm>
+                    </Form>
+                  </Card>
+                </Col>
+              </Row>
+            ),
+          },
+
+          // TAB 4: SUPPORT QUERIES & SMART INBOX
+          {
+            key: "support",
+            label: (
+              <span>
+                <MessageOutlined /> Smart Support Inbox ({conversationThreads.length})
+              </span>
+            ),
+            children: (
+              <div>
+                <Card style={{ marginBottom: 16, borderRadius: 12 }}>
+                  <Row gutter={[16, 12]} align="middle">
+                    <Col xs={24} md={10}>
+                      <Input
+                        placeholder="Search chats by contact number, name, or message text..."
+                        prefix={<SearchOutlined style={{ color: "#8c8c8c" }} />}
+                        value={supportSearch}
+                        onChange={(e) => setSupportSearch(e.target.value)}
+                        allowClear
+                      />
+                    </Col>
+                    <Col xs={12} md={6}>
+                      <Space>
+                        <Switch checked={needsReplyOnly} onChange={setNeedsReplyOnly} />
+                        <Text strong>Needs Reply Only</Text>
+                      </Space>
+                    </Col>
+                    <Col xs={12} md={8} style={{ textAlign: "right" }}>
+                      <Button icon={<SyncOutlined />} onClick={loadSupportMessages} loading={loadingMessages}>
+                        Refresh Chats
+                      </Button>
+                    </Col>
+                  </Row>
+                </Card>
+
+                <Card style={{ borderRadius: 12 }}>
+                  <Table
+                    dataSource={conversationThreads}
+                    rowKey="phone"
+                    loading={loadingMessages}
+                    pagination={{ pageSize: 10 }}
+                    locale={{ emptyText: "No incoming support queries found." }}
+                    columns={[
+                      {
+                        title: "Customer / Contact",
+                        key: "contact",
+                        render: (_: any, t: any) => (
+                          <div>
+                            <Text strong>{t.name}</Text>
+                            <div style={{ fontSize: 12, color: "#8c8c8c" }}>+{t.phone}</div>
+                          </div>
+                        ),
+                      },
+                      {
+                        title: "Last Message",
+                        key: "msg",
+                        render: (_: any, t: any) => (
+                          <div>
+                            <div style={{ maxWidth: 420, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              {t.latestText}
+                            </div>
+                            <div style={{ fontSize: 11, color: "#8c8c8c" }}>
+                              {t.latestTimestamp ? new Date(t.latestTimestamp).toLocaleString() : ""}
+                            </div>
+                          </div>
+                        ),
+                      },
+                      {
+                        title: "Status",
+                        key: "status",
+                        render: (_: any, t: any) =>
+                          t.lastFromMe ? (
+                            <Tag color="green">REPLIED</Tag>
+                          ) : (
+                            <Tag color="orange">PENDING REPLY</Tag>
+                          ),
+                      },
+                      {
+                        title: "Total Messages",
+                        dataIndex: "messageCount",
+                        key: "count",
+                        align: "center",
+                      },
+                      {
+                        title: "Action",
+                        key: "action",
+                        align: "right",
+                        render: (_: any, t: any) => (
+                          <Button
+                            type="primary"
+                            size="small"
+                            icon={<SendOutlined />}
+                            style={{ background: "#25D366", borderColor: "#25D366" }}
+                            onClick={() => {
+                              setActiveChatPhone(t.phone);
+                              setReplyText("");
+                            }}
+                          >
+                            Open Chat & Reply
+                          </Button>
+                        ),
+                      },
+                    ]}
+                  />
+                </Card>
+              </div>
+            ),
+          },
+
+          // TAB 5: OFFICIAL SUPPORT BOT & AUDIT LOGS
+          {
+            key: "support-bot",
+            label: (
+              <span>
+                <PhoneOutlined /> Official Bot (+91 9279259690)
+              </span>
+            ),
+            children: (
+              <div>
+                <Row gutter={[20, 20]} style={{ marginBottom: 24 }}>
+                  {/* Bot Connection Card */}
                   <Col xs={24} lg={12}>
                     <Card
                       title={
@@ -427,8 +1488,8 @@ export default function AdminPage() {
                         )}
                       </div>
 
-                      <div style={{ marginBottom: 16 }}>
-                        <Text strong>Configured Support Number: </Text>
+                      <div style={{ marginBottom: 12 }}>
+                        <Text strong>Official GinieSpace Helpline: </Text>
                         <Tag color="cyan">+91 9279259690</Tag>
                       </div>
 
@@ -478,7 +1539,7 @@ export default function AdminPage() {
                     </Card>
                   </Col>
 
-                  {/* Send Test Alert Card */}
+                  {/* Direct Test Alert Card */}
                   <Col xs={24} lg={12}>
                     <Card
                       title={
@@ -517,7 +1578,10 @@ export default function AdminPage() {
                           icon={<SendOutlined />}
                           loading={sendingTest}
                           disabled={supportStatus !== "connected"}
-                          style={{ background: supportStatus === "connected" ? "#25D366" : undefined, borderColor: supportStatus === "connected" ? "#25D366" : undefined }}
+                          style={{
+                            background: supportStatus === "connected" ? "#25D366" : undefined,
+                            borderColor: supportStatus === "connected" ? "#25D366" : undefined,
+                          }}
                         >
                           {supportStatus === "connected" ? "Send Test Alert" : "Connect WhatsApp First"}
                         </Button>
@@ -525,7 +1589,7 @@ export default function AdminPage() {
                     </Card>
                   </Col>
 
-                  {/* Automated Platform Notification Rules */}
+                  {/* Notification Rules */}
                   <Col xs={24}>
                     <Card
                       title={
@@ -596,212 +1660,335 @@ export default function AdminPage() {
                               />
                             </div>
                             <Text type="secondary" style={{ fontSize: 12 }}>
-                              Jab koi user 9279259690 par text kare to automatic support menu bhejna.
+                              Jab koi user 9279259690 par text kare to automatic support greeting bhejna.
                             </Text>
                           </Card>
                         </Col>
                       </Row>
                     </Card>
                   </Col>
-                </Row>
-              </div>
-            ),
-          },
-          {
-            key: "users",
-            label: (
-              <span>
-                <UserOutlined /> User & Business Management
-              </span>
-            ),
-            children: (
-              <div>
-                <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-                  <Col xs={24} sm={12} lg={6}>
-                    <Card style={{ borderRadius: 12 }}>
-                      <Statistic
-                        title="Total Business Accounts"
-                        value={totalUsers}
-                        prefix={<UserOutlined style={{ color: "#25D366" }} />}
-                      />
-                    </Card>
-                  </Col>
-                  <Col xs={24} sm={12} lg={6}>
-                    <Card style={{ borderRadius: 12 }}>
-                      <Statistic
-                        title="Retail Businesses"
-                        value={retailUsers}
-                        prefix={<ShopOutlined style={{ color: "#16a34a" }} />}
-                      />
-                    </Card>
-                  </Col>
-                  <Col xs={24} sm={12} lg={6}>
-                    <Card style={{ borderRadius: 12 }}>
-                      <Statistic
-                        title="Wholesale Businesses"
-                        value={wholesaleUsers}
-                        prefix={<ShopOutlined style={{ color: "#0284c7" }} />}
-                      />
-                    </Card>
-                  </Col>
-                  <Col xs={24} sm={12} lg={6}>
-                    <Card style={{ borderRadius: 12 }}>
-                      <Statistic
-                        title="Service Businesses"
-                        value={serviceUsers}
-                        prefix={<ShopOutlined style={{ color: "#7c3aed" }} />}
-                      />
-                    </Card>
-                  </Col>
-                </Row>
 
-                <Card
-                  title="Registered Business Users"
-                  extra={
-                    <Button
-                      icon={<DownloadOutlined />}
-                      loading={downloadingBackup}
-                      onClick={handleDownloadBackup}
-                    >
-                      Download Full Platform Backup (JSON)
-                    </Button>
-                  }
-                  style={{ borderRadius: 12 }}
-                >
-                  <Table
-                    dataSource={users}
-                    columns={columns}
-                    rowKey="id"
-                    loading={loadingUsers}
-                    pagination={{ pageSize: 10 }}
-                  />
-                </Card>
-              </div>
-            ),
-          },
-          {
-            key: "support-queries",
-            label: (
-              <span>
-                <MessageOutlined /> Support Queries ({supportMessages.length})
-              </span>
-            ),
-            children: (
-              <Card
-                title="Incoming User Queries & Support Replies (+91 9279259690)"
-                extra={
-                  <Button icon={<SyncOutlined />} onClick={loadSupportMessages} loading={loadingMessages}>
-                    Refresh
-                  </Button>
-                }
-                style={{ borderRadius: 12 }}
-              >
-                <Table
-                  dataSource={supportMessages}
-                  rowKey="id"
-                  loading={loadingMessages}
-                  pagination={{ pageSize: 10 }}
-                  locale={{ emptyText: "No support queries received yet on +91 9279259690." }}
-                  columns={[
-                    {
-                      title: "Contact",
-                      dataIndex: "contactPhone",
-                      key: "contactPhone",
-                      render: (phone: string, record: any) => (
-                        <div>
-                          <div style={{ fontWeight: 600 }}>{record.contactName || `+${phone}`}</div>
-                          <Text type="secondary" style={{ fontSize: 12 }}>+{String(phone || "").replace(/^\+/, "")}</Text>
-                        </div>
-                      ),
-                    },
-                    {
-                      title: "Type",
-                      dataIndex: "fromMe",
-                      key: "fromMe",
-                      render: (fromMe: string | boolean) => {
-                        const isOut = fromMe === "true" || fromMe === true;
-                        return <Tag color={isOut ? "green" : "blue"}>{isOut ? "SUPPORT REPLY" : "USER QUERY"}</Tag>;
-                      },
-                    },
-                    {
-                      title: "Message",
-                      dataIndex: "text",
-                      key: "text",
-                      render: (txt: string) => <div style={{ maxWidth: 420, whiteSpace: "pre-wrap" }}>{txt}</div>,
-                    },
-                    {
-                      title: "Time",
-                      dataIndex: "timestamp",
-                      key: "timestamp",
-                      render: (ts: string) => (
-                        <Text type="secondary" style={{ fontSize: 12 }}>
-                          {ts ? new Date(ts).toLocaleString() : "-"}
-                        </Text>
-                      ),
-                    },
-                    {
-                      title: "Action",
-                      key: "action",
-                      render: (_: any, record: any) => (
-                        <Button
-                          size="small"
-                          type="primary"
-                          icon={<SendOutlined />}
-                          style={{ background: "#25D366", borderColor: "#25D366" }}
-                          onClick={() => {
-                            setReplyTargetPhone(record.contactPhone);
-                            setReplyText("");
-                          }}
-                        >
-                          Reply
+                  {/* Admin Audit Trail */}
+                  <Col xs={24}>
+                    <Card
+                      title={
+                        <Space>
+                          <HistoryOutlined style={{ color: "#1677ff", fontSize: 18 }} />
+                          <span>Admin Activity Audit Trail</span>
+                        </Space>
+                      }
+                      extra={
+                        <Button icon={<SyncOutlined />} onClick={loadAuditLogs} loading={loadingAuditLogs}>
+                          Refresh Logs
                         </Button>
-                      ),
-                    },
-                  ]}
-                />
-              </Card>
+                      }
+                      style={{ borderRadius: 12 }}
+                    >
+                      <Table
+                        dataSource={auditLogs}
+                        rowKey="id"
+                        loading={loadingAuditLogs}
+                        pagination={{ pageSize: 8 }}
+                        locale={{ emptyText: "No admin actions recorded yet." }}
+                        columns={[
+                          {
+                            title: "Timestamp",
+                            dataIndex: "timestamp",
+                            key: "timestamp",
+                            render: (ts: string) => (ts ? new Date(ts).toLocaleString() : "-"),
+                          },
+                          {
+                            title: "Admin",
+                            dataIndex: "adminEmail",
+                            key: "admin",
+                            render: (email: string) => <Tag color="purple">{email}</Tag>,
+                          },
+                          {
+                            title: "Action",
+                            dataIndex: "action",
+                            key: "action",
+                            render: (act: string) => <Tag color="blue">{act}</Tag>,
+                          },
+                          {
+                            title: "Details",
+                            dataIndex: "details",
+                            key: "details",
+                          },
+                        ]}
+                      />
+                    </Card>
+                  </Col>
+                </Row>
+              </div>
             ),
           },
         ]}
       />
 
-      <Modal
-        title={`Reply via Official Support (+${replyTargetPhone || ""})`}
-        open={Boolean(replyTargetPhone)}
-        onCancel={() => setReplyTargetPhone(null)}
-        confirmLoading={sendingReply}
-        okText="Send Support Reply"
-        onOk={async () => {
-          if (!replyTargetPhone || !replyText.trim()) {
-            message.warning("Please enter reply message");
-            return;
-          }
-          setSendingReply(true);
-          try {
-            await api.post("/api/admin/whatsapp/send-test", {
-              recipientPhone: replyTargetPhone,
-              messageText: replyText.trim(),
-            });
-            message.success(`Reply sent to +${replyTargetPhone}`);
-            setReplyTargetPhone(null);
-            setReplyText("");
-            loadSupportMessages();
-          } catch (err: any) {
-            message.error(err.message || "Failed to send support reply");
-          } finally {
-            setSendingReply(false);
-          }
-        }}
+      {/* 360° Merchant Profile Drawer */}
+      <Drawer
+        title={
+          <Space>
+            <ShopOutlined style={{ color: "#25D366" }} />
+            <span>{selectedMerchant?.business?.name || selectedMerchant?.name}&apos;s 360° Profile</span>
+          </Space>
+        }
+        open={merchantDrawerOpen}
+        onClose={() => setMerchantDrawerOpen(false)}
+        width={560}
       >
-        <Input.TextArea
-          rows={4}
-          placeholder="Type your official GinieSpace support response..."
-          value={replyText}
-          onChange={(e) => setReplyText(e.target.value)}
-        />
+        {selectedMerchant && (
+          <div>
+            <div style={{ marginBottom: 20 }}>
+              <Title level={5} style={{ margin: 0 }}>{selectedMerchant.name}</Title>
+              <Text type="secondary">{selectedMerchant.email}</Text>
+              <div style={{ marginTop: 8 }}>
+                <Tag color={selectedMerchant.businessType === "wholesale" ? "blue" : selectedMerchant.businessType === "services" ? "purple" : "green"}>
+                  {selectedMerchant.businessType?.toUpperCase()}
+                </Tag>
+                <Tag color={selectedMerchant.plan === "pro" ? "gold" : "default"}>
+                  {selectedMerchant.plan?.toUpperCase()} PLAN
+                </Tag>
+                <Tag color={selectedMerchant.status === "suspended" ? "red" : "green"}>
+                  {selectedMerchant.status?.toUpperCase()}
+                </Tag>
+              </div>
+            </div>
+
+            <Card type="inner" title="Storefront & Public Links" style={{ marginBottom: 20, borderRadius: 8 }}>
+              <div style={{ marginBottom: 8 }}>
+                <Text strong>Store Name: </Text>
+                <Text>{selectedMerchant.business?.name || "Not Set"}</Text>
+              </div>
+              <div style={{ marginBottom: 8 }}>
+                <Text strong>WhatsApp Phone: </Text>
+                <Text>{selectedMerchant.business?.phone ? `+${selectedMerchant.business.phone}` : "Not Set"}</Text>
+              </div>
+              <div style={{ marginBottom: 8 }}>
+                <Text strong>Custom Link Slug: </Text>
+                <Tag color="cyan">/{selectedMerchant.business?.slug || selectedMerchant.id}</Tag>
+              </div>
+              <div>
+                <a
+                  href={`/shop/${selectedMerchant.business?.slug || selectedMerchant.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
+                >
+                  <LinkOutlined /> Open Live Storefront
+                </a>
+              </div>
+            </Card>
+
+            <Card type="inner" title="Workspace Usage Metrics" style={{ marginBottom: 20, borderRadius: 8 }}>
+              <Row gutter={[16, 16]}>
+                <Col span={12}>
+                  <Statistic title="Total Orders" value={selectedMerchant.counts?.orders || 0} prefix={<ShoppingOutlined />} />
+                </Col>
+                <Col span={12}>
+                  <Statistic
+                    title="Total Revenue (GMV)"
+                    value={selectedMerchant.counts?.revenue || 0}
+                    formatter={(val) => `₹${Number(val).toLocaleString("en-IN")}`}
+                    valueStyle={{ color: "#10b981", fontWeight: 700 }}
+                  />
+                </Col>
+                <Col span={12}>
+                  <Statistic title="Catalog Products" value={selectedMerchant.counts?.products || 0} />
+                </Col>
+                <Col span={12}>
+                  <Statistic title="Saved Customers" value={selectedMerchant.counts?.customers || 0} prefix={<TeamOutlined />} />
+                </Col>
+                <Col span={12}>
+                  <Statistic title="Leads Discovered" value={selectedMerchant.counts?.leads || 0} />
+                </Col>
+                <Col span={12}>
+                  <Statistic title="Team Staff Accounts" value={selectedMerchant.counts?.staff || 0} />
+                </Col>
+              </Row>
+            </Card>
+
+            <Card type="inner" title="Quick Admin Controls" style={{ borderRadius: 8 }}>
+              <Space direction="vertical" style={{ width: "100%" }}>
+                <Button
+                  block
+                  icon={<CrownOutlined />}
+                  onClick={() => handleSendProPitch(selectedMerchant)}
+                  disabled={selectedMerchant.plan === "pro" || !selectedMerchant.business?.phone}
+                >
+                  Send Pro Upgrade Pitch on WhatsApp
+                </Button>
+
+                <Button
+                  block
+                  icon={<KeyOutlined />}
+                  onClick={() => {
+                    setResetPassModalUser(selectedMerchant);
+                    setTempPassword("");
+                  }}
+                >
+                  Reset Merchant Password
+                </Button>
+
+                <Button
+                  block
+                  danger
+                  icon={<DisconnectOutlined />}
+                  onClick={() => handleDisconnectMerchantWhatsApp(selectedMerchant)}
+                  disabled={selectedMerchant.whatsapp?.status === "disconnected"}
+                >
+                  Force Disconnect Merchant WhatsApp
+                </Button>
+
+                <Button
+                  block
+                  danger={selectedMerchant.status !== "suspended"}
+                  disabled={selectedMerchant.role === "admin"}
+                  onClick={() =>
+                    handleUpdateMerchant(selectedMerchant, {
+                      status: selectedMerchant.status === "suspended" ? "active" : "suspended",
+                    })
+                  }
+                >
+                  {selectedMerchant.status === "suspended" ? "Reactivate Workspace" : "Suspend Workspace"}
+                </Button>
+              </Space>
+            </Card>
+          </div>
+        )}
+      </Drawer>
+
+      {/* Reset Password Modal */}
+      <Modal
+        title={`Reset Password for ${resetPassModalUser?.name || ""}`}
+        open={Boolean(resetPassModalUser)}
+        onCancel={() => setResetPassModalUser(null)}
+        onOk={handleResetPassword}
+        confirmLoading={resettingPassword}
+        okText="Set New Password"
+      >
+        <Paragraph type="secondary">
+          Enter a new password or leave blank to automatically generate a secure temporary password:
+        </Paragraph>
+        <div style={{ marginBottom: 12 }}>
+          <Input.Password
+            placeholder="Auto-generate or enter custom password (min 6 chars)"
+            value={tempPassword}
+            onChange={(e) => setTempPassword(e.target.value)}
+          />
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Switch checked={notifyOnWhatsApp} onChange={setNotifyOnWhatsApp} />
+          <Text>Send temporary password to merchant via WhatsApp bot (+91 9279259690)</Text>
+        </div>
       </Modal>
 
-      {/* QR Code Modal for Official Support WhatsApp */}
+      {/* Support Conversation & Reply Drawer */}
+      <Drawer
+        title={
+          <Space>
+            <MessageOutlined style={{ color: "#25D366" }} />
+            <span>Chat History: {activeThread?.name} (+{activeChatPhone})</span>
+          </Space>
+        }
+        open={Boolean(activeChatPhone)}
+        onClose={() => setActiveChatPhone(null)}
+        width={540}
+      >
+        <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+          {/* Messages Feed */}
+          <div style={{ flex: 1, overflowY: "auto", padding: "12px 0" }}>
+            <List
+              dataSource={[...(activeThread?.messages || [])].reverse()}
+              renderItem={(m) => {
+                const isOut = m.fromMe === "true" || m.fromMe === true;
+                return (
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: isOut ? "flex-end" : "flex-start",
+                      marginBottom: 12,
+                    }}
+                  >
+                    <div
+                      style={{
+                        maxWidth: "80%",
+                        padding: "10px 14px",
+                        borderRadius: 12,
+                        background: isOut ? "#dcf8c6" : "#ffffff",
+                        border: "1px solid",
+                        borderColor: isOut ? "#c7e8b4" : "#e5e7eb",
+                        boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+                      }}
+                    >
+                      <div style={{ fontSize: 11, fontWeight: 700, color: isOut ? "#059669" : "#3b82f6", marginBottom: 2 }}>
+                        {isOut ? "Official Support (+91 9279259690)" : activeThread?.name}
+                      </div>
+                      <div style={{ fontSize: 13, whiteSpace: "pre-wrap", color: "#1f2937" }}>{m.text}</div>
+                      <div style={{ fontSize: 10, color: "#9ca3af", textAlign: "right", marginTop: 4 }}>
+                        {m.timestamp ? new Date(m.timestamp).toLocaleTimeString() : ""}
+                      </div>
+                    </div>
+                  </div>
+                );
+              }}
+            />
+          </div>
+
+          {/* Quick Replies Buttons */}
+          <div style={{ borderTop: "1px solid #f0f0f0", paddingTop: 10, marginBottom: 10 }}>
+            <Text type="secondary" style={{ fontSize: 11, display: "block", marginBottom: 4 }}>Quick Canned Responses:</Text>
+            <Space wrap size={4}>
+              {CANNED_REPLIES.map((c, i) => (
+                <Button key={i} size="small" onClick={() => setReplyText(c.text)}>
+                  {c.title}
+                </Button>
+              ))}
+            </Space>
+          </div>
+
+          {/* Reply Input */}
+          <div style={{ borderTop: "1px solid #f0f0f0", paddingTop: 12 }}>
+            <Input.TextArea
+              rows={3}
+              placeholder="Type official reply to send via +91 9279259690..."
+              value={replyText}
+              onChange={(e) => setReplyText(e.target.value)}
+            />
+            <div style={{ marginTop: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <Text type="secondary" style={{ fontSize: 11 }}>Via +91 9279259690</Text>
+              <Button
+                type="primary"
+                icon={<SendOutlined />}
+                loading={sendingReply}
+                disabled={!replyText.trim()}
+                style={{ background: "#25D366", borderColor: "#25D366" }}
+                onClick={async () => {
+                  if (!activeChatPhone || !replyText.trim()) return;
+                  setSendingReply(true);
+                  try {
+                    await api.post("/api/admin/whatsapp/send-test", {
+                      recipientPhone: activeChatPhone,
+                      messageText: replyText.trim(),
+                    });
+                    message.success(`Reply sent to +${activeChatPhone}`);
+                    setReplyText("");
+                    loadSupportMessages();
+                  } catch (err: any) {
+                    message.error(err.message || "Failed to send support reply");
+                  } finally {
+                    setSendingReply(false);
+                  }
+                }}
+              >
+                Send Reply
+              </Button>
+            </div>
+          </div>
+        </div>
+      </Drawer>
+
+      {/* QR Code Modal for Support WhatsApp */}
       <Modal
         title={
           <Space>
