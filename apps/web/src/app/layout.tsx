@@ -5,8 +5,12 @@ import { AuthProvider } from "../context/AuthContext";
 import React from "react";
 
 export const metadata: Metadata = {
-  title: "GinieSpace | WhatsApp Automated Business Platform",
-  description: "Automate your sales, orders, and customer discovery directly through WhatsApp.",
+  metadataBase: new URL("https://ginie.space"),
+  title: {
+    default: "GinieSpace | WhatsApp Business Commerce, Hyperlocal Leads & Direct UPI Billing",
+    template: "%s | GinieSpace",
+  },
+  description: "Automate your sales, orders, and customer discovery directly through WhatsApp with 0% payment gateway commission.",
   manifest: "/manifest.json",
   icons: {
     icon: "/icon.svg",

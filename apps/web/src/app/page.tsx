@@ -1,166 +1,142 @@
-"use client";
+import React from "react";
+import type { Metadata } from "next";
+import LandingPageClient from "./LandingPageClient";
 
-import React, { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "../context/AuthContext";
-import { Button, Card, Col, Row, Space, Spin, Tag, Typography } from "antd";
-import {
-  WhatsAppOutlined,
-  ShopOutlined,
-  SearchOutlined,
-  FileTextOutlined,
-  ArrowRightOutlined,
-  CheckCircleOutlined,
-} from "@ant-design/icons";
-
-const { Title, Text, Paragraph } = Typography;
+export const metadata: Metadata = {
+  title: "GinieSpace | WhatsApp Commerce, Hyperlocal B2B Leads & Direct UPI Billing India",
+  description:
+    "Launch your online WhatsApp catalog, collect direct bank UPI payments with 0% gateway commission, and discover verified local B2B leads. Free plan available; PRO growth tier only ₹99/month.",
+  keywords: [
+    "WhatsApp Commerce India",
+    "WhatsApp Catalog Maker",
+    "Direct Bank UPI Billing",
+    "Zero Commission Online Store",
+    "B2B Leads Finder Google Places India",
+    "Kirana WhatsApp Store",
+    "Wholesale MOQ Storefront",
+    "Services Appointment Booking WhatsApp",
+    "GinieSpace",
+  ],
+  alternates: {
+    canonical: "https://ginie.space",
+  },
+  openGraph: {
+    title: "GinieSpace | Turn WhatsApp Into Your Sales & Billing Engine",
+    description:
+      "Direct bank UPI payments (0% commission), instant digital catalog link, and hyperlocal B2B leads discovery for Indian retail, wholesale, and service businesses.",
+    url: "https://ginie.space",
+    siteName: "GinieSpace",
+    locale: "en_IN",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "GinieSpace - Smart WhatsApp Commerce for Indian Businesses",
+    description: "Accept 100% direct UPI payments, launch your online catalog, and find verified local B2B leads.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
 
 export default function HomePage() {
-  const { user, loading } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!loading && user) {
-      router.replace("/dashboard");
-    }
-  }, [user, loading, router]);
-
-  if (loading || user) {
-    return (
-      <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <Spin size="large" />
-      </div>
-    );
-  }
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "GinieSpace",
+        "operatingSystem": "Web, Mobile, WhatsApp Web",
+        "applicationCategory": "BusinessApplication",
+        "offers": [
+          {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "INR",
+            "name": "Free Starter Tier"
+          },
+          {
+            "@type": "Offer",
+            "price": "99",
+            "priceCurrency": "INR",
+            "name": "PRO Growth Tier",
+            "billingDuration": "P1M"
+          }
+        ],
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": "4.9",
+          "reviewCount": "142"
+        }
+      },
+      {
+        "@type": "Organization",
+        "name": "GinieSpace",
+        "url": "https://ginie.space",
+        "logo": "https://ginie.space/icon.svg",
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "telephone": "+91-9279259690",
+          "contactType": "customer service",
+          "availableLanguage": ["English", "Hindi"]
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "GinieSpace par customer ki payment mere bank me kaise aati hai?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Seedhe 100% aapke bank me! GinieSpace koi payment gateway middleman nahi hai jo 2% se 3% commission kate. Har invoice par aapka apna UPI QR code hota hai aur grahak seedhe aapke account me paise bhejta hai."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "WhatsApp connect karne ke liye kisi technical knowledge ki zaroorat hai?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Bilkul nahi! Jaise aap WhatsApp Web scan karke chalate hain, waise hi GinieSpace app me jakar sirf 1 baar QR code scan karna hota hai."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Kya phone ka internet band hone par bhi GinieSpace kaam karega?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Haan! GinieSpace cloud-synced multi-device protocol par chalta hai. Ek baar link hone ke baad aapka shareable store catalog link 24 ghante live rehta hai."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Hyperlocal B2B Leads Finder kya hai aur ye kaise kaam karta hai?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Aap apne city ya pin code me target category search kar sakte hain. System aapko verified businesses ki details, Google ratings aur verified public phone numbers dikhata hai."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "₹99 PRO Plan kaise activate hota hai?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "GinieSpace app me jakar Upgrade to PRO par click karein, UPI QR scan karke ₹99 pay karein aur 12-digit UTR submit karein. Admin verification ke turant baad plan unlock ho jata hai."
+            }
+          }
+        ]
+      }
+    ]
+  };
 
   return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(180deg, #f0fdf4 0%, #ffffff 45%, #f8fafc 100%)" }}>
-      {/* Top Navbar */}
-      <div
-        style={{
-          maxWidth: 1180,
-          margin: "0 auto",
-          padding: "18px 24px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          flexWrap: "wrap",
-          gap: 12,
-        }}
-      >
-        <Space size="small">
-          <div
-            style={{
-              width: 38,
-              height: 38,
-              borderRadius: 10,
-              background: "#25D366",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#fff",
-              fontWeight: 800,
-              fontSize: 20,
-            }}
-          >
-            G
-          </div>
-          <div>
-            <div style={{ fontWeight: 800, fontSize: 18, color: "#0f172a", lineHeight: 1.1 }}>GinieSpace</div>
-            <div style={{ fontSize: 11, color: "#64748b" }}>WhatsApp Business Automation Hub</div>
-          </div>
-        </Space>
-
-        <Space>
-          <Button onClick={() => router.push("/login")}>Sign In</Button>
-          <Button
-            type="primary"
-            style={{ background: "#25D366", borderColor: "#25D366", fontWeight: 600 }}
-            onClick={() => router.push("/signup")}
-          >
-            Get Started Free
-          </Button>
-        </Space>
-      </div>
-
-      {/* Hero Section */}
-      <div style={{ maxWidth: 1000, margin: "0 auto", padding: "56px 24px 36px", textAlign: "center" }}>
-        <Tag color="green" style={{ padding: "4px 12px", borderRadius: 999, marginBottom: 16, fontWeight: 600 }}>
-          Built for Indian Retail &amp; Wholesale Businesses
-        </Tag>
-        <Title level={1} style={{ fontSize: "clamp(2rem, 4vw, 3.1rem)", color: "#0f172a", marginBottom: 16 }}>
-          Turn WhatsApp into Your Complete Sales, Storefront &amp; Billing Engine
-        </Title>
-        <Paragraph style={{ fontSize: 17, color: "#475569", maxWidth: 720, margin: "0 auto 28px" }}>
-          Connect your WhatsApp in seconds, discover verified B2B leads, launch your own digital catalog link, generate GST invoices with UPI QR codes, and automate customer updates.
-        </Paragraph>
-
-        <Space size="middle" wrap style={{ justifyContent: "center" }}>
-          <Button
-            type="primary"
-            size="large"
-            icon={<ArrowRightOutlined />}
-            style={{ background: "#25D366", borderColor: "#25D366", height: 48, paddingInline: 28, fontWeight: 600 }}
-            onClick={() => router.push("/signup")}
-          >
-            Create Free Business Account
-          </Button>
-          <Button size="large" style={{ height: 48, paddingInline: 24 }} onClick={() => router.push("/login")}>
-            Merchant Login
-          </Button>
-        </Space>
-
-        <div style={{ marginTop: 24, display: "flex", justifyContent: "center", gap: 20, flexWrap: "wrap", color: "#64748b", fontSize: 13 }}>
-          <span><CheckCircleOutlined style={{ color: "#25D366" }} /> Persistent Cloud WhatsApp</span>
-          <span><CheckCircleOutlined style={{ color: "#25D366" }} /> Direct UPI QR Payments</span>
-          <span><CheckCircleOutlined style={{ color: "#25D366" }} /> Official Support: +91 9279259690</span>
-        </div>
-      </div>
-
-      {/* Feature Grid */}
-      <div style={{ maxWidth: 1180, margin: "0 auto", padding: "24px 24px 64px" }}>
-        <Row gutter={[20, 20]}>
-          <Col xs={24} sm={12} lg={6}>
-            <Card style={{ borderRadius: 14, height: "100%" }}>
-              <WhatsAppOutlined style={{ fontSize: 28, color: "#25D366", marginBottom: 12 }} />
-              <Title level={5}>Real-Time WhatsApp Inbox</Title>
-              <Text type="secondary">
-                Cloud-synced chat history, quick-reply snippets, instant catalog sharing, and 1-click order creation from chat.
-              </Text>
-            </Card>
-          </Col>
-
-          <Col xs={24} sm={12} lg={6}>
-            <Card style={{ borderRadius: 14, height: "100%" }}>
-              <ShopOutlined style={{ fontSize: 28, color: "#0284c7", marginBottom: 12 }} />
-              <Title level={5}>Shareable Digital Store</Title>
-              <Text type="secondary">
-                Get your public online catalog link (`/shop/your-id`) so customers can browse stock and place orders 24/7.
-              </Text>
-            </Card>
-          </Col>
-
-          <Col xs={24} sm={12} lg={6}>
-            <Card style={{ borderRadius: 14, height: "100%" }}>
-              <FileTextOutlined style={{ fontSize: 28, color: "#7c3aed", marginBottom: 12 }} />
-              <Title level={5}>GST Invoices &amp; UPI QR</Title>
-              <Text type="secondary">
-                Print professional GST invoices, share WhatsApp bills with UPI IDs, and send scannable UPI QR payment reminders.
-              </Text>
-            </Card>
-          </Col>
-
-          <Col xs={24} sm={12} lg={6}>
-            <Card style={{ borderRadius: 14, height: "100%" }}>
-              <SearchOutlined style={{ fontSize: 28, color: "#d97706", marginBottom: 12 }} />
-              <Title level={5}>Google Places B2B Leads</Title>
-              <Text type="secondary">
-                Discover real local businesses by city/pincode and run safe rate-limited WhatsApp outreach campaigns.
-              </Text>
-            </Card>
-          </Col>
-        </Row>
-      </div>
-    </div>
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <LandingPageClient />
+    </>
   );
 }
