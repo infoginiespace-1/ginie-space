@@ -20,6 +20,27 @@ import { createStorefrontRouter } from "./routes/storefront.routes";
 import { NotificationService } from "./services/notification.service";
 import { startDailyReportScheduler } from "./services/scheduler.service";
 
+// Global resilience handlers against non-fatal Baileys / WebSocket crypto noise errors
+process.on("uncaughtException", (err: any) => {
+  const msg = err?.message || String(err);
+  const stack = err?.stack || "";
+  if (
+    msg.includes("Unsupported state or unable to authenticate data") ||
+    msg.includes("Decipheriv") ||
+    stack.includes("noise-handler") ||
+    stack.includes("aesDecryptGCM") ||
+    stack.includes("crypto.js")
+  ) {
+    console.warn("[GlobalResilience] Handled non-fatal Baileys crypto noise frame error:", msg);
+    return;
+  }
+  console.error("[GlobalResilience] Uncaught Exception:", err);
+});
+
+process.on("unhandledRejection", (reason: any) => {
+  console.warn("[GlobalResilience] Unhandled Promise Rejection:", reason?.message || reason);
+});
+
 async function bootstrap() {
   const config = loadConfig();
   const app = express();

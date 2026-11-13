@@ -142,7 +142,7 @@ export class WhatsAppSessionManager extends EventEmitter {
         if (key?.id && this.recentMessages.has(key.id)) {
           return this.recentMessages.get(key.id);
         }
-        return { conversation: "" };
+        return undefined;
       },
       defaultQueryTimeoutMs: undefined,
       keepAliveIntervalMs: 30000,
@@ -151,6 +151,13 @@ export class WhatsAppSessionManager extends EventEmitter {
 
     this.sockets.set(userId, sock);
     this.updateState(userId, { status: "connecting" });
+
+    // Catch non-fatal raw socket error events
+    try {
+      (sock.ws as any)?.on?.("error", (err: any) => {
+        console.warn(`[WhatsAppManager] Raw socket error for ${userId}:`, err?.message || err);
+      });
+    } catch {}
 
     sock.ev.on("creds.update", async () => {
       await saveCreds();
@@ -191,9 +198,14 @@ export class WhatsAppSessionManager extends EventEmitter {
             await this.authProvider.clearAuthState(userId);
           }
         } else {
-          // Reconnect automatically without clearing cloud credentials
-          console.log(`[WhatsAppManager] Connection closed (${statusCode}) for ${userId}. Auto-reconnecting in 3s...`);
-          setTimeout(() => this.startSession(userId), 3000);
+          // Reconnect automatically with backoff to prevent noise/state conflicts
+          const reconnectDelay = statusCode === 440 ? 15000 : 5000;
+          console.log(`[WhatsAppManager] Connection closed (${statusCode}) for ${userId}. Auto-reconnecting in ${reconnectDelay / 1000}s...`);
+          setTimeout(() => {
+            if (!this.sockets.has(userId)) {
+              this.startSession(userId).catch((e) => console.warn(`[WhatsAppManager] Auto-reconnect error for ${userId}:`, e.message));
+            }
+          }, reconnectDelay);
         }
       } else if (connection === "open") {
         const phone = sock.user?.id ? sock.user.id.split(":")[0] : undefined;
