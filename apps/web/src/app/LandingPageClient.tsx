@@ -418,7 +418,7 @@ export default function LandingPageClient() {
                       <Tag color="green">CONFIRMED</Tag>
                     </div>
                     <Text style={{ fontSize: 13, display: "block", marginBottom: 6 }}>
-                      Namaste <strong>DAWOOD</strong>, aapka order <strong>#09ef13</strong> confirm ho gaya hai.
+                      Namaste <strong>Rahul Sharma</strong>, aapka order <strong>#09ef13</strong> confirm ho gaya hai.
                     </Text>
                     <div style={{ background: "#f8fafc", padding: "8px 12px", borderRadius: 8, fontSize: 12, marginBottom: 10 }}>
                       <div>• 1x Premium Basmati Rice (1kg) - ₹110</div>
