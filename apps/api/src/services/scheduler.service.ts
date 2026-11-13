@@ -98,3 +98,53 @@ export function startDailyReportScheduler(
   // Check every 15 minutes
   setInterval(runTick, 15 * 60 * 1000);
 }
+
+/**
+ * 72-Hour Ephemeral WhatsApp Chat Retention & Auto-Erase Scheduler
+ * Periodically purges chat messages older than 72 hours from database & cache.
+ */
+export function startChatRetentionScheduler(db: IDatabase, intervalMs = 30 * 60 * 1000) {
+  const RETENTION_HOURS = 72;
+  const RETENTION_MS = RETENTION_HOURS * 60 * 60 * 1000;
+
+  const purgeExpiredMessages = async () => {
+    try {
+      const cutoffTime = Date.now() - RETENTION_MS;
+      const cutoffIso = new Date(cutoffTime).toISOString();
+
+      const allMessages = await db.messages.findMany().catch(() => []);
+      if (!allMessages || allMessages.length === 0) return;
+
+      const expired = allMessages.filter((m) => {
+        const timeStr = m.timestamp || (m as any).createdAt;
+        if (!timeStr) return false;
+        const msgTime = new Date(timeStr).getTime();
+        return !isNaN(msgTime) && msgTime > 0 && msgTime < cutoffTime;
+      });
+
+      if (expired.length === 0) return;
+
+      console.log(`[ChatRetentionScheduler] Found ${expired.length} messages older than 72h (cutoff: ${cutoffIso}). Starting purge...`);
+
+      let purgedCount = 0;
+      for (const msg of expired) {
+        try {
+          await db.messages.delete(msg.id);
+          purgedCount++;
+        } catch (e: any) {
+          console.warn(`[ChatRetentionScheduler] Could not delete message ${msg.id}:`, e?.message);
+        }
+      }
+
+      console.log(`[ChatRetentionScheduler] Successfully erased ${purgedCount}/${expired.length} messages older than 72 hours.`);
+    } catch (err: any) {
+      console.warn("[ChatRetentionScheduler] Purge tick warning:", err?.message);
+    }
+  };
+
+  // Run initial cleanup 10 seconds after startup
+  setTimeout(purgeExpiredMessages, 10 * 1000);
+
+  // Run regularly on interval (default: every 30 minutes)
+  setInterval(purgeExpiredMessages, intervalMs);
+}

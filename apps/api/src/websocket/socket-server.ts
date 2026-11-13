@@ -88,10 +88,44 @@ export function setupSocketServer(
       return;
     }
 
-    const contactDigits = normalizePhoneDigits(event.senderJid);
+    const isLid = Boolean(event.isLid || event.senderJid.endsWith("@lid") || event.senderJid.includes("@lid"));
+    let realPhone = "";
+
+    if (event.senderPn) {
+      realPhone = normalizePhoneDigits(event.senderPn);
+    }
+
+    if (!isLid && !realPhone) {
+      realPhone = normalizePhoneDigits(event.senderJid);
+    }
+
+    // If LID and real phone not extracted yet, attempt to match from merchant's existing customers
+    if (isLid && !realPhone && event.senderName) {
+      try {
+        const userCustomers = await db.customers.findMany({ userId: event.userId });
+        const matched = userCustomers.find(
+          (c) =>
+            c.name &&
+            c.name.trim().toLowerCase() === (event.senderName || "").trim().toLowerCase() &&
+            c.phone &&
+            !c.phone.startsWith("LID:")
+        );
+        if (matched && matched.phone) {
+          realPhone = normalizePhoneDigits(matched.phone);
+          waManager.setLidPhoneMapping(event.userId, event.senderJid, realPhone);
+        }
+      } catch {}
+    }
+
+    const rawLidDigits = normalizePhoneDigits(event.senderJid);
+    const contactIdentifier = realPhone || rawLidDigits;
+
     const enrichedEvent = {
       ...event,
-      contactPhone: contactDigits,
+      contactPhone: contactIdentifier,
+      realPhone: realPhone || undefined,
+      isLid: isLid && !realPhone,
+      senderLid: isLid ? event.senderJid : undefined,
     };
 
     io.to("user:" + event.userId).emit("whatsapp:message", enrichedEvent);
@@ -115,8 +149,8 @@ export function setupSocketServer(
       if (!existingMsg) {
         await db.messages.create({
           userId: event.userId,
-          contactPhone: contactDigits,
-          contactName: event.senderName || "",
+          contactPhone: contactIdentifier,
+          contactName: event.senderName || (realPhone ? `+${realPhone}` : ""),
           text: event.messageText,
           fromMe: String(Boolean(event.fromMe)),
           messageId: event.messageId || Date.now().toString(),
@@ -127,21 +161,24 @@ export function setupSocketServer(
       // Non-fatal persistence safeguard
     }
 
-    // Auto-discover customer on merchant WhatsApp using normalized phone matching
-    if (event.userId !== SYSTEM_SUPPORT_SESSION_ID && !event.fromMe && contactDigits) {
+    // Auto-discover customer on merchant WhatsApp using phone or LID matching
+    if (event.userId !== SYSTEM_SUPPORT_SESSION_ID && !event.fromMe && contactIdentifier) {
       try {
         const userCustomers = await db.customers.findMany({ userId: event.userId });
         const matched = userCustomers.find(
-          (c) => normalizePhoneDigits(c.phone || "") === contactDigits
+          (c) =>
+            (realPhone && normalizePhoneDigits(c.phone || "") === realPhone) ||
+            (!realPhone && normalizePhoneDigits(c.phone || "") === contactIdentifier)
         );
 
         if (!matched) {
+          const displayPhone = realPhone ? toE164(realPhone) : `LID:${contactIdentifier}`;
           await db.customers.create({
             userId: event.userId,
-            name: event.senderName || `+${contactDigits}`,
-            phone: toE164(contactDigits),
-            notes: "First contacted via WhatsApp",
-            tags: "WhatsApp",
+            name: event.senderName || (realPhone ? `+${realPhone}` : "WhatsApp User"),
+            phone: displayPhone,
+            notes: isLid && !realPhone ? "Contacted via WhatsApp Privacy LID" : "First contacted via WhatsApp",
+            tags: isLid && !realPhone ? "WhatsApp,Privacy-ID" : "WhatsApp",
           });
         }
       } catch {
@@ -149,7 +186,7 @@ export function setupSocketServer(
       }
 
       // Merchant Automated Welcome Bot + Smart Keyword Bot + Away Responder
-      const cooldownKey = `${event.userId}:${contactDigits}`;
+      const cooldownKey = `${event.userId}:${contactIdentifier}`;
       const nowMs = Date.now();
       const lastRepliedAt = merchantAutoReplyCooldown.get(cooldownKey) || 0;
       const incomingLower = String(event.messageText || "").trim().toLowerCase();
@@ -167,9 +204,10 @@ export function setupSocketServer(
         const storeLink = `https://app.ginie.space/shop/${storeSlugOrId}`;
 
         const sendBotReply = async (replyText: string) => {
+          const targetRecipient = isLid && !realPhone ? event.senderJid : contactIdentifier;
           await waManager.sendMessage({
             userId: event.userId,
-            recipientPhone: contactDigits,
+            recipientPhone: targetRecipient,
             messageText: replyText,
           });
 
@@ -177,8 +215,8 @@ export function setupSocketServer(
           const autoTs = new Date().toISOString();
           await db.messages.create({
             userId: event.userId,
-            contactPhone: contactDigits,
-            contactName: event.senderName || `+${contactDigits}`,
+            contactPhone: contactIdentifier,
+            contactName: event.senderName || (realPhone ? `+${realPhone}` : ""),
             text: replyText,
             fromMe: "true",
             messageId: autoId,
@@ -187,8 +225,8 @@ export function setupSocketServer(
 
           io.to("user:" + event.userId).emit("whatsapp:message", {
             userId: event.userId,
-            senderJid: `${contactDigits}@s.whatsapp.net`,
-            contactPhone: contactDigits,
+            senderJid: targetRecipient,
+            contactPhone: contactIdentifier,
             senderName: event.senderName,
             messageText: replyText,
             timestamp: autoTs,
@@ -228,7 +266,12 @@ export function setupSocketServer(
               handledByKeyword = true;
               const orders = await db.orders.findMany({ userId: event.userId }).catch(() => []);
               const myOrders = orders
-                .filter((o) => normalizePhoneDigits(o.customerPhone || "").slice(-10) === contactDigits.slice(-10))
+                .filter((o) => {
+                  const oPhone = normalizePhoneDigits(o.customerPhone || "");
+                  return realPhone
+                    ? oPhone.slice(-10) === realPhone.slice(-10)
+                    : oPhone.slice(-10) === contactIdentifier.slice(-10);
+                })
                 .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
               if (myOrders.length > 0) {
                 const latest = myOrders[0];

@@ -33,10 +33,29 @@ export class WhatsAppSessionManager extends EventEmitter {
   private recentMessages: Map<string, proto.IMessage> = new Map();
   private maxCachedMessages = 1000;
 
+  // In-memory mapping from WhatsApp LID (e.g. 120629256810681@lid) to Real Phone JID (e.g. 919876543210@s.whatsapp.net)
+  private lidToPhoneMap: Map<string, Map<string, string>> = new Map();
+
   constructor(baseStoragePath = "/tmp/giniespace-sessions", authProvider?: AuthStateProvider) {
     super();
     this.baseStoragePath = baseStoragePath;
     this.authProvider = authProvider;
+  }
+
+  setLidPhoneMapping(userId: string, lid: string, jidOrPhone: string): void {
+    if (!lid || !jidOrPhone) return;
+    const cleanLid = lid.includes("@") ? lid : `${lid}@lid`;
+    let userMap = this.lidToPhoneMap.get(userId);
+    if (!userMap) {
+      userMap = new Map();
+      this.lidToPhoneMap.set(userId, userMap);
+    }
+    userMap.set(cleanLid, jidOrPhone);
+  }
+
+  getPhoneForLid(userId: string, lid: string): string | undefined {
+    const cleanLid = lid.includes("@") ? lid : `${lid}@lid`;
+    return this.lidToPhoneMap.get(userId)?.get(cleanLid);
   }
 
   getSessionState(userId: string): SessionState {
@@ -240,6 +259,33 @@ export class WhatsAppSessionManager extends EventEmitter {
       }
     });
 
+    sock.ev.on("chats.phoneNumberShare", ({ lid, jid }: any) => {
+      if (lid && jid) {
+        this.setLidPhoneMapping(userId, lid, jid);
+        console.log(`[WhatsAppManager] Captured chats.phoneNumberShare for ${userId}: ${lid} -> ${jid}`);
+      }
+    });
+
+    sock.ev.on("contacts.upsert", (contacts: any[]) => {
+      if (Array.isArray(contacts)) {
+        for (const c of contacts) {
+          if (c.lid && c.id && !c.id.endsWith("@lid")) {
+            this.setLidPhoneMapping(userId, c.lid, c.id);
+          }
+        }
+      }
+    });
+
+    sock.ev.on("contacts.update", (updates: any[]) => {
+      if (Array.isArray(updates)) {
+        for (const u of updates) {
+          if (u.lid && u.id && !u.id.endsWith("@lid")) {
+            this.setLidPhoneMapping(userId, u.lid, u.id);
+          }
+        }
+      }
+    });
+
     sock.ev.on("messages.upsert", async ({ messages, type }: any) => {
       if (type !== "notify") return;
 
@@ -251,7 +297,20 @@ export class WhatsAppSessionManager extends EventEmitter {
           this.cacheMessage(msg.key.id, msg.message);
         }
 
-        const senderJid = msg.key.remoteJid || "";
+        const rawRemoteJid = msg.key.remoteJid || "";
+        const isLid = rawRemoteJid.endsWith("@lid") || rawRemoteJid.includes("@lid");
+
+        // Extract senderPn if provided by WhatsApp / Baileys
+        const rawSenderPn = (msg.key as any).senderPn || (msg.key as any).participantPn || "";
+        if (isLid && rawSenderPn) {
+          this.setLidPhoneMapping(userId, rawRemoteJid, rawSenderPn);
+        }
+
+        const resolvedPn = isLid
+          ? rawSenderPn || this.getPhoneForLid(userId, rawRemoteJid)
+          : undefined;
+
+        const senderJid = rawRemoteJid;
         const fromMe = msg.key.fromMe || false;
         const text =
           msg.message.conversation ||
@@ -263,6 +322,9 @@ export class WhatsAppSessionManager extends EventEmitter {
         const event: InboundMessageEvent = {
           userId,
           senderJid,
+          senderPn: resolvedPn,
+          isLid,
+          lid: isLid ? rawRemoteJid : undefined,
           senderName: msg.pushName || undefined,
           messageText: text,
           timestamp: new Date().toISOString(),
@@ -283,25 +345,42 @@ export class WhatsAppSessionManager extends EventEmitter {
       throw new Error(`WhatsApp session for user ${req.userId} is not connected`);
     }
 
-    let digits = req.recipientPhone.replace(/[^0-9]/g, "");
-    if (digits.startsWith("00")) digits = digits.slice(2);
-    if (digits.startsWith("0") && digits.length === 11) digits = digits.slice(1);
-    // Auto-prefix Indian country code 91 if only 10 digits provided
-    if (digits.length === 10) {
-      digits = `91${digits}`;
-    }
+    let targetJid: string;
+    const recipientRaw = (req.recipientPhone || "").trim();
 
-    const defaultJid = `${digits}@s.whatsapp.net`;
-    let targetJid = defaultJid;
-
-    // 1. Strict onWhatsApp validation check
-    try {
-      const results = await sock.onWhatsApp(digits);
-      if (results && results.length > 0 && results[0].exists) {
-        targetJid = results[0].jid;
+    // If recipient is already a full WhatsApp JID (e.g. LID ending with @lid or group)
+    if (recipientRaw.endsWith("@lid") || recipientRaw.endsWith("@s.whatsapp.net")) {
+      targetJid = recipientRaw;
+    } else {
+      let digits = recipientRaw.replace(/[^0-9]/g, "");
+      if (digits.startsWith("00")) digits = digits.slice(2);
+      if (digits.startsWith("0") && digits.length === 11) digits = digits.slice(1);
+      // Auto-prefix Indian country code 91 if only 10 digits provided
+      if (digits.length === 10) {
+        digits = `91${digits}`;
       }
-    } catch (err: any) {
-      console.warn(`[WhatsAppManager] onWhatsApp query warning: ${err.message}`);
+
+      // Check if this 15-digit number corresponds to an LID in our session map
+      const possibleLid = `${digits}@lid`;
+      const mappedPn = this.getPhoneForLid(req.userId, possibleLid);
+
+      if (mappedPn) {
+        targetJid = mappedPn;
+      } else if (digits.length >= 14 && (digits.startsWith("12") || digits.startsWith("14") || digits.startsWith("17") || digits.startsWith("96"))) {
+        // Direct LID send target fallback
+        targetJid = possibleLid;
+      } else {
+        targetJid = `${digits}@s.whatsapp.net`;
+        // Strict onWhatsApp validation check for standard phone numbers
+        try {
+          const results = await sock.onWhatsApp(digits);
+          if (results && results.length > 0 && results[0].exists) {
+            targetJid = results[0].jid;
+          }
+        } catch (err: any) {
+          console.warn(`[WhatsAppManager] onWhatsApp query warning: ${err.message}`);
+        }
+      }
     }
 
     // 2. Anti-Ban Human Simulation: Typing (composing) presence

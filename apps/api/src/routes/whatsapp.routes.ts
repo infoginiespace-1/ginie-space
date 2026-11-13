@@ -39,8 +39,16 @@ export function createWhatsAppRouter(
   router.get("/messages", async (req: Request, res: Response): Promise<void> => {
     try {
       const all = await db.messages.findMany({ userId: req.user!.id });
-      all.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-      res.json({ messages: all });
+      // Strict 72-hour ephemeral retention: exclude any messages older than 72 hours
+      const cutoffTime = Date.now() - 72 * 60 * 60 * 1000;
+      const recent = all.filter((m) => {
+        const timeStr = m.timestamp || (m as any).createdAt;
+        if (!timeStr) return true;
+        const msgTime = new Date(timeStr).getTime();
+        return isNaN(msgTime) || msgTime >= cutoffTime;
+      });
+      recent.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      res.json({ messages: recent });
     } catch {
       res.status(500).json({ error: "Could not load chat history" });
     }

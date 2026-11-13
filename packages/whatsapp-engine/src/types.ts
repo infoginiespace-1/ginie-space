@@ -12,6 +12,9 @@ export interface SessionState {
 export interface InboundMessageEvent {
   userId: string;
   senderJid: string;
+  senderPn?: string; // Resolved real phone number JID if present
+  isLid?: boolean; // Whether the raw sender is a WhatsApp Linked Identity (LID)
+  lid?: string; // Original LID if applicable
   senderName?: string;
   messageText: string;
   timestamp: string;

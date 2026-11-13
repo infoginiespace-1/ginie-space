@@ -18,7 +18,7 @@ import { createSettingsRouter } from "./routes/settings.routes";
 import { createAdminRouter } from "./routes/admin.routes";
 import { createStorefrontRouter } from "./routes/storefront.routes";
 import { NotificationService } from "./services/notification.service";
-import { startDailyReportScheduler } from "./services/scheduler.service";
+import { startDailyReportScheduler, startChatRetentionScheduler } from "./services/scheduler.service";
 
 // Global resilience handlers against non-fatal Baileys / WebSocket crypto noise errors
 process.on("uncaughtException", (err: any) => {
@@ -162,8 +162,9 @@ async function bootstrap() {
   app.use("/api/settings", auth, createSettingsRouter(db, notificationService));
   app.use("/api/admin", auth, requireAdmin, createAdminRouter(db, waManager, notificationService));
 
-  // Automated Nightly Business Summary Scheduler
+  // Automated Schedulers
   startDailyReportScheduler(db, waManager, notificationService);
+  startChatRetentionScheduler(db);
 
   server.listen(config.port, () => {
     console.log("GinieSpace API service active on port " + config.port);

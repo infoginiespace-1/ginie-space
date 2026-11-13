@@ -33,7 +33,7 @@ import {
 } from "@ant-design/icons";
 import { getSocket } from "../../lib/socket";
 import { api } from "../../lib/api";
-import { formatDisplayPhone } from "../../lib/phone";
+import { formatDisplayPhone, isRealMobile, isWhatsAppLid } from "../../lib/phone";
 
 const { Text, Title } = Typography;
 
@@ -162,13 +162,27 @@ export default function InboxPage() {
         }
       }
 
-      for (const m of savedMsgs) {
+      // Strict 72-Hour Ephemeral Retention: Ignore messages older than 72 hours
+      const cutoff72h = Date.now() - 72 * 60 * 60 * 1000;
+      const validSavedMsgs = (savedMsgs || []).filter((m: any) => {
+        const timeStr = m.timestamp || m.createdAt;
+        if (!timeStr) return true;
+        const t = new Date(timeStr).getTime();
+        return isNaN(t) || t >= cutoff72h;
+      });
+
+      for (const m of validSavedMsgs) {
         const key = normalizePhoneKey(m.contactPhone || "");
         if (!key) continue;
+        const lidFlag = isWhatsAppLid(key);
         const conv: Conversation = map.get(key) || {
           key,
-          phone: `+${key}`,
-          name: m.contactName || `+${key}`,
+          phone: lidFlag ? `LID:${key}` : `+${key}`,
+          name: m.contactName && !m.contactName.startsWith("+1") && !m.contactName.startsWith("+12") && !m.contactName.startsWith("+14") && !m.contactName.startsWith("+17")
+            ? m.contactName
+            : lidFlag
+            ? "WhatsApp User"
+            : `+${key}`,
           lastMessage: m.text,
           timestamp: m.timestamp,
           messages: [],
@@ -518,8 +532,8 @@ export default function InboxPage() {
                             {item.timestamp ? new Date(item.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""}
                           </span>
                         </div>
-                        <div style={{ fontSize: 11, color: "#059669", fontWeight: 600, marginTop: 1 }}>
-                          📞 {formatDisplayPhone(item.phone)}
+                        <div style={{ fontSize: 11, color: isRealMobile(item.phone) ? "#059669" : "#7c3aed", fontWeight: 600, marginTop: 1 }}>
+                          {isRealMobile(item.phone) ? `📞 ${formatDisplayPhone(item.phone)}` : `🔒 ${formatDisplayPhone(item.phone)}`}
                         </div>
                       </div>
                     }
@@ -564,16 +578,24 @@ export default function InboxPage() {
                   {isMobile && (
                     <Button icon={<ArrowLeftOutlined />} size="small" onClick={() => setActiveKey(null)} />
                   )}
-                  <Avatar style={{ background: "#25D366" }} icon={<UserOutlined />} />
+                  <Avatar style={{ background: isRealMobile(activeConv.phone) ? "#25D366" : "#8b5cf6" }} icon={<UserOutlined />} />
                   <div>
                     <div style={{ fontWeight: 600, fontSize: 15, display: "flex", alignItems: "center", gap: 8 }}>
                       <span>{activeConv.name}</span>
-                      <Tag color="success" style={{ margin: 0, fontSize: 11, padding: "0 6px" }}>
-                        Real Mobile
-                      </Tag>
+                      {isRealMobile(activeConv.phone) ? (
+                        <Tag color="success" style={{ margin: 0, fontSize: 11, padding: "0 6px" }}>
+                          Verified Mobile 📱
+                        </Tag>
+                      ) : (
+                        <Tag color="purple" style={{ margin: 0, fontSize: 11, padding: "0 6px" }}>
+                          WhatsApp ID 🔒
+                        </Tag>
+                      )}
                     </div>
-                    <Text strong style={{ fontSize: 13, color: "#047857" }}>
-                      📱 {formatDisplayPhone(activeConv.phone)}
+                    <Text strong style={{ fontSize: 13, color: isRealMobile(activeConv.phone) ? "#047857" : "#6d28d9" }}>
+                      {isRealMobile(activeConv.phone)
+                        ? `📱 ${formatDisplayPhone(activeConv.phone)}`
+                        : `🔒 ${formatDisplayPhone(activeConv.phone)} (Privacy ID)`}
                     </Text>
                   </div>
                 </Space>
@@ -587,6 +609,36 @@ export default function InboxPage() {
                   </Button>
                   <Badge status="processing" text="Live" />
                 </Space>
+              </div>
+
+              {/* 72-Hour Ephemeral Privacy Notice */}
+              <div
+                style={{
+                  background: "#f0fdf4",
+                  borderBottom: "1px solid #dcfce7",
+                  padding: "6px 16px",
+                  fontSize: 11,
+                  color: "#166534",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  flexWrap: "wrap",
+                  gap: 8,
+                }}
+              >
+                <span>🛡️ <strong>72h Auto-Erase Active:</strong> Chat messages are automatically erased after 72 hours.</span>
+                {!isRealMobile(activeConv.phone) && (
+                  <Button
+                    size="small"
+                    type="link"
+                    style={{ fontSize: 11, padding: 0, height: "auto", color: "#047857", fontWeight: 600 }}
+                    onClick={() => {
+                      setInputMessage("Namaste! Kripya apna official mobile number share karein taki hum order status & delivery updates bhej sakein.");
+                    }}
+                  >
+                    Ask for Mobile Number 📲
+                  </Button>
+                )}
               </div>
 
               {/* Chat Messages */}
@@ -617,7 +669,11 @@ export default function InboxPage() {
                         }}
                       >
                         <div style={{ fontSize: 10, fontWeight: 700, color: m.fromMe ? "#059669" : "#2563eb", marginBottom: 3 }}>
-                          {m.fromMe ? "You (Merchant)" : `📱 ${formatDisplayPhone(activeConv.phone)}`}
+                          {m.fromMe
+                            ? "You (Merchant)"
+                            : isRealMobile(activeConv.phone)
+                            ? `📱 ${formatDisplayPhone(activeConv.phone)}`
+                            : `${activeConv.name || "WhatsApp Customer"}`}
                         </div>
                         <div>{m.text}</div>
                         <div
