@@ -19,6 +19,7 @@ import {
   Divider,
   message,
   Rate,
+  Modal,
 } from "antd";
 import {
   WhatsAppOutlined,
@@ -42,6 +43,13 @@ import {
   CopyOutlined,
   EnvironmentOutlined,
   LockOutlined,
+  PlayCircleOutlined,
+  MobileOutlined,
+  LaptopOutlined,
+  RightOutlined,
+  ShoppingOutlined,
+  ClockCircleOutlined,
+  SendOutlined,
 } from "@ant-design/icons";
 
 const { Title, Text, Paragraph } = Typography;
@@ -61,8 +69,12 @@ export default function LandingPageClient() {
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
   // Interactive ROI Calculator State (Monthly sales in ₹)
   const [monthlySales, setMonthlySales] = useState<number>(100000);
-  // Active demo tab
-  const [demoType, setDemoType] = useState<"retail" | "wholesale" | "services">("retail");
+  // Interactive Tour Active Tab
+  const [tourTab, setTourTab] = useState<string>("sync");
+  // Video walkthrough modal
+  const [videoModalOpen, setVideoModalOpen] = useState(false);
+  // Live Chat Simulator state
+  const [simStep, setSimStep] = useState<number>(1);
 
   // Calculations for zero-fee gateway savings
   const traditionalGatewayFee = Math.round(monthlySales * 0.025); // ~2.5% avg gateway charge
@@ -147,8 +159,11 @@ export default function LandingPageClient() {
 
           {/* Nav Links */}
           <div style={{ display: "flex", alignItems: "center", gap: 24 }} className="hide-on-mobile">
-            <a href="#features" style={{ color: "#475569", textDecoration: "none", fontWeight: 500, fontSize: 14 }}>
-              Features
+            <a href="#how-it-works" style={{ color: "#475569", textDecoration: "none", fontWeight: 500, fontSize: 14 }}>
+              How It Works
+            </a>
+            <a href="#demo-tour" style={{ color: "#475569", textDecoration: "none", fontWeight: 500, fontSize: 14 }}>
+              Interactive Demo
             </a>
             <a href="#solutions" style={{ color: "#475569", textDecoration: "none", fontWeight: 500, fontSize: 14 }}>
               Solutions
@@ -157,7 +172,7 @@ export default function LandingPageClient() {
               Pricing (₹99 PRO)
             </a>
             <a href="#calculator" style={{ color: "#475569", textDecoration: "none", fontWeight: 500, fontSize: 14 }}>
-              Savings Calculator
+              Savings
             </a>
             <a href="#faqs" style={{ color: "#475569", textDecoration: "none", fontWeight: 500, fontSize: 14 }}>
               FAQs
@@ -190,7 +205,7 @@ export default function LandingPageClient() {
       </header>
 
       {/* Hero Section */}
-      <section style={{ maxWidth: 1200, margin: "0 auto", padding: "64px 24px 40px", textAlign: "center" }}>
+      <section style={{ maxWidth: 1200, margin: "0 auto", padding: "64px 24px 32px", textAlign: "center" }}>
         <div style={{ display: "inline-block", marginBottom: 16 }}>
           <Tag
             color="success"
@@ -239,7 +254,7 @@ export default function LandingPageClient() {
         </Paragraph>
 
         {/* Hero CTAs */}
-        <Space size="middle" wrap style={{ justifyContent: "center", marginBottom: 36 }}>
+        <Space size="middle" wrap style={{ justifyContent: "center", marginBottom: 28 }}>
           <Button
             type="primary"
             size="large"
@@ -261,7 +276,7 @@ export default function LandingPageClient() {
 
           <Button
             size="large"
-            icon={<WhatsAppOutlined style={{ color: "#25D366", fontSize: 18 }} />}
+            icon={<PlayCircleOutlined style={{ color: "#059669", fontSize: 18 }} />}
             style={{
               height: 52,
               paddingInline: 24,
@@ -271,219 +286,659 @@ export default function LandingPageClient() {
               borderColor: "#cbd5e1",
               background: "#fff",
             }}
-            href="https://wa.me/919279259690?text=Hi%20GinieSpace%20Support%2C%20I%20want%20to%20know%20more%20about%20the%20platform."
-            target="_blank"
-            rel="noopener noreferrer"
+            onClick={() => setVideoModalOpen(true)}
           >
-            Support Helpline (+91 92792 59690)
+            Watch 45-Sec Demo
           </Button>
         </Space>
 
-        {/* Live Trust Metrics Badges */}
+        {/* Direct UPI Ecosystem Trust Strip */}
         <div
           style={{
-            display: "flex",
-            justifyContent: "center",
-            gap: 24,
-            flexWrap: "wrap",
-            color: "#475569",
-            fontSize: 13,
-            fontWeight: 600,
-            padding: "16px 20px",
+            maxWidth: 920,
+            margin: "0 auto 40px",
             background: "#ffffff",
-            borderRadius: 12,
+            borderRadius: 14,
+            padding: "14px 20px",
             border: "1px solid #e2e8f0",
-            maxWidth: 860,
-            margin: "0 auto",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 16,
             boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
           }}
         >
-          <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <BankOutlined style={{ color: "#059669" }} /> 100% Direct Bank UPI (Zero Commission)
-          </span>
-          <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <PhoneOutlined style={{ color: "#25D366" }} /> Real Mobile Numbers &amp; Multi-Device Sync
-          </span>
-          <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <CrownOutlined style={{ color: "#d97706" }} /> PRO Growth Tier Only ₹99/Month
-          </span>
-          <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <SafetyCertificateOutlined style={{ color: "#2563eb" }} /> Safe Rate-Limited Message Cadence
-          </span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <BankOutlined style={{ color: "#059669", fontSize: 18 }} />
+            <Text strong style={{ fontSize: 13, color: "#334155" }}>
+              100% Direct Bank Settlements:
+            </Text>
+          </div>
+
+          <Space size="middle" wrap>
+            <Tag color="blue" style={{ fontWeight: 600, padding: "3px 10px", borderRadius: 6 }}>
+              PhonePe
+            </Tag>
+            <Tag color="cyan" style={{ fontWeight: 600, padding: "3px 10px", borderRadius: 6 }}>
+              Google Pay
+            </Tag>
+            <Tag color="geekblue" style={{ fontWeight: 600, padding: "3px 10px", borderRadius: 6 }}>
+              Paytm UPI
+            </Tag>
+            <Tag color="green" style={{ fontWeight: 600, padding: "3px 10px", borderRadius: 6 }}>
+              BHIM UPI
+            </Tag>
+            <Tag color="purple" style={{ fontWeight: 600, padding: "3px 10px", borderRadius: 6 }}>
+              Any Bank Account
+            </Tag>
+          </Space>
+
+          <Tag color="gold" style={{ fontWeight: 700, padding: "3px 8px" }}>
+            0% Gateway Commission
+          </Tag>
         </div>
       </section>
 
-      {/* Hero Product Mockup / Realistic Live Dashboard Preview */}
-      <section style={{ maxWidth: 1140, margin: "0 auto", padding: "0 24px 64px" }}>
-        <div
-          style={{
-            background: "#ffffff",
-            borderRadius: 20,
-            border: "1px solid #cbd5e1",
-            boxShadow: "0 20px 48px -12px rgba(15, 23, 42, 0.12)",
-            overflow: "hidden",
-          }}
-        >
-          {/* Dashboard Window Header */}
-          <div
-            style={{
-              background: "#0f172a",
-              padding: "14px 20px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              flexWrap: "wrap",
-              gap: 12,
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#ef4444" }} />
-              <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#f59e0b" }} />
-              <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#10b981" }} />
-              <Text strong style={{ color: "#94a3b8", fontSize: 13, marginLeft: 8 }}>
-                GinieSpace Merchant Portal • Live Connected
-              </Text>
-            </div>
+      {/* TWIN DEVICE SHOWCASE (Desktop Dashboard + Mobile Customer Storefront) */}
+      <section style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px 64px" }}>
+        <div style={{ textAlign: "center", marginBottom: 24 }}>
+          <Tag color="purple" style={{ padding: "4px 12px", borderRadius: 999, fontWeight: 600 }}>
+            ✨ COMPLETE OMNI-CHANNEL PERSPECTIVE
+          </Tag>
+          <Title level={3} style={{ marginTop: 8, color: "#0f172a" }}>
+            Merchant Ka Control Panel • Grahak Ka Fast Mobile Store
+          </Title>
+        </div>
 
-            <Space size="middle" wrap>
-              <Tag color="success" icon={<CheckCircleOutlined />} style={{ fontWeight: 600, padding: "3px 10px" }}>
-                WhatsApp Connected (+91 92792 59690)
-              </Tag>
-              <Tag color="gold" icon={<CrownOutlined />} style={{ fontWeight: 700, padding: "3px 10px" }}>
-                PRO WORKSPACE
-              </Tag>
-            </Space>
-          </div>
+        <Row gutter={[24, 24]} align="stretch">
+          {/* Left Side: Desktop Merchant Portal Mockup (65%) */}
+          <Col xs={24} lg={15}>
+            <div
+              style={{
+                background: "#ffffff",
+                borderRadius: 18,
+                border: "1px solid #cbd5e1",
+                boxShadow: "0 20px 48px -12px rgba(15, 23, 42, 0.12)",
+                overflow: "hidden",
+                height: "100%",
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
+              {/* Window Header */}
+              <div
+                style={{
+                  background: "#0f172a",
+                  padding: "12px 18px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#ef4444" }} />
+                  <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#f59e0b" }} />
+                  <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#10b981" }} />
+                  <Text strong style={{ color: "#94a3b8", fontSize: 12, marginLeft: 8 }}>
+                    <LaptopOutlined /> GinieSpace Merchant Hub
+                  </Text>
+                </div>
+                <Tag color="success" icon={<CheckCircleOutlined />} style={{ fontWeight: 600 }}>
+                  WhatsApp Connected (+91 92792 59690)
+                </Tag>
+              </div>
 
-          {/* Quick Metrics Bar inside Mockup */}
-          <div style={{ padding: "20px 24px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
-            <Row gutter={[16, 16]}>
-              <Col xs={12} sm={6}>
-                <div style={{ background: "#fff", padding: "12px 16px", borderRadius: 10, border: "1px solid #e2e8f0" }}>
-                  <Text type="secondary" style={{ fontSize: 12 }}>Today&apos;s Store Sales</Text>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: "#059669" }}>₹18,450</div>
-                  <Text type="secondary" style={{ fontSize: 11 }}>28 Orders processed</Text>
-                </div>
-              </Col>
-              <Col xs={12} sm={6}>
-                <div style={{ background: "#fff", padding: "12px 16px", borderRadius: 10, border: "1px solid #e2e8f0" }}>
-                  <Text type="secondary" style={{ fontSize: 12 }}>Online Digital Catalog</Text>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: "#0f172a" }}>142 Items</div>
-                  <Text type="secondary" style={{ fontSize: 11 }}>Live at /shop/store-slug</Text>
-                </div>
-              </Col>
-              <Col xs={12} sm={6}>
-                <div style={{ background: "#fff", padding: "12px 16px", borderRadius: 10, border: "1px solid #e2e8f0" }}>
-                  <Text type="secondary" style={{ fontSize: 12 }}>Verified Local Leads</Text>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: "#2563eb" }}>48 Found</div>
-                  <Text type="secondary" style={{ fontSize: 11 }}>Hyperlocal business discovery</Text>
-                </div>
-              </Col>
-              <Col xs={12} sm={6}>
-                <div style={{ background: "#fff", padding: "12px 16px", borderRadius: 10, border: "1px solid #e2e8f0" }}>
-                  <Text type="secondary" style={{ fontSize: 12 }}>Direct Bank UPI Rate</Text>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: "#d97706" }}>0% Fee</div>
-                  <Text type="secondary" style={{ fontSize: 11 }}>₹0 cut taken by platform</Text>
-                </div>
-              </Col>
-            </Row>
-          </div>
+              {/* Top Stats */}
+              <div style={{ padding: "16px 20px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
+                <Row gutter={[12, 12]}>
+                  <Col xs={8}>
+                    <div style={{ background: "#fff", padding: "10px 12px", borderRadius: 8, border: "1px solid #e2e8f0" }}>
+                      <Text type="secondary" style={{ fontSize: 11 }}>Today&apos;s Revenue</Text>
+                      <div style={{ fontSize: 17, fontWeight: 800, color: "#059669" }}>₹18,450</div>
+                    </div>
+                  </Col>
+                  <Col xs={8}>
+                    <div style={{ background: "#fff", padding: "10px 12px", borderRadius: 8, border: "1px solid #e2e8f0" }}>
+                      <Text type="secondary" style={{ fontSize: 11 }}>Active Products</Text>
+                      <div style={{ fontSize: 17, fontWeight: 800, color: "#0f172a" }}>142 Items</div>
+                    </div>
+                  </Col>
+                  <Col xs={8}>
+                    <div style={{ background: "#fff", padding: "10px 12px", borderRadius: 8, border: "1px solid #e2e8f0" }}>
+                      <Text type="secondary" style={{ fontSize: 11 }}>Local Leads</Text>
+                      <div style={{ fontSize: 17, fontWeight: 800, color: "#2563eb" }}>48 Found</div>
+                    </div>
+                  </Col>
+                </Row>
+              </div>
 
-          {/* Visual Showcase: 2 Real Feature Previews */}
-          <div style={{ padding: "24px", background: "#fff" }}>
-            <Row gutter={[24, 24]}>
-              {/* Feature 1: Real WhatsApp Order Alert with UPI QR */}
-              <Col xs={24} md={12}>
-                <Card
-                  title={
-                    <Space>
-                      <WhatsAppOutlined style={{ color: "#25D366", fontSize: 18 }} />
-                      <span style={{ fontWeight: 700 }}>Real-time WhatsApp Order Receipt</span>
-                    </Space>
-                  }
-                  type="inner"
-                  style={{ borderRadius: 12, background: "#f0fdf4", borderColor: "#bbf7d0", height: "100%" }}
-                >
-                  <div
-                    style={{
-                      background: "#fff",
-                      borderRadius: 12,
-                      padding: 16,
-                      boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-                      border: "1px solid #dcfce7",
-                    }}
-                  >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                      <Text strong style={{ color: "#065f46" }}>📦 GinieSpace Order Alert</Text>
-                      <Tag color="green">CONFIRMED</Tag>
-                    </div>
-                    <Text style={{ fontSize: 13, display: "block", marginBottom: 6 }}>
-                      Namaste <strong>Rahul Sharma</strong>, aapka order <strong>#09ef13</strong> confirm ho gaya hai.
-                    </Text>
-                    <div style={{ background: "#f8fafc", padding: "8px 12px", borderRadius: 8, fontSize: 12, marginBottom: 10 }}>
-                      <div>• 1x Premium Basmati Rice (1kg) - ₹110</div>
-                      <div>• 1x Cold Pressed Mustard Oil (500ml) - ₹75</div>
-                      <div style={{ borderTop: "1px solid #e2e8f0", marginTop: 6, paddingTop: 6, fontWeight: 700, color: "#059669" }}>
-                        💰 Total Amount: ₹185 (0% Gateway Cut)
-                      </div>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <QrcodeOutlined style={{ fontSize: 24, color: "#25D366" }} />
-                      <div>
-                        <div style={{ fontSize: 12, fontWeight: 600 }}>UPI ID: 9279259690@fam</div>
-                        <div style={{ fontSize: 11, color: "#64748b" }}>Direct bank settlement initiated</div>
-                      </div>
-                    </div>
+              {/* Main Content inside Desktop View */}
+              <div style={{ padding: 20, flex: 1, display: "flex", flexDirection: "column", gap: 16 }}>
+                {/* Simulated Order Notification */}
+                <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", padding: 14, borderRadius: 10 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                    <Text strong style={{ color: "#065f46" }}>📦 New WhatsApp Order #09ef13</Text>
+                    <Tag color="green">INSTANT CONFIRMED</Tag>
                   </div>
-                </Card>
-              </Col>
-
-              {/* Feature 2: Hyperlocal B2B Leads Discovery */}
-              <Col xs={24} md={12}>
-                <Card
-                  title={
-                    <Space>
-                      <SearchOutlined style={{ color: "#2563eb", fontSize: 18 }} />
-                      <span style={{ fontWeight: 700 }}>Hyperlocal Verified B2B Lead Finder</span>
-                    </Space>
-                  }
-                  type="inner"
-                  style={{ borderRadius: 12, background: "#eff6ff", borderColor: "#bfdbfe", height: "100%" }}
-                >
-                  <div
-                    style={{
-                      background: "#fff",
-                      borderRadius: 12,
-                      padding: 16,
-                      boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-                      border: "1px solid #dbeafe",
-                    }}
-                  >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                      <Text strong style={{ fontSize: 14 }}>Shree Krishna Kirana &amp; General Store</Text>
-                      <Tag color="blue">LOCAL RETAILER</Tag>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#64748b", marginBottom: 6 }}>
-                      <EnvironmentOutlined /> Sector 18, Noida, Uttar Pradesh
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, marginBottom: 12 }}>
-                      <Rate disabled defaultValue={4.8} style={{ fontSize: 12 }} />
-                      <Text strong>4.8★</Text>
-                      <Text type="secondary">(142 ratings)</Text>
-                      <Tag color="cyan">📞 +91 98112 XXXXX</Tag>
-                    </div>
+                  <Text style={{ fontSize: 12, color: "#1e293b", display: "block" }}>
+                    Customer: <strong>Rahul Sharma</strong> (+91 98765 XXXXX)
+                  </Text>
+                  <div style={{ fontSize: 12, color: "#475569", marginTop: 4 }}>
+                    • 1x Premium Basmati Rice (1kg) - ₹110<br />
+                    • 1x Cold Pressed Mustard Oil (500ml) - ₹75
+                  </div>
+                  <div style={{ marginTop: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <Text strong style={{ color: "#059669" }}>Total: ₹185 (Direct Bank UPI)</Text>
                     <Space size="small">
-                      <Button size="small" type="primary" icon={<WhatsAppOutlined />} style={{ background: "#25D366", borderColor: "#25D366" }}>
-                        Send WhatsApp Pitch
+                      <Button size="small" type="primary" style={{ background: "#25D366", borderColor: "#25D366" }}>
+                        Print Bill
                       </Button>
-                      <Button size="small">Save to CRM</Button>
+                      <Button size="small">Dispatch Alert</Button>
                     </Space>
                   </div>
-                </Card>
-              </Col>
-            </Row>
+                </div>
+
+                {/* Hyperlocal Lead Card */}
+                <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", padding: 14, borderRadius: 10 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                    <Text strong style={{ color: "#1e3a8a" }}>Shree Krishna Kirana &amp; Retail Store</Text>
+                    <Tag color="blue">LOCAL RETAILER</Tag>
+                  </div>
+                  <Text type="secondary" style={{ fontSize: 11, display: "block" }}>
+                    <EnvironmentOutlined /> Sector 18, Noida • ⭐ 4.8 (142 reviews) • 📱 +91 98112 XXXXX
+                  </Text>
+                  <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
+                    <Button size="small" type="primary" icon={<WhatsAppOutlined />} style={{ background: "#25D366", borderColor: "#25D366" }}>
+                      Send WhatsApp Proposal
+                    </Button>
+                    <Button size="small">Save to CRM</Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Col>
+
+          {/* Right Side: Mobile Smartphone Mockup (Customer View) (35%) */}
+          <Col xs={24} lg={9}>
+            <div
+              style={{
+                background: "#0f172a",
+                borderRadius: 36,
+                padding: "12px",
+                boxShadow: "0 24px 60px -12px rgba(15, 23, 42, 0.25)",
+                border: "4px solid #334155",
+                height: "100%",
+                maxWidth: 360,
+                margin: "0 auto",
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
+              {/* Phone Speaker Notch */}
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>
+                <div style={{ width: 64, height: 5, background: "#475569", borderRadius: 4 }} />
+              </div>
+
+              {/* Phone Screen Container */}
+              <div
+                style={{
+                  background: "#ffffff",
+                  borderRadius: 24,
+                  overflow: "hidden",
+                  flex: 1,
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
+                {/* Store Header inside Phone */}
+                <div style={{ background: "#25D366", color: "#fff", padding: "14px 16px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <div style={{ fontWeight: 800, fontSize: 14 }}>Sharma General Store</div>
+                      <div style={{ fontSize: 10, opacity: 0.9 }}>app.ginie.space/shop/sharma-store</div>
+                    </div>
+                    <Tag color="gold" style={{ fontWeight: 700, margin: 0 }}>VERIFIED</Tag>
+                  </div>
+                </div>
+
+                {/* Product Catalog Items inside Phone Screen */}
+                <div style={{ padding: "12px 14px", flex: 1, display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #f1f5f9", paddingBottom: 8 }}>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: 13 }}>Premium Basmati Rice</div>
+                      <div style={{ fontSize: 11, color: "#64748b" }}>1 kg Pack • In Stock</div>
+                      <div style={{ fontWeight: 700, color: "#059669", fontSize: 13 }}>₹110</div>
+                    </div>
+                    <Button size="small" type="primary" style={{ background: "#25D366", borderColor: "#25D366" }}>
+                      + Add
+                    </Button>
+                  </div>
+
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #f1f5f9", paddingBottom: 8 }}>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: 13 }}>Cold Pressed Mustard Oil</div>
+                      <div style={{ fontSize: 11, color: "#64748b" }}>500 ml Bottle • In Stock</div>
+                      <div style={{ fontWeight: 700, color: "#059669", fontSize: 13 }}>₹75</div>
+                    </div>
+                    <Button size="small" type="primary" style={{ background: "#25D366", borderColor: "#25D366" }}>
+                      + Add
+                    </Button>
+                  </div>
+
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: 13 }}>Organic Whole Wheat</div>
+                      <div style={{ fontSize: 11, color: "#64748b" }}>5 kg Bag • Fresh Milling</div>
+                      <div style={{ fontWeight: 700, color: "#059669", fontSize: 13 }}>₹240</div>
+                    </div>
+                    <Button size="small">+ Add</Button>
+                  </div>
+                </div>
+
+                {/* Floating WhatsApp Checkout Button on Mobile */}
+                <div style={{ padding: "12px 14px", background: "#f8fafc", borderTop: "1px solid #e2e8f0" }}>
+                  <Button
+                    type="primary"
+                    block
+                    icon={<WhatsAppOutlined />}
+                    style={{
+                      background: "#25D366",
+                      borderColor: "#25D366",
+                      fontWeight: 700,
+                      height: 40,
+                      borderRadius: 10,
+                      boxShadow: "0 4px 12px rgba(37, 211, 102, 0.35)",
+                    }}
+                  >
+                    Order 2 Items (₹185) via WhatsApp
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </Col>
+        </Row>
+      </section>
+
+      {/* 3-STEP VISUAL FLOW GRAPHIC ("How It Works in 60 Seconds") */}
+      <section id="how-it-works" style={{ background: "#ffffff", padding: "64px 24px", borderTop: "1px solid #e2e8f0", borderBottom: "1px solid #e2e8f0" }}>
+        <div style={{ maxWidth: 1140, margin: "0 auto" }}>
+          <div style={{ textAlign: "center", marginBottom: 48 }}>
+            <Tag color="green" style={{ padding: "4px 14px", borderRadius: 999, fontWeight: 700, fontSize: 13 }}>
+              ⚡ ZERO TECH HASSLE
+            </Tag>
+            <Title level={2} style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)", fontWeight: 800, marginTop: 12, color: "#0f172a" }}>
+              Sirf 3 Steps Me Aapki Online Dukan Live!
+            </Title>
+            <Paragraph style={{ color: "#64748b", fontSize: 16 }}>
+              Bina coding ya app download ke, direct browser me setup complete karein.
+            </Paragraph>
+          </div>
+
+          <Row gutter={[24, 24]}>
+            {/* Step 1 */}
+            <Col xs={24} md={8}>
+              <Card
+                style={{
+                  borderRadius: 16,
+                  height: "100%",
+                  border: "1px solid #e2e8f0",
+                  background: "#f8fafc",
+                  position: "relative",
+                  overflow: "hidden",
+                }}
+              >
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 12,
+                    right: 16,
+                    fontSize: 48,
+                    fontWeight: 900,
+                    color: "rgba(15, 23, 42, 0.05)",
+                    lineHeight: 1,
+                  }}
+                >
+                  01
+                </div>
+                <div
+                  style={{
+                    width: 52,
+                    height: 52,
+                    borderRadius: 14,
+                    background: "#ecfdf5",
+                    color: "#059669",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 26,
+                    marginBottom: 20,
+                  }}
+                >
+                  <QrcodeOutlined />
+                </div>
+                <Tag color="green" style={{ fontWeight: 700, marginBottom: 8 }}>STEP 01</Tag>
+                <Title level={4} style={{ color: "#0f172a", margin: "4px 0 10px" }}>
+                  1-Scan WhatsApp Sync
+                </Title>
+                <Paragraph style={{ color: "#64748b", fontSize: 14, lineHeight: 1.6 }}>
+                  Apne phone ka WhatsApp kholein, <strong>Linked Devices</strong> me jakar GinieSpace ka secure QR code scan karein. Sirf 10 second me multi-device sync complete.
+                </Paragraph>
+                <Tag color="cyan">Cloud-Maintained Session</Tag>
+              </Card>
+            </Col>
+
+            {/* Step 2 */}
+            <Col xs={24} md={8}>
+              <Card
+                style={{
+                  borderRadius: 16,
+                  height: "100%",
+                  border: "1px solid #e2e8f0",
+                  background: "#f8fafc",
+                  position: "relative",
+                  overflow: "hidden",
+                }}
+              >
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 12,
+                    right: 16,
+                    fontSize: 48,
+                    fontWeight: 900,
+                    color: "rgba(15, 23, 42, 0.05)",
+                    lineHeight: 1,
+                  }}
+                >
+                  02
+                </div>
+                <div
+                  style={{
+                    width: 52,
+                    height: 52,
+                    borderRadius: 14,
+                    background: "#eff6ff",
+                    color: "#2563eb",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 26,
+                    marginBottom: 20,
+                  }}
+                >
+                  <ShopOutlined />
+                </div>
+                <Tag color="blue" style={{ fontWeight: 700, marginBottom: 8 }}>STEP 02</Tag>
+                <Title level={4} style={{ color: "#0f172a", margin: "4px 0 10px" }}>
+                  Add Catalog &amp; Share Link
+                </Title>
+                <Paragraph style={{ color: "#64748b", fontSize: 14, lineHeight: 1.6 }}>
+                  Apne products, rates aur photos add karein ya 1-click industry template pack import karein. Apna unique link <code>/shop/your-store</code> WhatsApp bio me dalein.
+                </Paragraph>
+                <Tag color="purple">Shareable Storefront Link</Tag>
+              </Card>
+            </Col>
+
+            {/* Step 3 */}
+            <Col xs={24} md={8}>
+              <Card
+                style={{
+                  borderRadius: 16,
+                  height: "100%",
+                  border: "1px solid #e2e8f0",
+                  background: "#f8fafc",
+                  position: "relative",
+                  overflow: "hidden",
+                }}
+              >
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 12,
+                    right: 16,
+                    fontSize: 48,
+                    fontWeight: 900,
+                    color: "rgba(15, 23, 42, 0.05)",
+                    lineHeight: 1,
+                  }}
+                >
+                  03
+                </div>
+                <div
+                  style={{
+                    width: 52,
+                    height: 52,
+                    borderRadius: 14,
+                    background: "#fffbeb",
+                    color: "#d97706",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 26,
+                    marginBottom: 20,
+                  }}
+                >
+                  <BankOutlined />
+                </div>
+                <Tag color="gold" style={{ fontWeight: 700, marginBottom: 8 }}>STEP 03</Tag>
+                <Title level={4} style={{ color: "#0f172a", margin: "4px 0 10px" }}>
+                  Direct Bank UPI &amp; Orders
+                </Title>
+                <Paragraph style={{ color: "#64748b", fontSize: 14, lineHeight: 1.6 }}>
+                  Customer order karta hai, automatic receipt generate hoti hai jisme aapka UPI QR code hota hai. 100% paise seedhe aapke bank account me transfer hote hain.
+                </Paragraph>
+                <Tag color="gold">0% Commission Guaranteed</Tag>
+              </Card>
+            </Col>
+          </Row>
+        </div>
+      </section>
+
+      {/* INTERACTIVE DEMO TOUR / SIMULATOR SECTION */}
+      <section id="demo-tour" style={{ maxWidth: 1140, margin: "64px auto", padding: "0 24px" }}>
+        <div style={{ textAlign: "center", marginBottom: 36 }}>
+          <Tag color="blue" style={{ padding: "4px 14px", borderRadius: 999, fontWeight: 700, fontSize: 13 }}>
+            🎮 INTERACTIVE FEATURE TOUR
+          </Tag>
+          <Title level={2} style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)", fontWeight: 800, marginTop: 12, color: "#0f172a" }}>
+            Dekhein GinieSpace Kaise Kaam Karta Hai
+          </Title>
+          <Paragraph style={{ color: "#64748b", fontSize: 16 }}>
+            Neeche diye gaye interactive tabs par click karein aur real feature previews check karein.
+          </Paragraph>
+
+          {/* Tour Tabs Bar */}
+          <div style={{ display: "inline-flex", background: "#e2e8f0", padding: 4, borderRadius: 12, flexWrap: "wrap", gap: 4 }}>
+            <Button
+              type={tourTab === "sync" ? "primary" : "text"}
+              icon={<QrcodeOutlined />}
+              onClick={() => setTourTab("sync")}
+              style={{
+                background: tourTab === "sync" ? "#0f172a" : "transparent",
+                color: tourTab === "sync" ? "#fff" : "#475569",
+                fontWeight: 600,
+                borderRadius: 8,
+              }}
+            >
+              1. Multi-Device Sync
+            </Button>
+            <Button
+              type={tourTab === "store" ? "primary" : "text"}
+              icon={<ShopOutlined />}
+              onClick={() => setTourTab("store")}
+              style={{
+                background: tourTab === "store" ? "#0f172a" : "transparent",
+                color: tourTab === "store" ? "#fff" : "#475569",
+                fontWeight: 600,
+                borderRadius: 8,
+              }}
+            >
+              2. Digital Catalog Link
+            </Button>
+            <Button
+              type={tourTab === "leads" ? "primary" : "text"}
+              icon={<SearchOutlined />}
+              onClick={() => setTourTab("leads")}
+              style={{
+                background: tourTab === "leads" ? "#0f172a" : "transparent",
+                color: tourTab === "leads" ? "#fff" : "#475569",
+                fontWeight: 600,
+                borderRadius: 8,
+              }}
+            >
+              3. Hyperlocal Leads
+            </Button>
+            <Button
+              type={tourTab === "billing" ? "primary" : "text"}
+              icon={<FileTextOutlined />}
+              onClick={() => setTourTab("billing")}
+              style={{
+                background: tourTab === "billing" ? "#0f172a" : "transparent",
+                color: tourTab === "billing" ? "#fff" : "#475569",
+                fontWeight: 600,
+                borderRadius: 8,
+              }}
+            >
+              4. 0% Fee UPI Bills
+            </Button>
           </div>
         </div>
+
+        {/* Tour Stage Card */}
+        <Card
+          style={{
+            borderRadius: 18,
+            border: "1px solid #cbd5e1",
+            boxShadow: "0 16px 40px rgba(15, 23, 42, 0.08)",
+            padding: 20,
+            background: "#ffffff",
+          }}
+        >
+          {tourTab === "sync" && (
+            <Row gutter={[24, 24]} align="middle">
+              <Col xs={24} md={12}>
+                <Tag color="green" style={{ fontWeight: 700, marginBottom: 8 }}>PERSISTENT CLOUD LINK</Tag>
+                <Title level={3} style={{ color: "#0f172a" }}>Phone Se Sirf 1 Baar QR Scan Karein</Title>
+                <Paragraph style={{ color: "#64748b", lineHeight: 1.7, fontSize: 15 }}>
+                  Aapko kisi complicated API setup ya coding ki zaroorat nahi hai. Apne official phone se <strong>Linked Devices</strong> me jakar scan karein. System background me cloud socket maintain karta hai jisse aapka WhatsApp 24/7 active rehta hai.
+                </Paragraph>
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 16 }}>
+                  <Tag color="success">✓ Real Mobile Numbers</Tag>
+                  <Tag color="blue">✓ Cloud Background Active</Tag>
+                  <Tag color="cyan">✓ Multi-Device Protocol</Tag>
+                </div>
+              </Col>
+              <Col xs={24} md={12} style={{ textAlign: "center" }}>
+                <div style={{ background: "#f8fafc", padding: 24, borderRadius: 14, border: "2px dashed #cbd5e1", display: "inline-block" }}>
+                  <QrcodeOutlined style={{ fontSize: 120, color: "#25D366" }} />
+                  <div style={{ marginTop: 12, fontWeight: 700, color: "#065f46" }}>
+                    Scan &amp; Link Your Business Phone
+                  </div>
+                  <Text type="secondary" style={{ fontSize: 12 }}>Safe Rate-Limited Delivery Active</Text>
+                </div>
+              </Col>
+            </Row>
+          )}
+
+          {tourTab === "store" && (
+            <Row gutter={[24, 24]} align="middle">
+              <Col xs={24} md={12}>
+                <Tag color="blue" style={{ fontWeight: 700, marginBottom: 8 }}>SHAREABLE DIGITAL CATALOG</Tag>
+                <Title level={3} style={{ color: "#0f172a" }}>Aapki Apni Dukan Ka Public Web Link</Title>
+                <Paragraph style={{ color: "#64748b", lineHeight: 1.7, fontSize: 15 }}>
+                  Grahak ko koi app install nahi karni padegi. Wo aapke link <code>app.ginie.space/shop/{`{your-store}`}</code> par tap karke live catalog, wholesale MOQ ya service slots browse kar sakte hain.
+                </Paragraph>
+                <div style={{ background: "#f1f5f9", padding: "10px 14px", borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                  <Text strong style={{ fontSize: 13, color: "#0f172a" }}>app.ginie.space/shop/kirana-hub</Text>
+                  <Button size="small" icon={<CopyOutlined />} onClick={() => handleCopyLink("https://app.ginie.space/shop/demo")}>Copy Link</Button>
+                </div>
+              </Col>
+              <Col xs={24} md={12}>
+                <div style={{ background: "#f8fafc", padding: 20, borderRadius: 14, border: "1px solid #e2e8f0" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <Text strong>Live Catalog Preview</Text>
+                    <Tag color="green">142 Items</Tag>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    <div style={{ background: "#fff", padding: "8px 12px", borderRadius: 8, display: "flex", justifyContent: "space-between" }}>
+                      <span>Premium Basmati Rice 1kg</span>
+                      <strong style={{ color: "#059669" }}>₹110</strong>
+                    </div>
+                    <div style={{ background: "#fff", padding: "8px 12px", borderRadius: 8, display: "flex", justifyContent: "space-between" }}>
+                      <span>Cold Pressed Mustard Oil 500ml</span>
+                      <strong style={{ color: "#059669" }}>₹75</strong>
+                    </div>
+                  </div>
+                </div>
+              </Col>
+            </Row>
+          )}
+
+          {tourTab === "leads" && (
+            <Row gutter={[24, 24]} align="middle">
+              <Col xs={24} md={12}>
+                <Tag color="cyan" style={{ fontWeight: 700, marginBottom: 8 }}>HYPERLOCAL B2B DISCOVERY</Tag>
+                <Title level={3} style={{ color: "#0f172a" }}>Google Places Se Naye Retailers Khojein</Title>
+                <Paragraph style={{ color: "#64748b", lineHeight: 1.7, fontSize: 15 }}>
+                  Apne city ya locality me specific category (e.g. &quot;Hardware Stores in Pune&quot;) search karein. System verified business name, address, Google star ratings aur verified phone number nikal kar deta hai.
+                </Paragraph>
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 12 }}>
+                  <Tag color="blue">✓ Verified Phone Numbers</Tag>
+                  <Tag color="green">✓ 1-Click WhatsApp Pitch</Tag>
+                  <Tag color="purple">✓ Direct CRM Pipeline</Tag>
+                </div>
+              </Col>
+              <Col xs={24} md={12}>
+                <div style={{ background: "#eff6ff", padding: 20, borderRadius: 14, border: "1px solid #bfdbfe" }}>
+                  <div style={{ fontWeight: 700, color: "#1e3a8a", fontSize: 14, marginBottom: 4 }}>
+                    Shree Ganesh Supermarket (Sector 18)
+                  </div>
+                  <div style={{ fontSize: 12, color: "#475569", marginBottom: 8 }}>
+                    ⭐ 4.9 (210 reviews) • 📱 +91 98765 XXXXX • Verified Retailer
+                  </div>
+                  <Button size="small" type="primary" icon={<WhatsAppOutlined />} style={{ background: "#25D366", borderColor: "#25D366" }}>
+                    Send Direct WhatsApp Proposal
+                  </Button>
+                </div>
+              </Col>
+            </Row>
+          )}
+
+          {tourTab === "billing" && (
+            <Row gutter={[24, 24]} align="middle">
+              <Col xs={24} md={12}>
+                <Tag color="gold" style={{ fontWeight: 700, marginBottom: 8 }}>100% DIRECT BANK SETTLEMENT</Tag>
+                <Title level={3} style={{ color: "#0f172a" }}>0% Commission Scannable UPI Bills</Title>
+                <Paragraph style={{ color: "#64748b", lineHeight: 1.7, fontSize: 15 }}>
+                  Grahak ke har invoice par aapka apna personal UPI QR code attach hota hai. Grahak PhonePe, Google Pay ya Paytm se scan karke direct aapke bank account me transfer karta hai.
+                </Paragraph>
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 12 }}>
+                  <Tag color="gold">✓ ₹0 Gateway Cut</Tag>
+                  <Tag color="success">✓ Real-time WhatsApp Receipt</Tag>
+                  <Tag color="cyan">✓ Printable GST Invoices</Tag>
+                </div>
+              </Col>
+              <Col xs={24} md={12} style={{ textAlign: "center" }}>
+                <div style={{ background: "#fffbeb", padding: 20, borderRadius: 14, border: "1px solid #fde68a", display: "inline-block", textAlign: "left" }}>
+                  <div style={{ fontWeight: 700, color: "#92400e", marginBottom: 6 }}>
+                    GST Tax Invoice #09ef13
+                  </div>
+                  <div style={{ fontSize: 12, color: "#78350f", marginBottom: 8 }}>
+                    Items Total: ₹185 • Payment Mode: Direct UPI
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", padding: "8px 12px", borderRadius: 8 }}>
+                    <QrcodeOutlined style={{ fontSize: 32, color: "#25D366" }} />
+                    <div style={{ fontSize: 11 }}>
+                      <strong>UPI: 9279259690@fam</strong><br />
+                      Scan to Pay via any UPI App
+                    </div>
+                  </div>
+                </div>
+              </Col>
+            </Row>
+          )}
+        </Card>
       </section>
 
       {/* Solutions by Business Type (Retail, Wholesale, Services) */}
@@ -1037,6 +1492,103 @@ export default function LandingPageClient() {
         </div>
       </section>
 
+      {/* Video Walkthrough Modal */}
+      <Modal
+        title={
+          <Space>
+            <PlayCircleOutlined style={{ color: "#059669" }} />
+            <span>GinieSpace 45-Second Walkthrough Demo</span>
+          </Space>
+        }
+        open={videoModalOpen}
+        onCancel={() => setVideoModalOpen(false)}
+        footer={null}
+        width={700}
+        centered
+      >
+        <div style={{ padding: "12px 0" }}>
+          {/* Interactive Simulated Video Screen */}
+          <div
+            style={{
+              background: "#0f172a",
+              borderRadius: 12,
+              padding: 24,
+              color: "#fff",
+              position: "relative",
+              overflow: "hidden",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <Tag color="green">● LIVE PLATFORM DEMO</Tag>
+              <Text style={{ color: "#94a3b8", fontSize: 12 }}>Step {simStep} of 3</Text>
+            </div>
+
+            {simStep === 1 && (
+              <div style={{ textAlign: "center", padding: "20px 0" }}>
+                <QrcodeOutlined style={{ fontSize: 64, color: "#25D366", marginBottom: 12 }} />
+                <Title level={4} style={{ color: "#fff", margin: 0 }}>
+                  1. Scan WhatsApp QR from Linked Devices
+                </Title>
+                <Text style={{ color: "#94a3b8", display: "block", marginTop: 8 }}>
+                  Phone connects in under 10 seconds. Your number stays safe and cloud-maintained.
+                </Text>
+                <Button
+                  type="primary"
+                  style={{ marginTop: 20, background: "#25D366", borderColor: "#25D366" }}
+                  onClick={() => setSimStep(2)}
+                >
+                  Next: See Customer Store View ➔
+                </Button>
+              </div>
+            )}
+
+            {simStep === 2 && (
+              <div style={{ textAlign: "center", padding: "20px 0" }}>
+                <ShopOutlined style={{ fontSize: 64, color: "#38bdf8", marginBottom: 12 }} />
+                <Title level={4} style={{ color: "#fff", margin: 0 }}>
+                  2. Share Your Storefront: /shop/your-store
+                </Title>
+                <Text style={{ color: "#94a3b8", display: "block", marginTop: 8 }}>
+                  Customer clicks link in WhatsApp bio, adds products to cart, and taps Order!
+                </Text>
+                <Button
+                  type="primary"
+                  style={{ marginTop: 20, background: "#38bdf8", borderColor: "#38bdf8" }}
+                  onClick={() => setSimStep(3)}
+                >
+                  Next: See Automated WhatsApp Bill ➔
+                </Button>
+              </div>
+            )}
+
+            {simStep === 3 && (
+              <div style={{ textAlign: "center", padding: "20px 0" }}>
+                <BankOutlined style={{ fontSize: 64, color: "#34d399", marginBottom: 12 }} />
+                <Title level={4} style={{ color: "#fff", margin: 0 }}>
+                  3. Customer Pays 100% Direct via UPI (0% Fee)
+                </Title>
+                <Text style={{ color: "#94a3b8", display: "block", marginTop: 8 }}>
+                  Instant WhatsApp invoice receipt delivered. Settlement directly into your bank.
+                </Text>
+                <Space style={{ marginTop: 20 }}>
+                  <Button onClick={() => setSimStep(1)}>Restart Demo</Button>
+                  <Button
+                    type="primary"
+                    style={{ background: "#25D366", borderColor: "#25D366" }}
+                    onClick={() => {
+                      setVideoModalOpen(false);
+                      router.push("/signup");
+                    }}
+                  >
+                    Start Free Account Now
+                  </Button>
+                </Space>
+              </div>
+            )}
+          </div>
+        </div>
+      </Modal>
+
       {/* Footer with Legal Shield Disclaimer & Links */}
       <footer style={{ background: "#0f172a", color: "#94a3b8", padding: "48px 24px 32px", borderTop: "1px solid #1e293b" }}>
         <div style={{ maxWidth: 1200, margin: "0 auto" }}>
@@ -1077,8 +1629,8 @@ export default function LandingPageClient() {
               <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13 }}>
                 <a href="#solutions" style={{ color: "#94a3b8", textDecoration: "none" }}>Retail &amp; Kirana Stores</a>
                 <a href="#solutions" style={{ color: "#94a3b8", textDecoration: "none" }}>Wholesale &amp; Bulk Cartons</a>
-                <a href="#solutions" style={{ color: "#94a3b8", textDecoration: "none" }}>Services &amp; Appointments</a>
-                <a href="#features" style={{ color: "#94a3b8", textDecoration: "none" }}>Hyperlocal B2B Leads</a>
+                <a href="#solutions" style={{ color: "#solutions", textDecoration: "none" }}>Services &amp; Appointments</a>
+                <a href="#demo-tour" style={{ color: "#94a3b8", textDecoration: "none" }}>Hyperlocal B2B Leads</a>
                 <a href="#calculator" style={{ color: "#94a3b8", textDecoration: "none" }}>0% Commission UPI Billing</a>
               </div>
             </Col>
