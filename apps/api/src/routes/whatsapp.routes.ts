@@ -56,17 +56,26 @@ export function createWhatsAppRouter(
 
   router.post("/send", async (req: Request, res: Response): Promise<void> => {
     try {
-      const { recipientPhone, messageText, contactName, mediaDataUrl } = req.body;
-      if (!recipientPhone || (!messageText && !mediaDataUrl)) {
+      const { recipientPhone, messageText, contactName, mediaDataUrl, mediaUrl, mediaType, fileName } = req.body;
+      if (!recipientPhone || (!messageText && !mediaDataUrl && !mediaUrl)) {
         res.status(400).json({ error: "Recipient phone number and message text or media are required" });
         return;
       }
+
+      const resolvedMediaType = mediaType || (
+        mediaUrl?.toLowerCase().endsWith(".pdf") || mediaDataUrl?.startsWith("data:application/pdf")
+          ? "document"
+          : (mediaUrl || mediaDataUrl ? "image" : undefined)
+      );
 
       const sentInfo = await waManager.sendMessage({
         userId: req.user!.id,
         recipientPhone: recipientPhone.trim(),
         messageText: (messageText || "").trim(),
+        mediaType: resolvedMediaType,
+        mediaUrl: typeof mediaUrl === "string" ? mediaUrl.trim() : undefined,
         mediaDataUrl: typeof mediaDataUrl === "string" ? mediaDataUrl.trim() : undefined,
+        fileName: typeof fileName === "string" ? fileName.trim() : undefined,
         antiBan: {
           simulateTyping: true,
           randomizeHash: true,
@@ -76,11 +85,13 @@ export function createWhatsAppRouter(
       const now = new Date().toISOString();
       const contactDigits = normalizePhoneDigits(recipientPhone);
 
+      const mediaPrefix = resolvedMediaType === "document" ? "[Document/PDF]" : "[Photo]";
+      const hasMedia = Boolean(mediaDataUrl || mediaUrl);
       const saved = await db.messages.create({
         userId: req.user!.id,
         contactPhone: contactDigits,
         contactName: contactName ? String(contactName).trim() : "",
-        text: mediaDataUrl ? `[Photo] ${(messageText || "").trim()}` : (messageText || "").trim(),
+        text: hasMedia ? `${mediaPrefix} ${(messageText || "").trim()}` : (messageText || "").trim(),
         fromMe: "true",
         messageId: sentInfo?.key?.id || Date.now().toString(),
         timestamp: now,

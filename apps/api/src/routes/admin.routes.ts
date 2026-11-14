@@ -233,7 +233,7 @@ export function createAdminRouter(
   // 7. Bulk WhatsApp Broadcast from Official Bot
   router.post("/whatsapp/broadcast", async (req: Request, res: Response): Promise<void> => {
     try {
-      const { segment, messageText } = req.body;
+      const { segment, messageText, imageUrl, mediaUrl } = req.body;
       if (!messageText || !messageText.trim()) {
         res.status(400).json({ error: "Message text is required" });
         return;
@@ -289,10 +289,13 @@ export function createAdminRouter(
           if (!text.toLowerCase().includes("stop") && !text.toLowerCase().includes("opt out")) {
             text += "\n\n_Reply STOP to opt out._";
           }
-          const ok = await notificationService.sendSupportNotification(r.phone, text, {
-            simulateTyping: true,
-            randomizeHash: true,
-          });
+          const bannerUrl = (imageUrl || mediaUrl || "").trim() || undefined;
+          const ok = await notificationService.sendSupportNotification(
+            r.phone,
+            text,
+            { simulateTyping: true, randomizeHash: true },
+            bannerUrl ? { mediaType: "image", mediaUrl: bannerUrl } : undefined
+          );
           if (ok) {
             sentCount++;
             await db.messages.create({
@@ -695,7 +698,7 @@ export function createAdminRouter(
         `  ✅ *Bulk WhatsApp Broadcast Alerts*\n` +
         `  ✅ *Priority 24/7 Official Support*\n\n` +
         `💰 *Special Pro Upgrade:* Only ₹499/month (or ₹3,999/year)\n` +
-        `💳 *UPI ID:* info.giniespace@okaxis\n\n` +
+        `💳 *UPI ID:* paytmqr9tziqdamfo@paytm\n\n` +
         `Payment ke baad screenshot is number par send karein, aapka plan instant activate kar diya jayega!\n\n` +
         `- GinieSpace Growth Team (+91 9279259690)`;
 

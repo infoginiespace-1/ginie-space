@@ -30,6 +30,8 @@ import {
   ArrowLeftOutlined,
   PlusOutlined,
   DeleteOutlined,
+  PictureOutlined,
+  CloseCircleOutlined,
 } from "@ant-design/icons";
 import { getSocket } from "../../lib/socket";
 import { api } from "../../lib/api";
@@ -93,6 +95,8 @@ export default function InboxPage() {
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const [searchTerm, setSearchTerm] = useState("");
   const [inputText, setInputText] = useState("");
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [sending, setSending] = useState(false);
   const [catalogModalVisible, setCatalogModalVisible] = useState(false);
   const [products, setProducts] = useState<ProductItem[]>([]);
@@ -275,6 +279,26 @@ export default function InboxPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [conversations, activeKey]);
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      message.error("Please select an image file (JPG, PNG, WebP)");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      message.error("Image file size should be less than 5MB");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setSelectedImage(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+    // Reset file input so same file can be selected again
+    e.target.value = "";
+  };
+
   const sendTextMessage = async (textToSend: string, mediaDataUrl?: string) => {
     if (!activeKey || (!textToSend.trim() && !mediaDataUrl)) return;
     const conv = conversations.get(activeKey);
@@ -282,11 +306,16 @@ export default function InboxPage() {
 
     setSending(true);
     try {
+      const isRemoteUrl = mediaDataUrl && (mediaDataUrl.startsWith("http://") || mediaDataUrl.startsWith("https://"));
+      const isBase64 = mediaDataUrl && mediaDataUrl.startsWith("data:");
+
       const res = await api.post("/api/whatsapp/send", {
         recipientPhone: targetPhone,
         messageText: textToSend.trim(),
         contactName: conv?.name,
-        mediaDataUrl,
+        mediaUrl: isRemoteUrl ? mediaDataUrl : undefined,
+        mediaDataUrl: isBase64 ? mediaDataUrl : undefined,
+        mediaType: (isRemoteUrl || isBase64) ? "image" : undefined,
       });
 
       const savedId = res.data?.saved?.messageId || Date.now().toString();
@@ -295,7 +324,7 @@ export default function InboxPage() {
       const outbound: ChatMessage = {
         id: savedId,
         senderPhone: activeKey,
-        text: mediaDataUrl ? `[Photo] ${textToSend.trim()}` : textToSend.trim(),
+        text: mediaDataUrl ? `📷 [Photo] ${textToSend.trim()}` : textToSend.trim(),
         timestamp: now,
         fromMe: true,
       };
@@ -306,7 +335,7 @@ export default function InboxPage() {
         if (existing) {
           next.set(activeKey, {
             ...existing,
-            lastMessage: textToSend.trim(),
+            lastMessage: textToSend.trim() || "📷 Photo",
             timestamp: now,
             messages: [...existing.messages, outbound],
           });
@@ -321,10 +350,12 @@ export default function InboxPage() {
   };
 
   const handleSendMessage = async () => {
-    if (!inputText.trim()) return;
+    if (!inputText.trim() && !selectedImage) return;
     const txt = inputText.trim();
+    const img = selectedImage;
     setInputText("");
-    await sendTextMessage(txt);
+    setSelectedImage(null);
+    await sendTextMessage(txt, img || undefined);
   };
 
   const handleOpenCatalog = async () => {
@@ -716,17 +747,44 @@ export default function InboxPage() {
                     Templates
                   </Button>
                 </div>
+                {selectedImage && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, padding: "4px 8px", background: "#f0fdf4", borderRadius: 8, border: "1px solid #bbf7d0" }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={selectedImage} alt="Attachment" style={{ width: 44, height: 44, objectFit: "cover", borderRadius: 6 }} />
+                    <span style={{ fontSize: 12, color: "#166534", flex: 1 }}>Photo attached (will send via WhatsApp)</span>
+                    <Button
+                      type="text"
+                      size="small"
+                      danger
+                      icon={<CloseCircleOutlined />}
+                      onClick={() => setSelectedImage(null)}
+                    />
+                  </div>
+                )}
                 <div style={{ display: "flex", gap: 8, width: "100%" }}>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    style={{ display: "none" }}
+                    onChange={handleFileSelect}
+                  />
+                  <Button
+                    icon={<PictureOutlined />}
+                    size="large"
+                    onClick={() => fileInputRef.current?.click()}
+                    title="Attach Banner or Photo"
+                  />
                   <Button
                     icon={<AppstoreOutlined />}
                     size="large"
                     onClick={handleOpenCatalog}
                     title="Share Product Quote from Catalog"
                   >
-                    Catalog
+                    {!isMobile && "Catalog"}
                   </Button>
                   <Input
-                    placeholder="Type your WhatsApp message..."
+                    placeholder={selectedImage ? "Add caption for photo..." : "Type your WhatsApp message..."}
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     onPressEnter={handleSendMessage}

@@ -1,10 +1,11 @@
 import { Router, Request, Response } from "express";
-import { IDatabase, OrderStatus, PaymentStatus } from "@giniespace/sheets-db";
+import { IDatabase, OrderStatus, PaymentStatus, OrderItem } from "@giniespace/sheets-db";
 import { Server } from "socket.io";
 import { WhatsAppSessionManager } from "@giniespace/whatsapp-engine";
 import { NotificationService } from "../services/notification.service";
 import { normalizePhoneDigits, toE164 } from "../utils/phone";
 import { requireOwnerOrAdmin } from "../middleware/auth";
+import { generateInvoicePdfBuffer } from "../services/invoice-pdf.service";
 
 export function createOrdersRouter(
   db: IDatabase,
@@ -347,6 +348,120 @@ export function createOrdersRouter(
       res.json({ order: updated, message: "Booking schedule & technician updated" });
     } catch {
       res.status(500).json({ error: "Could not update booking schedule" });
+    }
+  });
+
+  // Download Order Invoice PDF
+  router.get("/:id/invoice-pdf", async (req: Request, res: Response): Promise<void> => {
+    try {
+      const order = await db.orders.findById(req.params.id as string);
+      if (!order) {
+        res.status(404).json({ error: "Order not found" });
+        return;
+      }
+      if (req.user?.role !== "admin" && order.userId !== req.user!.id) {
+        res.status(403).json({ error: "Access denied" });
+        return;
+      }
+
+      const [biz] = await Promise.all([
+        db.businesses.findOne({ userId: order.userId }).catch(() => null),
+      ]);
+
+      let items: OrderItem[] = [];
+      try {
+        if (order.itemsJson) items = JSON.parse(order.itemsJson);
+      } catch {}
+
+      const pdfBuffer = await generateInvoicePdfBuffer(order, biz, items);
+      const filename = `Invoice_${order.id.slice(-6).toUpperCase()}.pdf`;
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
+      res.setHeader("Content-Length", pdfBuffer.length);
+      res.end(pdfBuffer);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Failed to generate invoice PDF" });
+    }
+  });
+
+  // Send Order Invoice PDF via WhatsApp Document Message
+  router.post("/:id/send-invoice-whatsapp", async (req: Request, res: Response): Promise<void> => {
+    try {
+      const order = await db.orders.findById(req.params.id as string);
+      if (!order) {
+        res.status(404).json({ error: "Order not found" });
+        return;
+      }
+      if (req.user?.role !== "admin" && order.userId !== req.user!.id) {
+        res.status(403).json({ error: "Access denied" });
+        return;
+      }
+
+      if (!order.customerPhone) {
+        res.status(400).json({ error: "Customer phone number is missing from this order" });
+        return;
+      }
+
+      const [biz] = await Promise.all([
+        db.businesses.findOne({ userId: order.userId }).catch(() => null),
+      ]);
+
+      let items: OrderItem[] = [];
+      try {
+        if (order.itemsJson) items = JSON.parse(order.itemsJson);
+      } catch {}
+
+      const pdfBuffer = await generateInvoicePdfBuffer(order, biz, items);
+      const filename = `Invoice_${order.id.slice(-6).toUpperCase()}.pdf`;
+      const captionText = `🧾 *Tax Invoice #${order.id.slice(-6).toUpperCase()}*\nHello ${order.customerName}!\nYour bill receipt for ₹${Number(order.totalAmount).toLocaleString("en-IN")} is attached below as a PDF document.\n\nThank you for shopping with ${biz?.name || "us"}!`;
+
+      const merchantState = waManager.getSessionState(order.userId);
+      let sentInfo: any = null;
+
+      if (merchantState.status === "connected") {
+        sentInfo = await waManager.sendMessage({
+          userId: order.userId,
+          recipientPhone: order.customerPhone,
+          messageText: captionText,
+          mediaType: "document",
+          mediaBuffer: pdfBuffer,
+          fileName: filename,
+          mimetype: "application/pdf",
+          antiBan: { simulateTyping: true, randomizeHash: true },
+        });
+      } else if (notificationService) {
+        // Fallback to official support notification if merchant WA is disconnected
+        sentInfo = await notificationService.sendSupportDocument(
+          order.customerPhone,
+          pdfBuffer,
+          filename,
+          captionText
+        );
+      } else {
+        res.status(400).json({
+          error: "Your WhatsApp is not connected. Please connect WhatsApp from Settings or Inbox first.",
+        });
+        return;
+      }
+
+      // Record in messages history
+      await db.messages.create({
+        userId: order.userId,
+        contactPhone: normalizePhoneDigits(order.customerPhone),
+        contactName: order.customerName,
+        text: `[PDF Invoice] ${captionText}`,
+        fromMe: "true",
+        messageId: sentInfo?.key?.id || `inv_${Date.now()}`,
+        timestamp: new Date().toISOString(),
+      }).catch(() => null);
+
+      res.json({
+        success: true,
+        message: `PDF Invoice successfully sent to ${order.customerName} (${order.customerPhone}) on WhatsApp!`,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Failed to send invoice PDF via WhatsApp" });
     }
   });
 

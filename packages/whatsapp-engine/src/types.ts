@@ -32,7 +32,12 @@ export interface OutboundMessageRequest {
   userId: string;
   recipientPhone: string;
   messageText: string;
-  mediaDataUrl?: string;
+  mediaType?: "image" | "document" | "video" | "audio";
+  mediaUrl?: string; // remote URL (https://...) or base64 data URL
+  mediaBuffer?: Buffer; // direct memory buffer (for dynamically generated PDFs, invoices)
+  mediaDataUrl?: string; // backwards compatibility
+  fileName?: string; // e.g. "Tax_Invoice_#09EF13.pdf"
+  mimetype?: string; // e.g. "application/pdf", "image/jpeg", "image/png"
   antiBan?: AntiBanOptions;
 }
 

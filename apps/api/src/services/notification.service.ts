@@ -40,7 +40,8 @@ export class NotificationService {
   async sendSupportNotification(
     recipientPhone: string,
     messageText: string,
-    antiBanOptions?: AntiBanOptions
+    antiBanOptions?: AntiBanOptions,
+    mediaOptions?: { mediaType?: "image" | "document"; mediaUrl?: string; mediaBuffer?: Buffer; fileName?: string }
   ): Promise<boolean> {
     try {
       const state = this.waManager.getSessionState(SYSTEM_SUPPORT_SESSION_ID);
@@ -55,6 +56,10 @@ export class NotificationService {
         userId: SYSTEM_SUPPORT_SESSION_ID,
         recipientPhone: digits,
         messageText,
+        mediaType: mediaOptions?.mediaType,
+        mediaUrl: mediaOptions?.mediaUrl,
+        mediaBuffer: mediaOptions?.mediaBuffer,
+        fileName: mediaOptions?.fileName,
         antiBan: antiBanOptions || {
           simulateTyping: true,
           typingDurationMs: Math.min(1800, Math.max(600, messageText.length * 12)),
@@ -65,6 +70,67 @@ export class NotificationService {
     } catch (err: any) {
       console.error("[NotificationService] Failed to send support alert:", err.message);
       return false;
+    }
+  }
+
+  async sendSupportDocument(
+    recipientPhone: string,
+    documentBuffer: Buffer,
+    fileName: string,
+    captionText: string,
+    antiBanOptions?: AntiBanOptions
+  ): Promise<any> {
+    try {
+      const state = this.waManager.getSessionState(SYSTEM_SUPPORT_SESSION_ID);
+      if (state.status !== "connected") {
+        return null;
+      }
+      const digits = normalizePhoneDigits(recipientPhone);
+      if (!digits || digits.length < 10) return null;
+
+      return await this.waManager.sendMessage({
+        userId: SYSTEM_SUPPORT_SESSION_ID,
+        recipientPhone: digits,
+        messageText: captionText,
+        mediaType: "document",
+        mediaBuffer: documentBuffer,
+        fileName,
+        mimetype: "application/pdf",
+        antiBan: antiBanOptions || { simulateTyping: true, randomizeHash: true },
+      });
+    } catch (err: any) {
+      console.error("[NotificationService] Failed to send support document:", err.message);
+      return null;
+    }
+  }
+
+  async sendSupportImage(
+    recipientPhone: string,
+    imageSource: string | Buffer,
+    captionText: string,
+    antiBanOptions?: AntiBanOptions
+  ): Promise<any> {
+    try {
+      const state = this.waManager.getSessionState(SYSTEM_SUPPORT_SESSION_ID);
+      if (state.status !== "connected") {
+        return null;
+      }
+      const digits = normalizePhoneDigits(recipientPhone);
+      if (!digits || digits.length < 10) return null;
+
+      const isBuffer = Buffer.isBuffer(imageSource);
+      return await this.waManager.sendMessage({
+        userId: SYSTEM_SUPPORT_SESSION_ID,
+        recipientPhone: digits,
+        messageText: captionText,
+        mediaType: "image",
+        mediaBuffer: isBuffer ? (imageSource as Buffer) : undefined,
+        mediaUrl: !isBuffer ? (imageSource as string) : undefined,
+        antiBan: antiBanOptions || { simulateTyping: true, randomizeHash: true },
+      });
+    } catch (err: any) {
+      console.error("[NotificationService] Failed to send support image:", err.message);
+      return null;
     }
   }
 

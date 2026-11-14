@@ -394,17 +394,63 @@ export class WhatsAppSessionManager extends EventEmitter {
     }
 
     // 3. Anti-Ban Unique Hash Randomization (Zero-Width suffix to prevent bulk spam hash matching)
+    const hasMedia = Boolean(req.mediaBuffer || req.mediaUrl || req.mediaDataUrl);
     const outboundText =
-      req.antiBan?.randomizeHash !== false && !req.mediaDataUrl
+      req.antiBan?.randomizeHash !== false && !hasMedia
         ? randomizeMessageHash(req.messageText)
         : req.messageText;
 
     let payload: any = { text: outboundText };
-    if (req.mediaDataUrl && req.mediaDataUrl.startsWith("data:image/")) {
-      const commaIdx = req.mediaDataUrl.indexOf(",");
-      if (commaIdx !== -1) {
-        const imgBuffer = Buffer.from(req.mediaDataUrl.slice(commaIdx + 1), "base64");
-        payload = { image: imgBuffer, caption: outboundText };
+
+    // Resolve media source if provided (Buffer, remote URL, or base64 data URL)
+    const mediaSource = req.mediaBuffer || req.mediaUrl || req.mediaDataUrl;
+
+    if (mediaSource) {
+      // Determine if document (PDF) or Image
+      const isDocument =
+        req.mediaType === "document" ||
+        req.mimetype?.includes("pdf") ||
+        Boolean(req.fileName?.toLowerCase().endsWith(".pdf")) ||
+        (typeof mediaSource === "string" && (mediaSource.startsWith("data:application/pdf") || mediaSource.toLowerCase().includes(".pdf")));
+
+      if (isDocument) {
+        let docContent: any;
+        if (Buffer.isBuffer(mediaSource)) {
+          docContent = mediaSource;
+        } else if (typeof mediaSource === "string" && mediaSource.startsWith("data:")) {
+          const commaIdx = mediaSource.indexOf(",");
+          docContent = Buffer.from(mediaSource.slice(commaIdx + 1), "base64");
+        } else if (typeof mediaSource === "string" && (mediaSource.startsWith("http://") || mediaSource.startsWith("https://"))) {
+          docContent = { url: mediaSource };
+        }
+
+        if (docContent) {
+          payload = {
+            document: docContent,
+            mimetype: req.mimetype || "application/pdf",
+            fileName: req.fileName || "Invoice.pdf",
+            caption: outboundText,
+          };
+        }
+      } else {
+        // Handle Image / Promotional Banner / Photo
+        let imgContent: any;
+        if (Buffer.isBuffer(mediaSource)) {
+          imgContent = mediaSource;
+        } else if (typeof mediaSource === "string" && mediaSource.startsWith("data:")) {
+          const commaIdx = mediaSource.indexOf(",");
+          imgContent = Buffer.from(mediaSource.slice(commaIdx + 1), "base64");
+        } else if (typeof mediaSource === "string" && (mediaSource.startsWith("http://") || mediaSource.startsWith("https://"))) {
+          imgContent = { url: mediaSource };
+        }
+
+        if (imgContent) {
+          payload = {
+            image: imgContent,
+            caption: outboundText,
+            mimetype: req.mimetype || "image/jpeg",
+          };
+        }
       }
     }
 

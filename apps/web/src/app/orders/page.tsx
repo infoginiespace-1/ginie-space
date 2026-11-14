@@ -134,32 +134,57 @@ export default function OrdersPage() {
   const [invoiceOrder, setInvoiceOrder] = useState<Order | null>(null);
   const [invoiceQrUrl, setInvoiceQrUrl] = useState<string | null>(null);
 
+  const handleDownloadPdf = async (order: Order) => {
+    try {
+      message.loading({ content: "Generating Tax Invoice PDF...", key: "pdf-dl" });
+      const res = await api.get(`/api/orders/${order.id}/invoice-pdf`, { responseType: "blob" });
+      const blob = new Blob([res.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Invoice-${order.id.slice(-6).toUpperCase()}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      message.success({ content: "Invoice PDF downloaded!", key: "pdf-dl" });
+    } catch (err: any) {
+      message.error({ content: err.message || "Failed to download invoice PDF", key: "pdf-dl" });
+    }
+  };
+
   const handleSendWhatsAppBill = async (order: Order) => {
     try {
       setSendingBillId(order.id);
-      let itemsSummary = "";
-      try {
-        const parsed = JSON.parse(order.itemsJson || "[]");
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          itemsSummary = "\n📋 *Items:*\n" + parsed.map((i: any) => `• ${i.name} x ${i.quantity} = ₹${i.price * i.quantity}`).join("\n");
-        }
-      } catch {}
-
-      const scheduleLine =
-        order.bookingDate || order.assignedStaff || order.nextRenewalDate
-          ? `${order.bookingDate ? `\n📅 *Scheduled Date:* ${order.bookingDate}${order.timeSlot ? ` (${order.timeSlot})` : ""}` : ""}${order.assignedStaff ? `\n👷 *Assigned Staff:* ${order.assignedStaff}` : ""}${order.nextRenewalDate ? `\n🔔 *Next Renewal:* ${order.nextRenewalDate}` : ""}`
-          : "";
-      const upiLine = upiId ? `\n💳 *Pay via UPI:* ${upiId}` : "";
-      const billText = `🧾 *Order / Booking Invoice #${order.id.slice(-6)}*\n\nNamaste *${order.customerName}*,\nAapki details neeche di gayi hain:${itemsSummary}${scheduleLine}\n\n💰 *Total Amount:* ₹${order.totalAmount}\n📌 *Status:* ${order.status.toUpperCase()}${order.notes ? `\n📝 *Note:* ${order.notes}` : ""}${upiLine}\n📅 *Bill Date:* ${new Date(order.createdAt).toLocaleDateString()}\n\nThank you for your business! 🙏`;
-
-      await api.post("/api/whatsapp/send", {
-        recipientPhone: order.customerPhone,
-        messageText: billText,
-        contactName: order.customerName,
-      });
-      message.success(`WhatsApp bill sent to ${order.customerName}!`);
+      message.loading({ content: `Sending PDF bill to ${order.customerName} on WhatsApp...`, key: "wa-bill" });
+      const res = await api.post(`/api/orders/${order.id}/send-invoice-whatsapp`);
+      message.success({ content: res.data?.message || `PDF Invoice sent to ${order.customerName}!`, key: "wa-bill" });
     } catch (err: any) {
-      message.error(err.response?.data?.error || err.message || "Could not send bill. Please ensure WhatsApp is connected.");
+      try {
+        let itemsSummary = "";
+        try {
+          const parsed = JSON.parse(order.itemsJson || "[]");
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            itemsSummary = "\n📋 *Items:*\n" + parsed.map((i: any) => `• ${i.name} x ${i.quantity} = ₹${i.price * i.quantity}`).join("\n");
+          }
+        } catch {}
+
+        const scheduleLine =
+          order.bookingDate || order.assignedStaff || order.nextRenewalDate
+            ? `${order.bookingDate ? `\n📅 *Scheduled Date:* ${order.bookingDate}${order.timeSlot ? ` (${order.timeSlot})` : ""}` : ""}${order.assignedStaff ? `\n👷 *Assigned Staff:* ${order.assignedStaff}` : ""}${order.nextRenewalDate ? `\n🔔 *Next Renewal:* ${order.nextRenewalDate}` : ""}`
+            : "";
+        const upiLine = upiId ? `\n💳 *Pay via UPI:* ${upiId}` : "";
+        const billText = `🧾 *Order / Booking Invoice #${order.id.slice(-6)}*\n\nNamaste *${order.customerName}*,\nAapki details neeche di gayi hain:${itemsSummary}${scheduleLine}\n\n💰 *Total Amount:* ₹${order.totalAmount}\n📌 *Status:* ${order.status.toUpperCase()}${order.notes ? `\n📝 *Note:* ${order.notes}` : ""}${upiLine}\n📅 *Bill Date:* ${new Date(order.createdAt).toLocaleDateString()}\n\nThank you for your business! 🙏`;
+
+        await api.post("/api/whatsapp/send", {
+          recipientPhone: order.customerPhone,
+          messageText: billText,
+          contactName: order.customerName,
+        });
+        message.success({ content: `WhatsApp text bill sent to ${order.customerName}!`, key: "wa-bill" });
+      } catch (fallbackErr: any) {
+        message.error({ content: err.response?.data?.error || fallbackErr.message || "Could not send bill. Please ensure WhatsApp is connected.", key: "wa-bill" });
+      }
     } finally {
       setSendingBillId(null);
     }
@@ -1070,13 +1095,29 @@ export default function OrdersPage() {
         footer={[
           <Button key="close" onClick={() => setInvoiceOrder(null)}>Close</Button>,
           <Button
+            key="download"
+            icon={<DownloadOutlined />}
+            onClick={() => invoiceOrder && handleDownloadPdf(invoiceOrder)}
+          >
+            Download PDF
+          </Button>,
+          <Button
+            key="send-wa"
+            icon={<WhatsAppOutlined />}
+            style={{ color: "#25D366", borderColor: "#25D366" }}
+            loading={sendingBillId === invoiceOrder?.id}
+            onClick={() => invoiceOrder && handleSendWhatsAppBill(invoiceOrder)}
+          >
+            Send on WhatsApp
+          </Button>,
+          <Button
             key="print"
             type="primary"
             icon={<PrinterOutlined />}
             style={{ background: "#25D366", borderColor: "#25D366" }}
             onClick={() => invoiceOrder && handlePrintInvoiceWindow(invoiceOrder)}
           >
-            Print / Save as PDF
+            Print
           </Button>,
         ]}
       >

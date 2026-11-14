@@ -184,6 +184,7 @@ export default function AdminPage() {
   // Broadcast State
   const [broadcastSegment, setBroadcastSegment] = useState<"all" | "free" | "pro" | "retail" | "wholesale" | "services">("all");
   const [broadcastText, setBroadcastText] = useState("");
+  const [broadcastImageUrl, setBroadcastImageUrl] = useState("");
   const [sendingBroadcast, setSendingBroadcast] = useState(false);
 
   // Platform Announcement State
@@ -617,9 +618,11 @@ export default function AdminPage() {
       const res = await api.post("/api/admin/whatsapp/broadcast", {
         segment: broadcastSegment,
         messageText: broadcastText.trim(),
+        imageUrl: broadcastImageUrl.trim() || undefined,
       });
       message.success(res.data.message);
       setBroadcastText("");
+      setBroadcastImageUrl("");
       loadAuditLogs();
       loadSupportMessages();
     } catch (err: any) {
@@ -2055,6 +2058,18 @@ export default function AdminPage() {
                           placeholder="Namaste {{name}}! GinieSpace has introduced new service features to help your business grow..."
                           value={broadcastText}
                           onChange={(e) => setBroadcastText(e.target.value)}
+                        />
+                      </Form.Item>
+
+                      <Form.Item 
+                        label="Promotional Banner / Poster Image URL (Optional)" 
+                        tooltip="Direct Image URL (JPG/PNG/WebP). User ke WhatsApp par rich photo ke sath caption message deliver hoga."
+                      >
+                        <Input
+                          placeholder="https://images.unsplash.com/... or https://domain.com/banner.jpg"
+                          value={broadcastImageUrl}
+                          onChange={(e) => setBroadcastImageUrl(e.target.value)}
+                          allowClear
                         />
                       </Form.Item>
 
