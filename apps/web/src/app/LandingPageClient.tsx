@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
+import { translations, Locale } from "../lib/translations";
 import {
   Button,
   Card,
@@ -64,6 +66,27 @@ export default function LandingPageClient() {
   const router = useRouter();
   const screens = Grid.useBreakpoint();
   const isMobile = screens.md === false;
+
+  // Global Language state (en: Pure English, hi: Friendly Hinglish)
+  const [locale, setLocale] = useState<Locale>("hi");
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("ginie_locale") as Locale;
+      if (saved === "en" || saved === "hi") {
+        setLocale(saved);
+      }
+    } catch {}
+  }, []);
+
+  const handleLocaleChange = (newLoc: Locale) => {
+    setLocale(newLoc);
+    try {
+      localStorage.setItem("ginie_locale", newLoc);
+    } catch {}
+  };
+
+  const t = translations[locale];
 
   // Mobile drawer state
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -171,32 +194,38 @@ export default function LandingPageClient() {
           {/* Desktop Nav Links */}
           <div style={{ display: "flex", alignItems: "center", gap: 24 }} className="hide-on-mobile">
             <a href="#how-it-works" style={{ color: "#475569", textDecoration: "none", fontWeight: 500, fontSize: 14 }}>
-              How It Works
+              {t.nav.howItWorks}
             </a>
             <a href="#demo-tour" style={{ color: "#475569", textDecoration: "none", fontWeight: 500, fontSize: 14 }}>
-              Interactive Demo
+              {t.twinDevice.title.slice(0, 15)}
             </a>
             <a href="#solutions" style={{ color: "#475569", textDecoration: "none", fontWeight: 500, fontSize: 14 }}>
-              Solutions
+              {t.nav.solutions}
             </a>
             <a href="#pricing" style={{ color: "#475569", textDecoration: "none", fontWeight: 500, fontSize: 14 }}>
-              Pricing (₹99 PRO)
-            </a>
-            <a href="#calculator" style={{ color: "#475569", textDecoration: "none", fontWeight: 500, fontSize: 14 }}>
-              Savings
+              {t.nav.pricing}
             </a>
             <a href="#faqs" style={{ color: "#475569", textDecoration: "none", fontWeight: 500, fontSize: 14 }}>
-              FAQs
+              {t.nav.faq}
             </a>
           </div>
 
           {/* Desktop Action CTAs */}
           <Space size="middle" className="hide-on-mobile">
+            <Segmented
+              value={locale}
+              onChange={(val: any) => handleLocaleChange(val)}
+              options={[
+                { label: "🇬🇧 English", value: "en" },
+                { label: "🇮🇳 Hinglish", value: "hi" },
+              ]}
+              style={{ background: "#f1f5f9", fontWeight: 600 }}
+            />
             <Button
               onClick={() => router.push("/login")}
               style={{ fontWeight: 600, borderColor: "#cbd5e1", borderRadius: 8 }}
             >
-              Sign In
+              {t.nav.login}
             </Button>
             <Button
               type="primary"
@@ -209,18 +238,28 @@ export default function LandingPageClient() {
               }}
               onClick={() => router.push("/signup")}
             >
-              Start Free (₹0)
+              {t.nav.getStarted}
             </Button>
           </Space>
 
-          {/* Mobile Right Controls (Sign In + Hamburger) */}
+          {/* Mobile Right Controls (Lang Toggle + Sign In + Hamburger) */}
           <div className="show-on-mobile" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Segmented
+              size="small"
+              value={locale}
+              onChange={(val: any) => handleLocaleChange(val)}
+              options={[
+                { label: "EN", value: "en" },
+                { label: "HI", value: "hi" },
+              ]}
+              style={{ background: "#f1f5f9", fontWeight: 600 }}
+            />
             <Button
               size="small"
               onClick={() => router.push("/login")}
               style={{ fontWeight: 600, borderColor: "#cbd5e1", borderRadius: 6, fontSize: 13 }}
             >
-              Sign In
+              {t.nav.login}
             </Button>
             <Button
               type="text"
@@ -266,50 +305,97 @@ export default function LandingPageClient() {
         styles={{ body: { padding: "16px 20px" } }}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {/* Language Switcher in Mobile Drawer */}
+          <div style={{ paddingBottom: 12, borderBottom: "1px solid #f1f5f9" }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "#64748b", marginBottom: 6 }}>
+              {locale === "en" ? "Select Language:" : "Bhasha Chunein:"}
+            </div>
+            <Segmented
+              block
+              value={locale}
+              onChange={(val: any) => handleLocaleChange(val)}
+              options={[
+                { label: "🇬🇧 English", value: "en" },
+                { label: "🇮🇳 Hinglish", value: "hi" },
+              ]}
+              style={{ background: "#f1f5f9", fontWeight: 600 }}
+            />
+          </div>
+
           <a
             href="#how-it-works"
             onClick={() => setMobileMenuOpen(false)}
-            style={{ color: "#1e293b", fontWeight: 600, fontSize: 15, textDecoration: "none", padding: "10px 0", borderBottom: "1px solid #f1f5f9" }}
+            style={{ color: "#1e293b", fontWeight: 600, fontSize: 15, textDecoration: "none", padding: "8px 0", borderBottom: "1px solid #f1f5f9" }}
           >
-            ⚡ How It Works (3 Steps)
+            ⚡ {t.nav.howItWorks}
           </a>
           <a
             href="#demo-tour"
             onClick={() => setMobileMenuOpen(false)}
-            style={{ color: "#1e293b", fontWeight: 600, fontSize: 15, textDecoration: "none", padding: "10px 0", borderBottom: "1px solid #f1f5f9" }}
+            style={{ color: "#1e293b", fontWeight: 600, fontSize: 15, textDecoration: "none", padding: "8px 0", borderBottom: "1px solid #f1f5f9" }}
           >
-            🎮 Interactive Feature Tour
+            🎮 {t.twinDevice.title.slice(0, 22)}
           </a>
           <a
             href="#solutions"
             onClick={() => setMobileMenuOpen(false)}
-            style={{ color: "#1e293b", fontWeight: 600, fontSize: 15, textDecoration: "none", padding: "10px 0", borderBottom: "1px solid #f1f5f9" }}
+            style={{ color: "#1e293b", fontWeight: 600, fontSize: 15, textDecoration: "none", padding: "8px 0", borderBottom: "1px solid #f1f5f9" }}
           >
-            📦 Retail, Wholesale &amp; Services
+            📦 {t.nav.solutions}
           </a>
           <a
             href="#pricing"
             onClick={() => setMobileMenuOpen(false)}
-            style={{ color: "#1e293b", fontWeight: 600, fontSize: 15, textDecoration: "none", padding: "10px 0", borderBottom: "1px solid #f1f5f9" }}
+            style={{ color: "#1e293b", fontWeight: 600, fontSize: 15, textDecoration: "none", padding: "8px 0", borderBottom: "1px solid #f1f5f9" }}
           >
-            👑 Transparent Pricing (₹99 PRO)
+            👑 {t.nav.pricing}
           </a>
           <a
             href="#calculator"
             onClick={() => setMobileMenuOpen(false)}
-            style={{ color: "#1e293b", fontWeight: 600, fontSize: 15, textDecoration: "none", padding: "10px 0", borderBottom: "1px solid #f1f5f9" }}
+            style={{ color: "#1e293b", fontWeight: 600, fontSize: 15, textDecoration: "none", padding: "8px 0", borderBottom: "1px solid #f1f5f9" }}
           >
-            💰 Zero Commission Savings
+            💰 {locale === "en" ? "UPI Commission Savings" : "Zero Commission Bachaat"}
           </a>
           <a
             href="#faqs"
             onClick={() => setMobileMenuOpen(false)}
-            style={{ color: "#1e293b", fontWeight: 600, fontSize: 15, textDecoration: "none", padding: "10px 0", borderBottom: "1px solid #f1f5f9" }}
+            style={{ color: "#1e293b", fontWeight: 600, fontSize: 15, textDecoration: "none", padding: "8px 0", borderBottom: "1px solid #f1f5f9" }}
           >
-            ❓ Merchant FAQs
+            ❓ {t.nav.faq}
           </a>
 
-          <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 10 }}>
+          {/* Legal Pages in Mobile Drawer */}
+          <div style={{ paddingTop: 8, borderBottom: "1px solid #f1f5f9", paddingBottom: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>
+              {t.footer.legalTitle}
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <Link
+                href="/terms"
+                onClick={() => setMobileMenuOpen(false)}
+                style={{ color: "#475569", fontWeight: 500, fontSize: 14, textDecoration: "none" }}
+              >
+                📜 {t.footer.terms}
+              </Link>
+              <Link
+                href="/privacy"
+                onClick={() => setMobileMenuOpen(false)}
+                style={{ color: "#475569", fontWeight: 500, fontSize: 14, textDecoration: "none" }}
+              >
+                🔒 {t.footer.privacy}
+              </Link>
+              <Link
+                href="/refund"
+                onClick={() => setMobileMenuOpen(false)}
+                style={{ color: "#475569", fontWeight: 500, fontSize: 14, textDecoration: "none" }}
+              >
+                💳 {t.footer.refund}
+              </Link>
+            </div>
+          </div>
+
+          <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
             <Button
               type="primary"
               block
@@ -327,7 +413,7 @@ export default function LandingPageClient() {
                 router.push("/signup");
               }}
             >
-              Start Free (₹0)
+              {t.nav.getStarted}
             </Button>
             <Button
               block
@@ -338,7 +424,7 @@ export default function LandingPageClient() {
                 router.push("/login");
               }}
             >
-              Merchant Sign In
+              {t.nav.login}
             </Button>
             <Button
               block
@@ -356,7 +442,7 @@ export default function LandingPageClient() {
               target="_blank"
               rel="noopener noreferrer"
             >
-              WhatsApp Us (+91 92792 59690)
+              WhatsApp (+91 92792 59690)
             </Button>
           </div>
         </div>
@@ -379,7 +465,7 @@ export default function LandingPageClient() {
               lineHeight: 1.4,
             }}
           >
-            🚀 Zero Payment Gateway Commissions • 100% Direct Bank UPI
+            {t.hero.badge}
           </Tag>
         </div>
 
@@ -395,10 +481,11 @@ export default function LandingPageClient() {
             margin: "0 auto 18px",
           }}
         >
-          Turn WhatsApp Into Your Complete{" "}
+          {t.hero.titleStart}{" "}
           <span style={{ color: "#059669", background: "linear-gradient(135deg, #059669 0%, #25D366 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-            Sales, Storefront &amp; B2B Engine
-          </span>
+            {t.hero.titleHighlight}
+          </span>{" "}
+          {t.hero.titleEnd}
         </Title>
 
         <Paragraph
@@ -410,7 +497,7 @@ export default function LandingPageClient() {
             lineHeight: 1.6,
           }}
         >
-          Launch your instant shareable catalog link, accept direct bank UPI payments without 2-3% platform cuts, discover verified local B2B leads by locality, and manage orders with real-time WhatsApp alerts.
+          {t.hero.subtitle}
         </Paragraph>
 
         {/* Hero CTAs */}
@@ -432,7 +519,7 @@ export default function LandingPageClient() {
               }}
               onClick={() => router.push("/signup")}
             >
-              Create Free Account (₹0)
+              {t.hero.ctaPrimary}
             </Button>
             <Button
               size="large"
@@ -448,7 +535,7 @@ export default function LandingPageClient() {
               }}
               onClick={() => setVideoModalOpen(true)}
             >
-              Watch 45-Sec Demo
+              {t.hero.ctaSecondary}
             </Button>
           </div>
         ) : (
@@ -469,7 +556,7 @@ export default function LandingPageClient() {
               }}
               onClick={() => router.push("/signup")}
             >
-              Create Free Business Account
+              {t.hero.ctaPrimary}
             </Button>
 
             <Button
@@ -486,7 +573,7 @@ export default function LandingPageClient() {
               }}
               onClick={() => setVideoModalOpen(true)}
             >
-              Watch 45-Sec Demo
+              {t.hero.ctaSecondary}
             </Button>
           </Space>
         )}
@@ -1687,10 +1774,10 @@ export default function LandingPageClient() {
           }}
         >
           <Title level={2} style={{ color: "#fff", fontWeight: 800, margin: "0 0 12px", fontSize: isMobile ? "1.45rem" : undefined }}>
-            Apne Vyapar Ko Aaj Hi Digital Aur WhatsApp-Automated Banayein!
+            {t.preFooter.title}
           </Title>
           <Paragraph style={{ color: "#ecfdf5", fontSize: isMobile ? 14 : 16, maxWidth: 640, margin: "0 auto 24px" }}>
-            Bina kisi monthly contract ya hidden fees ke abhi Free account create karein. Sirf 2 minute me aapka catalog online live hoga.
+            {t.preFooter.subtitle}
           </Paragraph>
           {isMobile ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 340, margin: "0 auto" }}>
@@ -1708,7 +1795,7 @@ export default function LandingPageClient() {
                 }}
                 onClick={() => router.push("/signup")}
               >
-                Get Started Free Now
+                {t.preFooter.cta}
               </Button>
               <Button
                 size="large"
@@ -1726,7 +1813,7 @@ export default function LandingPageClient() {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                WhatsApp Us (+91 92792 59690)
+                WhatsApp (+91 92792 59690)
               </Button>
             </div>
           ) : (
@@ -1745,7 +1832,7 @@ export default function LandingPageClient() {
                 }}
                 onClick={() => router.push("/signup")}
               >
-                Get Started Free Now
+                {t.preFooter.cta}
               </Button>
               <Button
                 size="large"
@@ -1763,7 +1850,7 @@ export default function LandingPageClient() {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                WhatsApp Us (+91 92792 59690)
+                WhatsApp (+91 92792 59690)
               </Button>
             </Space>
           )}
@@ -1870,8 +1957,8 @@ export default function LandingPageClient() {
       {/* Footer with Legal Shield Disclaimer & Links */}
       <footer style={{ background: "#0f172a", color: "#94a3b8", padding: "48px 24px 32px", borderTop: "1px solid #1e293b" }}>
         <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-          <Row gutter={[32, 32]}>
-            <Col xs={24} md={8}>
+          <Row gutter={[24, 24]}>
+            <Col xs={24} md={7}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
                 <div
                   style={{
@@ -1892,7 +1979,7 @@ export default function LandingPageClient() {
                 <div style={{ fontWeight: 800, fontSize: 18, color: "#fff" }}>GinieSpace</div>
               </div>
               <Paragraph style={{ color: "#64748b", fontSize: 13, lineHeight: 1.6 }}>
-                India&apos;s premier WhatsApp business commerce platform. Empowering retail stores, wholesale traders, and services to automate sales, collect direct UPI payments, and discover local B2B leads.
+                {t.footer.desc}
               </Paragraph>
               <div style={{ fontSize: 13, color: "#cbd5e1" }}>
                 📞 Official Helpline: <strong>+91 92792 59690</strong>
@@ -1902,34 +1989,52 @@ export default function LandingPageClient() {
               </div>
             </Col>
 
-            <Col xs={12} md={5}>
-              <Text strong style={{ color: "#fff", display: "block", marginBottom: 14 }}>Product Solutions</Text>
+            <Col xs={12} sm={6} md={4}>
+              <Text strong style={{ color: "#fff", display: "block", marginBottom: 14 }}>{t.footer.solutionsTitle}</Text>
               <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13 }}>
-                <a href="#solutions" style={{ color: "#94a3b8", textDecoration: "none" }}>Retail &amp; Kirana Stores</a>
-                <a href="#solutions" style={{ color: "#94a3b8", textDecoration: "none" }}>Wholesale &amp; Bulk Cartons</a>
-                <a href="#solutions" style={{ color: "#solutions", textDecoration: "none" }}>Services &amp; Appointments</a>
-                <a href="#demo-tour" style={{ color: "#94a3b8", textDecoration: "none" }}>Hyperlocal B2B Leads</a>
-                <a href="#calculator" style={{ color: "#94a3b8", textDecoration: "none" }}>0% Commission UPI Billing</a>
+                <a href="#solutions" style={{ color: "#94a3b8", textDecoration: "none" }}>Retail &amp; Kirana</a>
+                <a href="#solutions" style={{ color: "#94a3b8", textDecoration: "none" }}>Wholesale &amp; Bulk</a>
+                <a href="#solutions" style={{ color: "#94a3b8", textDecoration: "none" }}>Services &amp; Booking</a>
+                <a href="#demo-tour" style={{ color: "#94a3b8", textDecoration: "none" }}>B2B Local Leads</a>
+                <a href="#calculator" style={{ color: "#94a3b8", textDecoration: "none" }}>0% Commission UPI</a>
               </div>
             </Col>
 
-            <Col xs={12} md={5}>
-              <Text strong style={{ color: "#fff", display: "block", marginBottom: 14 }}>Merchant Portal</Text>
+            <Col xs={12} sm={6} md={4}>
+              <Text strong style={{ color: "#fff", display: "block", marginBottom: 14 }}>{t.footer.merchantPortalTitle}</Text>
               <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13 }}>
                 <a href="/login" style={{ color: "#94a3b8", textDecoration: "none" }}>Merchant Sign In</a>
                 <a href="/signup" style={{ color: "#94a3b8", textDecoration: "none" }}>Create Free Account</a>
-                <a href="#pricing" style={{ color: "#94a3b8", textDecoration: "none" }}>PRO Plan (₹99/Month)</a>
+                <a href="#pricing" style={{ color: "#94a3b8", textDecoration: "none" }}>PRO Plan (₹99)</a>
                 <a href="#faqs" style={{ color: "#94a3b8", textDecoration: "none" }}>Merchant FAQs</a>
               </div>
             </Col>
 
-            <Col xs={24} md={6}>
-              <Text strong style={{ color: "#fff", display: "block", marginBottom: 14 }}>Security &amp; Trust</Text>
+            <Col xs={12} sm={6} md={5}>
+              <Text strong style={{ color: "#fff", display: "block", marginBottom: 14 }}>{t.footer.legalTitle}</Text>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13 }}>
+                <Link href="/terms" style={{ color: "#cbd5e1", textDecoration: "none" }}>
+                  📜 {t.footer.terms}
+                </Link>
+                <Link href="/privacy" style={{ color: "#cbd5e1", textDecoration: "none" }}>
+                  🔒 {t.footer.privacy}
+                </Link>
+                <Link href="/refund" style={{ color: "#cbd5e1", textDecoration: "none" }}>
+                  💳 {t.footer.refund}
+                </Link>
+                <span style={{ color: "#64748b", fontSize: 11 }}>
+                  🛡️ DPDP Act 2023 Compliant
+                </span>
+              </div>
+            </Col>
+
+            <Col xs={12} sm={6} md={4}>
+              <Text strong style={{ color: "#fff", display: "block", marginBottom: 14 }}>{t.footer.trustTitle}</Text>
               <div style={{ fontSize: 13, color: "#64748b", lineHeight: 1.6 }}>
-                <div>🔒 100% Direct Bank UPI Settlement</div>
-                <div>🛡️ Safe Rate-Limited Message Cadence</div>
-                <div>📱 Persistent Cloud Linked Session</div>
-                <div>🇮🇳 Proudly Built For Bharat MSMEs</div>
+                <div>🔒 100% Direct Bank UPI</div>
+                <div>🛡️ 72h Ephemeral Chats</div>
+                <div>📱 Persistent Cloud Session</div>
+                <div>🇮🇳 Made in Bharat</div>
               </div>
             </Col>
           </Row>
@@ -1948,12 +2053,12 @@ export default function LandingPageClient() {
               marginBottom: 20,
             }}
           >
-            <strong>Legal Disclaimer:</strong> GinieSpace is an independent SaaS business automation platform developed to help Indian merchants manage their sales, catalogs, and customer communications. GinieSpace is not affiliated, associated, authorized, endorsed by, or in any way officially connected with Meta Platforms, Inc., WhatsApp LLC, or Google LLC. WhatsApp™ is a registered trademark of WhatsApp LLC and Meta Platforms, Inc. Google Maps™ is a trademark of Google LLC. All product and company names are the registered trademarks of their respective owners.
+            {t.footer.disclaimer}
           </div>
 
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, fontSize: 12, color: "#64748b" }}>
-            <div>© {new Date().getFullYear()} GinieSpace. All rights reserved. Operating in India.</div>
-            <div>Official Support Helpline: +91 92792 59690</div>
+            <div>© {new Date().getFullYear()} {t.footer.copyright}</div>
+            <div>{t.footer.helpline}</div>
           </div>
         </div>
       </footer>
