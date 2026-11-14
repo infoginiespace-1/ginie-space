@@ -1259,7 +1259,7 @@ export default function LandingPageClient() {
                   <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", padding: "8px 12px", borderRadius: 8 }}>
                     <QrcodeOutlined style={{ fontSize: 32, color: "#25D366" }} />
                     <div style={{ fontSize: 11 }}>
-                      <strong>UPI: 9279259690@fam</strong><br />
+                      <strong>UPI: paytmqr9tziqdamfo@paytm</strong><br />
                       Scan to Pay via any UPI App
                     </div>
                   </div>

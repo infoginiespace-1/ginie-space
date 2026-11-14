@@ -21,7 +21,7 @@ export const PRO_PRICING = {
   monthly: 99,
   yearly: 999,
   currency: "INR",
-  upiId: "9279259690@fam", // Official UPI ID for instant approval
+  upiId: "paytmqr9tziqdamfo@paytm", // Official GinieSpace Paytm Merchant UPI ID
   supportPhone: "919279259690",
 };
 

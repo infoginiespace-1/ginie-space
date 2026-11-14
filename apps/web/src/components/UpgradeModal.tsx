@@ -41,9 +41,9 @@ export function UpgradeModal({ open, onClose, onSuccess, currentPlan = "free" }:
   const [submittedUtr, setSubmittedUtr] = useState<string | null>(null);
 
   const amount = billingCycle === "monthly" ? 99 : 999;
-  const officialUpi = "9279259690@fam";
-  const upiLink = `upi://pay?pa=${officialUpi}&pn=GinieSpace&am=${amount}&cu=INR&tn=GinieSpacePro`;
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiLink)}`;
+  const officialUpi = "paytmqr9tziqdamfo@paytm";
+  const upiLink = `upi://pay?pa=${officialUpi}&pn=GinieSpace&am=${amount}&cu=INR&tn=GinieSpace%20PRO%20Upgrade`;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(upiLink)}`;
 
   const handleCopyUpi = () => {
     navigator.clipboard?.writeText(officialUpi);
@@ -193,28 +193,36 @@ export function UpgradeModal({ open, onClose, onSuccess, currentPlan = "free" }:
                 <div style={{ textAlign: "center" }}>
                   <img
                     src={qrUrl}
-                    alt="UPI QR Code"
+                    alt="GinieSpace UPI QR Code"
                     style={{
-                      width: 140,
-                      height: 140,
+                      width: 150,
+                      height: 150,
                       border: "2px solid #e2e8f0",
-                      borderRadius: 8,
+                      borderRadius: 10,
                       display: "block",
                       margin: "0 auto",
+                      background: "#fff",
+                      padding: 4,
                     }}
                   />
-                  <Text type="secondary" style={{ fontSize: 11, marginTop: 4, display: "block" }}>
-                    Scan with PhonePe, GPay, Paytm
+                  <Text type="secondary" style={{ fontSize: 11, marginTop: 6, display: "block" }}>
+                    Scan with PhonePe, GPay, Paytm, BHIM
                   </Text>
                 </div>
 
-                <div style={{ flex: 1, minWidth: 220 }}>
-                  <div style={{ marginBottom: 12 }}>
+                <div style={{ flex: 1, minWidth: 240 }}>
+                  <div style={{ marginBottom: 10 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                      <Text type="secondary" style={{ fontSize: 12 }}>Payee / Merchant Name:</Text>
+                      <Tag color="success" style={{ fontWeight: 700, fontSize: 12 }}>
+                        ✅ GinieSpace
+                      </Tag>
+                    </div>
                     <Text type="secondary" style={{ fontSize: 12, display: "block" }}>
-                      Official GinieSpace UPI ID:
+                      Official UPI ID:
                     </Text>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
-                      <Tag color="blue" style={{ fontSize: 14, padding: "4px 10px", margin: 0 }}>
+                      <Tag color="blue" style={{ fontSize: 13, padding: "4px 8px", margin: 0, fontWeight: 600 }}>
                         {officialUpi}
                       </Tag>
                       <Button size="small" icon={<CopyOutlined />} onClick={handleCopyUpi}>
@@ -223,14 +231,29 @@ export function UpgradeModal({ open, onClose, onSuccess, currentPlan = "free" }:
                     </div>
                   </div>
 
-                  <div style={{ marginBottom: 6 }}>
-                    <Text strong style={{ fontSize: 13, color: "#166534" }}>
+                  <div style={{ marginBottom: 10 }}>
+                    <Text strong style={{ fontSize: 14, color: "#166534" }}>
                       💰 Payable Amount: ₹{amount} ({billingCycle})
                     </Text>
                   </div>
+
+                  <div style={{ marginBottom: 8 }}>
+                    <a href={upiLink} style={{ display: "inline-block" }}>
+                      <Button
+                        type="primary"
+                        ghost
+                        size="small"
+                        icon={<QrcodeOutlined />}
+                        style={{ fontWeight: 600, borderRadius: 6 }}
+                      >
+                        📱 Tap to Pay in UPI App (Mobile)
+                      </Button>
+                    </a>
+                  </div>
+
                   <Text type="secondary" style={{ fontSize: 11 }}>
                     <SafetyCertificateOutlined style={{ color: "#10b981", marginRight: 4 }} />
-                    100% Secure Instant UPI Payment. Zero convenience fee.
+                    100% Secure Instant UPI Payment. Zero commission / fee.
                   </Text>
                 </div>
               </div>

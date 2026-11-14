@@ -2074,7 +2074,7 @@ export default function AdminPage() {
                             size="small"
                             onClick={() =>
                               setBroadcastText(
-                                "🌟 Special Pro Upgrade Offer for {{name}}! Unlimited catalog, B2B leads aur 5 team staff accounts unlock karein only ₹99/month me. UPI ID: 9279259690@fam par pay karein aur app me 12-digit UTR submit karein!\n\n- GinieSpace Official Support (+91 92792 59690)"
+                                "🌟 Special Pro Upgrade Offer for {{name}}! Unlimited catalog, B2B leads aur 5 team staff accounts unlock karein only ₹99/month me. UPI ID: paytmqr9tziqdamfo@paytm par pay karein aur app me 12-digit UTR submit karein!\n\n- GinieSpace Official Support (+91 92792 59690)"
                               )
                             }
                           >
