@@ -8,3 +8,5 @@ dist/
 whatsapp-bridge/
 supabase/
 package-lock.json
+google-indexing-key.json
+*service-account*.json
