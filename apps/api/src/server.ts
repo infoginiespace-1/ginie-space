@@ -17,6 +17,8 @@ import { createWhatsAppRouter } from "./routes/whatsapp.routes";
 import { createSettingsRouter } from "./routes/settings.routes";
 import { createAdminRouter } from "./routes/admin.routes";
 import { createStorefrontRouter } from "./routes/storefront.routes";
+import { createAnalyticsRouter } from "./routes/analytics.routes";
+import { AnalyticsService } from "./services/analytics.service";
 import { NotificationService } from "./services/notification.service";
 import { startDailyReportScheduler, startChatRetentionScheduler } from "./services/scheduler.service";
 
@@ -121,6 +123,7 @@ async function bootstrap() {
   const placesClient = createPlacesClient(config.googlePlacesApiKey);
   const waManager = createWhatsAppManager(config.whatsappStoragePath, authProvider);
   const notificationService = new NotificationService(waManager, db);
+  const analyticsService = new AnalyticsService(db);
 
   // Auto-restore all active WhatsApp sessions on boot (both system-support and tenant sessions)
   setTimeout(async () => {
@@ -148,9 +151,10 @@ async function bootstrap() {
     res.json({ status: "healthy", timestamp: new Date().toISOString() });
   });
 
-  // Auth Routes & Public Storefront (Public)
+  // Auth Routes, Public Storefront & Public Analytics (Public)
   app.use("/api/auth", createAuthRouter(db, config.jwtSecret, notificationService));
   app.use("/api/storefront", createStorefrontRouter(db, io, notificationService, waManager));
+  app.use("/api/analytics", createAnalyticsRouter(analyticsService));
 
   // Protected Business Routes
   const auth = authMiddleware(config.jwtSecret);
@@ -160,7 +164,7 @@ async function bootstrap() {
   app.use("/api/leads", auth, createLeadsRouter(db, placesClient, io, notificationService));
   app.use("/api/whatsapp", auth, createWhatsAppRouter(waManager, db));
   app.use("/api/settings", auth, createSettingsRouter(db, notificationService));
-  app.use("/api/admin", auth, requireAdmin, createAdminRouter(db, waManager, notificationService));
+  app.use("/api/admin", auth, requireAdmin, createAdminRouter(db, waManager, notificationService, analyticsService));
 
   // Automated Schedulers
   startDailyReportScheduler(db, waManager, notificationService);

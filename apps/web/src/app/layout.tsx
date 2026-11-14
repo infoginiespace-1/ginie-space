@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { AntdRegistry } from "@ant-design/nextjs-registry";
 import { ConfigProvider } from "antd";
 import { AuthProvider } from "../context/AuthContext";
+import { AnalyticsTracker } from "../components/AnalyticsTracker";
 import React from "react";
 import "./globals.css";
 
@@ -43,7 +44,10 @@ export default function RootLayout({
               },
             }}
           >
-            <AuthProvider>{children}</AuthProvider>
+            <AuthProvider>
+              <AnalyticsTracker />
+              {children}
+            </AuthProvider>
           </ConfigProvider>
         </AntdRegistry>
       </body>

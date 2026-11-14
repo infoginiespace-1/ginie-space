@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { IDatabase } from "@giniespace/sheets-db";
 import { WhatsAppSessionManager } from "@giniespace/whatsapp-engine";
 import { SYSTEM_SUPPORT_SESSION_ID, SYSTEM_SUPPORT_PHONE, NotificationService } from "../services/notification.service";
+import { AnalyticsService } from "../services/analytics.service";
 import { normalizePhoneDigits } from "../utils/phone";
 
 async function recordAuditLog(
@@ -45,9 +46,45 @@ async function recordAuditLog(
 export function createAdminRouter(
   db: IDatabase,
   waManager: WhatsAppSessionManager,
-  notificationService: NotificationService
+  notificationService: NotificationService,
+  analyticsService?: AnalyticsService
 ): Router {
   const router = Router();
+
+  // Web Traffic Analytics Report
+  router.get("/web-analytics", async (_req: Request, res: Response): Promise<void> => {
+    try {
+      if (!analyticsService) {
+        res.status(503).json({ error: "Analytics service not initialized" });
+        return;
+      }
+      const report = await analyticsService.getAnalyticsReport();
+      res.json(report);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Failed to load web analytics report" });
+    }
+  });
+
+  // Save SEO & GA4 Configuration
+  router.post("/seo-settings", async (req: Request, res: Response): Promise<void> => {
+    try {
+      if (!analyticsService) {
+        res.status(503).json({ error: "Analytics service not initialized" });
+        return;
+      }
+      const { ga4MeasurementId, googleSiteVerification, targetKeywords } = req.body || {};
+      await analyticsService.saveSeoSettings({
+        ga4MeasurementId,
+        googleSiteVerification,
+        targetKeywords,
+      });
+      const adminEmail = req.user?.email || "admin";
+      await recordAuditLog(db, adminEmail, "UPDATE_SEO_SETTINGS", `Updated GA4 ID: ${ga4MeasurementId || "none"}`);
+      res.json({ message: "SEO and Google Analytics configuration saved successfully!" });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Failed to save SEO settings" });
+    }
+  });
 
   // 1. Get Support WhatsApp Connection Status
   router.get("/whatsapp/status", async (_req: Request, res: Response): Promise<void> => {
@@ -939,6 +976,48 @@ export function createAdminRouter(
       res.json({ success: true, message: "Subscription request rejected." });
     } catch (err: any) {
       res.status(500).json({ error: err.message || "Failed to reject subscription" });
+    }
+  });
+
+  // 21. Web Analytics & SEO Dashboard
+  router.get("/web-analytics", async (_req: Request, res: Response): Promise<void> => {
+    try {
+      if (!analyticsService) {
+        res.status(500).json({ error: "Analytics service not initialized" });
+        return;
+      }
+      const report = await analyticsService.getAnalyticsReport();
+      res.json(report);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Failed to fetch analytics report" });
+    }
+  });
+
+  // 22. Update SEO & GA4 Settings
+  router.post("/seo-settings", async (req: Request, res: Response): Promise<void> => {
+    try {
+      if (!analyticsService) {
+        res.status(500).json({ error: "Analytics service not initialized" });
+        return;
+      }
+      const { ga4MeasurementId, googleSiteVerification, targetKeywords } = req.body || {};
+      await analyticsService.saveSeoSettings({
+        ga4MeasurementId: String(ga4MeasurementId || "").trim(),
+        googleSiteVerification: String(googleSiteVerification || "").trim(),
+        targetKeywords: String(targetKeywords || "").trim(),
+      });
+
+      const adminEmail = req.user?.email || "admin";
+      await recordAuditLog(
+        db,
+        adminEmail,
+        "UPDATE_SEO_SETTINGS",
+        `Updated SEO & GA4 settings (GA4: ${ga4MeasurementId || "None"}, Verification: ${googleSiteVerification ? "Updated" : "None"})`
+      );
+
+      res.json({ success: true, message: "SEO & GA4 configuration saved successfully!" });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Failed to update SEO settings" });
     }
   });
 
