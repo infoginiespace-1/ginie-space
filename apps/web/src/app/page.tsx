@@ -18,13 +18,13 @@ export const metadata: Metadata = {
     "GinieSpace",
   ],
   alternates: {
-    canonical: "https://ginie.space",
+    canonical: "https://app.ginie.space",
   },
   openGraph: {
     title: "GinieSpace | Turn WhatsApp Into Your Sales & Billing Engine",
     description:
       "Direct bank UPI payments (0% commission), instant digital catalog link, and hyperlocal B2B leads discovery for Indian retail, wholesale, and service businesses.",
-    url: "https://ginie.space",
+    url: "https://app.ginie.space",
     siteName: "GinieSpace",
     locale: "en_IN",
     type: "website",
@@ -73,8 +73,8 @@ export default function HomePage() {
       {
         "@type": "Organization",
         "name": "GinieSpace",
-        "url": "https://ginie.space",
-        "logo": "https://ginie.space/icon.svg",
+        "url": "https://app.ginie.space",
+        "logo": "https://app.ginie.space/icon.svg",
         "contactPoint": {
           "@type": "ContactPoint",
           "telephone": "+91-9279259690",

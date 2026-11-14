@@ -7,7 +7,7 @@ import React from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://ginie.space"),
+  metadataBase: new URL("https://app.ginie.space"),
   title: {
     default: "GinieSpace | WhatsApp Business Commerce, Hyperlocal Leads & Direct UPI Billing",
     template: "%s | GinieSpace",
@@ -16,6 +16,7 @@ export const metadata: Metadata = {
   keywords: [
     "GinieSpace",
     "ginie.space",
+    "app.ginie.space",
     "WhatsApp Store Builder",
     "Online Dukaan",
     "Direct UPI Billing",
@@ -24,11 +25,11 @@ export const metadata: Metadata = {
     "Zero Commission Store",
     "Hyperlocal Catalog",
   ],
-  authors: [{ name: "GinieSpace Team", url: "https://ginie.space" }],
+  authors: [{ name: "GinieSpace Team", url: "https://app.ginie.space" }],
   creator: "GinieSpace",
   publisher: "GinieSpace",
   alternates: {
-    canonical: "https://ginie.space",
+    canonical: "https://app.ginie.space",
   },
   robots: {
     index: true,
@@ -44,7 +45,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "GinieSpace | WhatsApp Business Commerce & Direct UPI Billing",
     description: "Launch your WhatsApp Store in 30 seconds with 0% gateway commission. Automated order receipts and customer discovery.",
-    url: "https://ginie.space",
+    url: "https://app.ginie.space",
     siteName: "GinieSpace",
     locale: "en_IN",
     type: "website",
