@@ -631,10 +631,10 @@ export default function LandingPageClient() {
       <section style={{ maxWidth: 1200, margin: "0 auto", padding: isMobile ? "0 16px 48px" : "0 24px 64px" }}>
         <div style={{ textAlign: "center", marginBottom: 20 }}>
           <Tag color="purple" style={{ padding: "4px 12px", borderRadius: 999, fontWeight: 600 }}>
-            ✨ COMPLETE OMNI-CHANNEL PERSPECTIVE
+            {t.twinDevice.tag}
           </Tag>
           <Title level={3} style={{ marginTop: 8, color: "#0f172a", fontSize: isMobile ? "1.3rem" : undefined }}>
-            Merchant Ka Control Panel • Grahak Ka Fast Mobile Store
+            {t.twinDevice.title}
           </Title>
         </div>
 
@@ -645,8 +645,8 @@ export default function LandingPageClient() {
               value={deviceMockupView}
               onChange={(val) => setDeviceMockupView(val as "store" | "merchant")}
               options={[
-                { label: "📱 Customer Storefront", value: "store" },
-                { label: "💻 Merchant Hub", value: "merchant" },
+                { label: t.twinDevice.storeTab, value: "store" },
+                { label: t.twinDevice.merchantTab, value: "merchant" },
               ]}
               size="large"
               style={{ background: "#e2e8f0", padding: 4, borderRadius: 10, fontWeight: 600 }}
@@ -687,11 +687,11 @@ export default function LandingPageClient() {
                     <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#f59e0b" }} />
                     <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#10b981" }} />
                     <Text strong style={{ color: "#94a3b8", fontSize: 12, marginLeft: 6 }}>
-                      <LaptopOutlined /> GinieSpace Hub
+                      <LaptopOutlined /> {t.twinDevice.hubTitle}
                     </Text>
                   </div>
                   <Tag color="success" icon={<CheckCircleOutlined />} style={{ fontWeight: 600, margin: 0, fontSize: 11 }}>
-                    {isMobile ? "WhatsApp Live" : "WhatsApp Connected (+91 92792 59690)"}
+                    {isMobile ? "WhatsApp Live" : t.twinDevice.statusLive}
                   </Tag>
                 </div>
 
@@ -700,19 +700,19 @@ export default function LandingPageClient() {
                   <Row gutter={[10, 10]}>
                     <Col xs={12} sm={8}>
                       <div style={{ background: "#fff", padding: "10px 12px", borderRadius: 8, border: "1px solid #e2e8f0" }}>
-                        <Text type="secondary" style={{ fontSize: 11 }}>Today&apos;s Revenue</Text>
+                        <Text type="secondary" style={{ fontSize: 11 }}>{t.twinDevice.todayRevenue}</Text>
                         <div style={{ fontSize: 17, fontWeight: 800, color: "#059669" }}>₹18,450</div>
                       </div>
                     </Col>
                     <Col xs={12} sm={8}>
                       <div style={{ background: "#fff", padding: "10px 12px", borderRadius: 8, border: "1px solid #e2e8f0" }}>
-                        <Text type="secondary" style={{ fontSize: 11 }}>Active Products</Text>
+                        <Text type="secondary" style={{ fontSize: 11 }}>{t.twinDevice.activeProducts}</Text>
                         <div style={{ fontSize: 17, fontWeight: 800, color: "#0f172a" }}>142 Items</div>
                       </div>
                     </Col>
                     <Col xs={24} sm={8}>
                       <div style={{ background: "#fff", padding: "10px 12px", borderRadius: 8, border: "1px solid #e2e8f0" }}>
-                        <Text type="secondary" style={{ fontSize: 11 }}>Local Leads</Text>
+                        <Text type="secondary" style={{ fontSize: 11 }}>{t.twinDevice.localLeads}</Text>
                         <div style={{ fontSize: 17, fontWeight: 800, color: "#2563eb" }}>48 Found</div>
                       </div>
                     </Col>
@@ -724,8 +724,8 @@ export default function LandingPageClient() {
                   {/* Simulated Order Notification */}
                   <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", padding: 14, borderRadius: 10 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, flexWrap: "wrap", gap: 6 }}>
-                      <Text strong style={{ color: "#065f46", fontSize: 13 }}>📦 New WhatsApp Order #09ef13</Text>
-                      <Tag color="green" style={{ margin: 0, fontSize: 11 }}>INSTANT CONFIRMED</Tag>
+                      <Text strong style={{ color: "#065f46", fontSize: 13 }}>📦 {t.twinDevice.orderTitle} #09ef13</Text>
+                      <Tag color="green" style={{ margin: 0, fontSize: 11 }}>{t.twinDevice.instantConfirmed}</Tag>
                     </div>
                     <Text style={{ fontSize: 12, color: "#1e293b", display: "block" }}>
                       Customer: <strong>Rahul Sharma</strong> (+91 98765 XXXXX)
@@ -738,9 +738,9 @@ export default function LandingPageClient() {
                       <Text strong style={{ color: "#059669", fontSize: 13 }}>Total: ₹185 (Direct Bank UPI)</Text>
                       <Space size="small">
                         <Button size="small" type="primary" style={{ background: "#25D366", borderColor: "#25D366" }}>
-                          Print Bill
+                          {t.twinDevice.printBill}
                         </Button>
-                        <Button size="small">Dispatch Alert</Button>
+                        <Button size="small">{t.twinDevice.dispatchAlert}</Button>
                       </Space>
                     </div>
                   </div>
@@ -756,9 +756,9 @@ export default function LandingPageClient() {
                     </Text>
                     <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
                       <Button size="small" type="primary" icon={<WhatsAppOutlined />} style={{ background: "#25D366", borderColor: "#25D366" }}>
-                        WhatsApp Pitch
+                        {t.twinDevice.pitchButton}
                       </Button>
-                      <Button size="small">Save to CRM</Button>
+                      <Button size="small">{t.twinDevice.saveToCrm}</Button>
                     </div>
                   </div>
                 </div>
@@ -859,7 +859,7 @@ export default function LandingPageClient() {
                         boxShadow: "0 4px 12px rgba(37, 211, 102, 0.35)",
                       }}
                     >
-                      Order 2 Items (₹185) via WhatsApp
+                      {t.twinDevice.placeOrder}
                     </Button>
                   </div>
                 </div>
@@ -874,13 +874,13 @@ export default function LandingPageClient() {
         <div style={{ maxWidth: 1140, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 48 }}>
             <Tag color="green" style={{ padding: "4px 14px", borderRadius: 999, fontWeight: 700, fontSize: 13 }}>
-              ⚡ ZERO TECH HASSLE
+              {t.howItWorks.tag}
             </Tag>
             <Title level={2} style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)", fontWeight: 800, marginTop: 12, color: "#0f172a" }}>
-              Sirf 3 Steps Me Aapki Online Dukan Live!
+              {t.howItWorks.title}
             </Title>
             <Paragraph style={{ color: "#64748b", fontSize: 16 }}>
-              Bina coding ya app download ke, direct browser me setup complete karein.
+              {t.howItWorks.subtitle}
             </Paragraph>
           </div>
 
@@ -926,14 +926,14 @@ export default function LandingPageClient() {
                 >
                   <QrcodeOutlined />
                 </div>
-                <Tag color="green" style={{ fontWeight: 700, marginBottom: 8 }}>STEP 01</Tag>
+                <Tag color="green" style={{ fontWeight: 700, marginBottom: 8 }}>{t.howItWorks.step1Tag}</Tag>
                 <Title level={4} style={{ color: "#0f172a", margin: "4px 0 10px" }}>
-                  1-Scan WhatsApp Sync
+                  {t.howItWorks.step1Title}
                 </Title>
                 <Paragraph style={{ color: "#64748b", fontSize: 14, lineHeight: 1.6 }}>
-                  Apne phone ka WhatsApp kholein, <strong>Linked Devices</strong> me jakar GinieSpace ka secure QR code scan karein. Sirf 10 second me multi-device sync complete.
+                  {t.howItWorks.step1Desc}
                 </Paragraph>
-                <Tag color="cyan">Cloud-Maintained Session</Tag>
+                <Tag color="cyan">{t.howItWorks.step1Badge}</Tag>
               </Card>
             </Col>
 
@@ -978,14 +978,14 @@ export default function LandingPageClient() {
                 >
                   <ShopOutlined />
                 </div>
-                <Tag color="blue" style={{ fontWeight: 700, marginBottom: 8 }}>STEP 02</Tag>
+                <Tag color="blue" style={{ fontWeight: 700, marginBottom: 8 }}>{t.howItWorks.step2Tag}</Tag>
                 <Title level={4} style={{ color: "#0f172a", margin: "4px 0 10px" }}>
-                  Add Catalog &amp; Share Link
+                  {t.howItWorks.step2Title}
                 </Title>
                 <Paragraph style={{ color: "#64748b", fontSize: 14, lineHeight: 1.6 }}>
-                  Apne products, rates aur photos add karein ya 1-click industry template pack import karein. Apna unique link <code>/shop/your-store</code> WhatsApp bio me dalein.
+                  {t.howItWorks.step2Desc}
                 </Paragraph>
-                <Tag color="purple">Shareable Storefront Link</Tag>
+                <Tag color="purple">{t.howItWorks.step2Badge}</Tag>
               </Card>
             </Col>
 
@@ -1030,14 +1030,14 @@ export default function LandingPageClient() {
                 >
                   <BankOutlined />
                 </div>
-                <Tag color="gold" style={{ fontWeight: 700, marginBottom: 8 }}>STEP 03</Tag>
+                <Tag color="gold" style={{ fontWeight: 700, marginBottom: 8 }}>{t.howItWorks.step3Tag}</Tag>
                 <Title level={4} style={{ color: "#0f172a", margin: "4px 0 10px" }}>
-                  Direct Bank UPI &amp; Orders
+                  {t.howItWorks.step3Title}
                 </Title>
                 <Paragraph style={{ color: "#64748b", fontSize: 14, lineHeight: 1.6 }}>
-                  Customer order karta hai, automatic receipt generate hoti hai jisme aapka UPI QR code hota hai. 100% paise seedhe aapke bank account me transfer hote hain.
+                  {t.howItWorks.step3Desc}
                 </Paragraph>
-                <Tag color="gold">0% Commission Guaranteed</Tag>
+                <Tag color="gold">{t.howItWorks.step3Badge}</Tag>
               </Card>
             </Col>
           </Row>
@@ -1048,13 +1048,13 @@ export default function LandingPageClient() {
       <section id="demo-tour" style={{ maxWidth: 1140, margin: isMobile ? "40px auto" : "64px auto", padding: isMobile ? "0 16px" : "0 24px" }}>
         <div style={{ textAlign: "center", marginBottom: isMobile ? 24 : 36 }}>
           <Tag color="blue" style={{ padding: "4px 14px", borderRadius: 999, fontWeight: 700, fontSize: 13 }}>
-            🎮 INTERACTIVE FEATURE TOUR
+            {t.demoTour.tag}
           </Tag>
           <Title level={2} style={{ fontSize: isMobile ? "1.5rem" : "clamp(1.8rem, 3.5vw, 2.6rem)", fontWeight: 800, marginTop: 12, color: "#0f172a" }}>
-            Dekhein GinieSpace Kaise Kaam Karta Hai
+            {t.demoTour.title}
           </Title>
           <Paragraph style={{ color: "#64748b", fontSize: isMobile ? 14 : 16 }}>
-            Neeche diye gaye interactive tabs par click karein aur real feature previews check karein.
+            {t.demoTour.subtitle}
           </Paragraph>
 
           {/* Tour Tabs Bar (Swipeable on Mobile) */}
@@ -1084,7 +1084,7 @@ export default function LandingPageClient() {
                 flexShrink: 0,
               }}
             >
-              1. Multi-Device Sync
+              {t.demoTour.tabSync}
             </Button>
             <Button
               type={tourTab === "store" ? "primary" : "text"}
@@ -1098,7 +1098,7 @@ export default function LandingPageClient() {
                 flexShrink: 0,
               }}
             >
-              2. Digital Catalog Link
+              {t.demoTour.tabStore}
             </Button>
             <Button
               type={tourTab === "leads" ? "primary" : "text"}
@@ -1112,7 +1112,7 @@ export default function LandingPageClient() {
                 flexShrink: 0,
               }}
             >
-              3. Hyperlocal Leads
+              {t.demoTour.tabLeads}
             </Button>
             <Button
               type={tourTab === "billing" ? "primary" : "text"}
@@ -1126,7 +1126,7 @@ export default function LandingPageClient() {
                 flexShrink: 0,
               }}
             >
-              4. 0% Fee UPI Bills
+              {t.demoTour.tabBilling}
             </Button>
           </div>
         </div>
@@ -1144,24 +1144,24 @@ export default function LandingPageClient() {
           {tourTab === "sync" && (
             <Row gutter={[24, 24]} align="middle">
               <Col xs={24} md={12}>
-                <Tag color="green" style={{ fontWeight: 700, marginBottom: 8 }}>PERSISTENT CLOUD LINK</Tag>
-                <Title level={3} style={{ color: "#0f172a", fontSize: isMobile ? "1.25rem" : undefined }}>Phone Se Sirf 1 Baar QR Scan Karein</Title>
+                <Tag color="green" style={{ fontWeight: 700, marginBottom: 8 }}>{t.demoTour.syncTag}</Tag>
+                <Title level={3} style={{ color: "#0f172a", fontSize: isMobile ? "1.25rem" : undefined }}>{t.demoTour.syncTitle}</Title>
                 <Paragraph style={{ color: "#64748b", lineHeight: 1.7, fontSize: 14 }}>
-                  Aapko kisi complicated API setup ya coding ki zaroorat nahi hai. Apne official phone se <strong>Linked Devices</strong> me jakar scan karein. System background me cloud socket maintain karta hai jisse aapka WhatsApp 24/7 active rehta hai.
+                  {t.demoTour.syncDesc}
                 </Paragraph>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 14 }}>
-                  <Tag color="success">✓ Real Mobile Numbers</Tag>
-                  <Tag color="blue">✓ Cloud Background Active</Tag>
-                  <Tag color="cyan">✓ Multi-Device Protocol</Tag>
+                  <Tag color="success">{t.demoTour.syncBadge1}</Tag>
+                  <Tag color="blue">{t.demoTour.syncBadge2}</Tag>
+                  <Tag color="cyan">{t.demoTour.syncBadge3}</Tag>
                 </div>
               </Col>
               <Col xs={24} md={12} style={{ textAlign: "center" }}>
                 <div style={{ background: "#f8fafc", padding: isMobile ? 16 : 24, borderRadius: 14, border: "2px dashed #cbd5e1", display: "inline-block" }}>
                   <QrcodeOutlined style={{ fontSize: isMobile ? 80 : 120, color: "#25D366" }} />
                   <div style={{ marginTop: 12, fontWeight: 700, color: "#065f46", fontSize: 14 }}>
-                    Scan &amp; Link Your Business Phone
+                    {t.demoTour.syncScanTitle}
                   </div>
-                  <Text type="secondary" style={{ fontSize: 12 }}>Safe Rate-Limited Delivery Active</Text>
+                  <Text type="secondary" style={{ fontSize: 12 }}>{t.demoTour.syncSafeDelivery}</Text>
                 </div>
               </Col>
             </Row>
@@ -1170,20 +1170,20 @@ export default function LandingPageClient() {
           {tourTab === "store" && (
             <Row gutter={[24, 24]} align="middle">
               <Col xs={24} md={12}>
-                <Tag color="blue" style={{ fontWeight: 700, marginBottom: 8 }}>SHAREABLE DIGITAL CATALOG</Tag>
-                <Title level={3} style={{ color: "#0f172a", fontSize: isMobile ? "1.25rem" : undefined }}>Aapki Apni Dukan Ka Public Web Link</Title>
+                <Tag color="blue" style={{ fontWeight: 700, marginBottom: 8 }}>{t.demoTour.storeTag}</Tag>
+                <Title level={3} style={{ color: "#0f172a", fontSize: isMobile ? "1.25rem" : undefined }}>{t.demoTour.storeTitle}</Title>
                 <Paragraph style={{ color: "#64748b", lineHeight: 1.7, fontSize: 14 }}>
-                  Grahak ko koi app install nahi karni padegi. Wo aapke link <code>app.ginie.space/shop/{`{your-store}`}</code> par tap karke live catalog, wholesale MOQ ya service slots browse kar sakte hain.
+                  {t.demoTour.storeDesc}
                 </Paragraph>
                 <div style={{ background: "#f1f5f9", padding: "10px 14px", borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
                   <Text strong style={{ fontSize: 13, color: "#0f172a", wordBreak: "break-all" }}>app.ginie.space/shop/kirana-hub</Text>
-                  <Button size="small" icon={<CopyOutlined />} onClick={() => handleCopyLink("https://app.ginie.space/shop/demo")}>Copy Link</Button>
+                  <Button size="small" icon={<CopyOutlined />} onClick={() => handleCopyLink("https://app.ginie.space/shop/demo")}>{copiedLink ? t.demoTour.storeCopied : t.demoTour.storeCopy}</Button>
                 </div>
               </Col>
               <Col xs={24} md={12}>
                 <div style={{ background: "#f8fafc", padding: isMobile ? 14 : 20, borderRadius: 14, border: "1px solid #e2e8f0" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                    <Text strong>Live Catalog Preview</Text>
+                    <Text strong>{t.demoTour.storePreview}</Text>
                     <Tag color="green">142 Items</Tag>
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -1204,15 +1204,15 @@ export default function LandingPageClient() {
           {tourTab === "leads" && (
             <Row gutter={[24, 24]} align="middle">
               <Col xs={24} md={12}>
-                <Tag color="cyan" style={{ fontWeight: 700, marginBottom: 8 }}>HYPERLOCAL B2B DISCOVERY</Tag>
-                <Title level={3} style={{ color: "#0f172a" }}>Google Places Se Naye Retailers Khojein</Title>
+                <Tag color="cyan" style={{ fontWeight: 700, marginBottom: 8 }}>{t.demoTour.leadsTag}</Tag>
+                <Title level={3} style={{ color: "#0f172a" }}>{t.demoTour.leadsTitle}</Title>
                 <Paragraph style={{ color: "#64748b", lineHeight: 1.7, fontSize: 15 }}>
-                  Apne city ya locality me specific category (e.g. &quot;Hardware Stores in Pune&quot;) search karein. System verified business name, address, Google star ratings aur verified phone number nikal kar deta hai.
+                  {t.demoTour.leadsDesc}
                 </Paragraph>
                 <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 12 }}>
-                  <Tag color="blue">✓ Verified Phone Numbers</Tag>
-                  <Tag color="green">✓ 1-Click WhatsApp Pitch</Tag>
-                  <Tag color="purple">✓ Direct CRM Pipeline</Tag>
+                  <Tag color="blue">{t.demoTour.leadsBadge1}</Tag>
+                  <Tag color="green">{t.demoTour.leadsBadge2}</Tag>
+                  <Tag color="purple">{t.demoTour.leadsBadge3}</Tag>
                 </div>
               </Col>
               <Col xs={24} md={12}>
@@ -1224,7 +1224,7 @@ export default function LandingPageClient() {
                     ⭐ 4.9 (210 reviews) • 📱 +91 98765 XXXXX • Verified Retailer
                   </div>
                   <Button size="small" type="primary" icon={<WhatsAppOutlined />} style={{ background: "#25D366", borderColor: "#25D366" }}>
-                    Send Direct WhatsApp Proposal
+                    {t.demoTour.leadsPitch}
                   </Button>
                 </div>
               </Col>
@@ -1234,15 +1234,15 @@ export default function LandingPageClient() {
           {tourTab === "billing" && (
             <Row gutter={[24, 24]} align="middle">
               <Col xs={24} md={12}>
-                <Tag color="gold" style={{ fontWeight: 700, marginBottom: 8 }}>100% DIRECT BANK SETTLEMENT</Tag>
-                <Title level={3} style={{ color: "#0f172a" }}>0% Commission Scannable UPI Bills</Title>
+                <Tag color="gold" style={{ fontWeight: 700, marginBottom: 8 }}>{t.demoTour.billingTag}</Tag>
+                <Title level={3} style={{ color: "#0f172a" }}>{t.demoTour.billingTitle}</Title>
                 <Paragraph style={{ color: "#64748b", lineHeight: 1.7, fontSize: 15 }}>
-                  Grahak ke har invoice par aapka apna personal UPI QR code attach hota hai. Grahak PhonePe, Google Pay ya Paytm se scan karke direct aapke bank account me transfer karta hai.
+                  {t.demoTour.billingDesc}
                 </Paragraph>
                 <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 12 }}>
-                  <Tag color="gold">✓ ₹0 Gateway Cut</Tag>
-                  <Tag color="success">✓ Real-time WhatsApp Receipt</Tag>
-                  <Tag color="cyan">✓ Printable GST Invoices</Tag>
+                  <Tag color="gold">{t.demoTour.billingBadge1}</Tag>
+                  <Tag color="success">{t.demoTour.billingBadge2}</Tag>
+                  <Tag color="cyan">{t.demoTour.billingBadge3}</Tag>
                 </div>
               </Col>
               <Col xs={24} md={12} style={{ textAlign: "center" }}>
@@ -1271,13 +1271,13 @@ export default function LandingPageClient() {
       <section id="solutions" style={{ maxWidth: 1200, margin: "0 auto", padding: "40px 24px 64px" }}>
         <div style={{ textAlign: "center", marginBottom: 40 }}>
           <Tag color="blue" style={{ padding: "4px 14px", borderRadius: 999, fontWeight: 600, fontSize: 13 }}>
-            Tailored For Your Business Model
+            {t.solutions.tag}
           </Tag>
           <Title level={2} style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)", fontWeight: 800, marginTop: 12, color: "#0f172a" }}>
-            Ek Platform • Teeno Vyapar Ke Liye Perfect
+            {t.solutions.title}
           </Title>
           <Paragraph style={{ color: "#64748b", fontSize: 16, maxWidth: 650, margin: "0 auto" }}>
-            Chahe aap dukan chalate ho, wholesale trading karte ho, ya home services provide karte ho — GinieSpace aapke liye custom configured hai.
+            {t.solutions.subtitle}
           </Paragraph>
         </div>
 
@@ -1308,15 +1308,14 @@ export default function LandingPageClient() {
               >
                 <ShopOutlined />
               </div>
-              <Title level={4} style={{ color: "#0f172a" }}>Retail &amp; Kirana Stores</Title>
+              <Title level={4} style={{ color: "#0f172a" }}>{t.solutions.retailTitle}</Title>
               <Paragraph style={{ color: "#64748b", fontSize: 14 }}>
-                Aapki physical dukan ka digital avataar. Grahak ghar baithe aapka stock browse karein aur direct WhatsApp par order dein.
+                {t.solutions.retailDesc}
               </Paragraph>
               <ul style={{ paddingLeft: 20, color: "#334155", fontSize: 13, lineHeight: 1.8 }}>
-                <li>Instant Public Storefront Link (`/shop/your-store`)</li>
-                <li>Photos &amp; Stock availability tracking</li>
-                <li>Scannable UPI QR on printed invoice</li>
-                <li>Automated order dispatch alerts on WhatsApp</li>
+                {t.solutions.retailItems.map((item, i) => (
+                  <li key={i}>{item}</li>
+                ))}
               </ul>
             </Card>
           </Col>
@@ -1347,15 +1346,14 @@ export default function LandingPageClient() {
               >
                 <ThunderboltOutlined />
               </div>
-              <Title level={4} style={{ color: "#0f172a" }}>Wholesale &amp; Distributors</Title>
+              <Title level={4} style={{ color: "#0f172a" }}>{t.solutions.wholesaleTitle}</Title>
               <Paragraph style={{ color: "#64748b", fontSize: 14 }}>
-                Bulk B2B orders manage karein bina call par time waste kiye. Retailers ko carton pricing aur MOQs dikhayein.
+                {t.solutions.wholesaleDesc}
               </Paragraph>
               <ul style={{ paddingLeft: 20, color: "#334155", fontSize: 13, lineHeight: 1.8 }}>
-                <li>Minimum Order Quantity (MOQ) enforcement</li>
-                <li>Carton, Pack &amp; Bulk Box units</li>
-                <li>Hyperlocal retail buyers lead discovery</li>
-                <li>Broadcast new stock arrivals to verified dealers</li>
+                {t.solutions.wholesaleItems.map((item, i) => (
+                  <li key={i}>{item}</li>
+                ))}
               </ul>
             </Card>
           </Col>
@@ -1386,15 +1384,14 @@ export default function LandingPageClient() {
               >
                 <CustomerServiceOutlined />
               </div>
-              <Title level={4} style={{ color: "#0f172a" }}>Services &amp; Appointments</Title>
+              <Title level={4} style={{ color: "#0f172a" }}>{t.solutions.servicesTitle}</Title>
               <Paragraph style={{ color: "#64748b", fontSize: 14 }}>
-                AC Repair, Salons, Coaching ya Consultancy services ke liye hassle-free slot booking aur advance UPI tokens.
+                {t.solutions.servicesDesc}
               </Paragraph>
               <ul style={{ paddingLeft: 20, color: "#334155", fontSize: 13, lineHeight: 1.8 }}>
-                <li>Session duration (30 mins / 60 mins / AMC Plans)</li>
-                <li>Home-visit vs In-store appointment modes</li>
-                <li>Instant WhatsApp booking confirmation receipts</li>
-                <li>Automated appointment reminder notifications</li>
+                {t.solutions.servicesItems.map((item, i) => (
+                  <li key={i}>{item}</li>
+                ))}
               </ul>
             </Card>
           </Col>
@@ -1406,10 +1403,10 @@ export default function LandingPageClient() {
         <div style={{ maxWidth: 1200, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 48 }}>
             <Tag color="cyan" style={{ padding: "4px 14px", borderRadius: 999, fontWeight: 600, fontSize: 13 }}>
-              Enterprise-Grade Architecture
+              {t.pillars.tag}
             </Tag>
             <Title level={2} style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)", fontWeight: 800, marginTop: 12, color: "#0f172a" }}>
-              Kyun GinieSpace Har Indian Merchant Ka Pehla Choice Hai?
+              {t.pillars.title}
             </Title>
           </div>
 
@@ -1417,9 +1414,9 @@ export default function LandingPageClient() {
             <Col xs={24} sm={12} lg={6}>
               <Card style={{ borderRadius: 14, height: "100%", background: "#f8fafc", borderColor: "#e2e8f0" }}>
                 <BankOutlined style={{ fontSize: 32, color: "#059669", marginBottom: 16 }} />
-                <Title level={4}>0% UPI Commission</Title>
+                <Title level={4}>{t.pillars.p1Title}</Title>
                 <Text type="secondary" style={{ fontSize: 13, lineHeight: 1.6 }}>
-                  GinieSpace kisi payment gateway ki tarah 2-3% nahi kat-ta. Customer se 100% payment seedhe aapke apne bank UPI account me transfer hoti hai.
+                  {t.pillars.p1Desc}
                 </Text>
               </Card>
             </Col>
@@ -1427,9 +1424,9 @@ export default function LandingPageClient() {
             <Col xs={24} sm={12} lg={6}>
               <Card style={{ borderRadius: 14, height: "100%", background: "#f8fafc", borderColor: "#e2e8f0" }}>
                 <WhatsAppOutlined style={{ fontSize: 32, color: "#25D366", marginBottom: 16 }} />
-                <Title level={4}>Multi-Device Cloud Sync</Title>
+                <Title level={4}>{t.pillars.p2Title}</Title>
                 <Text type="secondary" style={{ fontSize: 13, lineHeight: 1.6 }}>
-                  Aapka WhatsApp persistently cloud se linked rehta hai. Browser refresh ya PC switch karne par session disconnect nahi hota.
+                  {t.pillars.p2Desc}
                 </Text>
               </Card>
             </Col>
@@ -1437,9 +1434,9 @@ export default function LandingPageClient() {
             <Col xs={24} sm={12} lg={6}>
               <Card style={{ borderRadius: 14, height: "100%", background: "#f8fafc", borderColor: "#e2e8f0" }}>
                 <SearchOutlined style={{ fontSize: 32, color: "#2563eb", marginBottom: 16 }} />
-                <Title level={4}>Hyperlocal B2B Leads</Title>
+                <Title level={4}>{t.pillars.p3Title}</Title>
                 <Text type="secondary" style={{ fontSize: 13, lineHeight: 1.6 }}>
-                  Apne shahar ya pincode ke verified businesses ko explore karein, Google review scores dekhein aur 1-click WhatsApp proposal send karein.
+                  {t.pillars.p3Desc}
                 </Text>
               </Card>
             </Col>
@@ -1447,9 +1444,9 @@ export default function LandingPageClient() {
             <Col xs={24} sm={12} lg={6}>
               <Card style={{ borderRadius: 14, height: "100%", background: "#f8fafc", borderColor: "#e2e8f0" }}>
                 <TeamOutlined style={{ fontSize: 32, color: "#7c3aed", marginBottom: 16 }} />
-                <Title level={4}>Staff Access Controls</Title>
+                <Title level={4}>{t.pillars.p4Title}</Title>
                 <Text type="secondary" style={{ fontSize: 13, lineHeight: 1.6 }}>
-                  Billing boy ya delivery staff ke liye alag sub-accounts banayein without sharing WhatsApp session credentials ya admin settings.
+                  {t.pillars.p4Desc}
                 </Text>
               </Card>
             </Col>
@@ -1471,19 +1468,19 @@ export default function LandingPageClient() {
         >
           <div style={{ textAlign: "center", marginBottom: isMobile ? 20 : 28 }}>
             <Tag color="warning" style={{ fontWeight: 700, padding: "4px 12px" }}>
-              💰 SAVINGS CALCULATOR
+              {t.calculator.tag}
             </Tag>
             <Title level={3} style={{ color: "#fff", marginTop: 10, fontSize: isMobile ? "1.25rem" : undefined }}>
-              GinieSpace Par Shifting Se Aapki Kitni Bachaat Hogi?
+              {t.calculator.title}
             </Title>
             <Text style={{ color: "#94a3b8", fontSize: isMobile ? 13 : 14 }}>
-              Other e-commerce gateways har transaction par 2% to 3% cut lete hain. GinieSpace par payment 100% Direct UPI hoti hai.
+              {t.calculator.subtitle}
             </Text>
           </div>
 
           <div style={{ maxWidth: 650, margin: "0 auto", background: "rgba(255,255,255,0.05)", padding: isMobile ? "16px 12px" : 24, borderRadius: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <span style={{ color: "#cbd5e1", fontSize: isMobile ? 13 : 14, fontWeight: 500 }}>Estimated Sales:</span>
+              <span style={{ color: "#cbd5e1", fontSize: isMobile ? 13 : 14, fontWeight: 500 }}>{t.calculator.estimatedSales}</span>
               <span style={{ color: "#38bdf8", fontSize: isMobile ? 18 : 20, fontWeight: 800 }}>
                 ₹{monthlySales.toLocaleString("en-IN")}
               </span>
@@ -1502,13 +1499,13 @@ export default function LandingPageClient() {
 
             <Row gutter={[12, 12]} style={{ textAlign: "center" }}>
               <Col xs={12}>
-                <div style={{ color: "#94a3b8", fontSize: isMobile ? 11 : 12 }}>Standard 2.5% Fee</div>
+                <div style={{ color: "#94a3b8", fontSize: isMobile ? 11 : 12 }}>{t.calculator.standardFee}</div>
                 <div style={{ color: "#f87171", fontSize: isMobile ? 15 : 18, fontWeight: 700, textDecoration: "line-through" }}>
                   ₹{traditionalGatewayFee.toLocaleString("en-IN")}/mo
                 </div>
               </Col>
               <Col xs={12}>
-                <div style={{ color: "#94a3b8", fontSize: isMobile ? 11 : 12 }}>GinieSpace Flat Fee</div>
+                <div style={{ color: "#94a3b8", fontSize: isMobile ? 11 : 12 }}>{t.calculator.ginieFee}</div>
                 <div style={{ color: "#34d399", fontSize: isMobile ? 15 : 18, fontWeight: 700 }}>
                   ₹{ginieSpaceFee}/mo (0% Cut)
                 </div>
@@ -1526,7 +1523,7 @@ export default function LandingPageClient() {
               }}
             >
               <Text strong style={{ color: "#6ee7b7", fontSize: isMobile ? 13 : 15 }}>
-                🎉 Aapki Seedhi Bachaat: ₹{monthlySavings.toLocaleString("en-IN")} har mahine (₹{(monthlySavings * 12).toLocaleString("en-IN")}/saal)!
+                {t.calculator.savingsPrefix} ₹{monthlySavings.toLocaleString("en-IN")} {t.calculator.savingsPerMonth} (₹{(monthlySavings * 12).toLocaleString("en-IN")}{t.calculator.savingsPerYear})!
               </Text>
             </div>
           </div>
@@ -1537,13 +1534,13 @@ export default function LandingPageClient() {
       <section id="pricing" style={{ maxWidth: 1080, margin: isMobile ? "40px auto" : "64px auto", padding: isMobile ? "0 16px" : "0 24px" }}>
         <div style={{ textAlign: "center", marginBottom: 36 }}>
           <Tag color="gold" style={{ padding: "4px 14px", borderRadius: 999, fontWeight: 700, fontSize: 13 }}>
-            TRANSPARENT &amp; AFFORDABLE PRICING
+            {t.pricing.tag}
           </Tag>
           <Title level={2} style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)", fontWeight: 800, marginTop: 12, color: "#0f172a" }}>
-            Har Vyapari Ke Budget Me Fit
+            {t.pricing.title}
           </Title>
           <Paragraph style={{ color: "#64748b", fontSize: 16 }}>
-            Free se shuru karein aur bina kisi contractual commitment ke jab chahein PRO upgrade karein.
+            {t.pricing.subtitle}
           </Paragraph>
 
           {/* Billing Cycle Toggle */}
@@ -1558,7 +1555,7 @@ export default function LandingPageClient() {
               }}
               onClick={() => setBillingCycle("monthly")}
             >
-              Monthly Billing
+              {t.pricing.monthlyBilling}
             </Button>
             <Button
               type={billingCycle === "yearly" ? "primary" : "text"}
@@ -1570,7 +1567,7 @@ export default function LandingPageClient() {
               }}
               onClick={() => setBillingCycle("yearly")}
             >
-              Yearly (₹999/yr) <Tag color="green" style={{ marginLeft: 4 }}>Save 17%</Tag>
+              {t.pricing.yearlyBilling} <Tag color="green" style={{ marginLeft: 4 }}>{t.pricing.saveBadge}</Tag>
             </Button>
           </div>
         </div>
@@ -1591,25 +1588,24 @@ export default function LandingPageClient() {
             >
               <div>
                 <Tag color="default" style={{ fontWeight: 600, marginBottom: 12 }}>
-                  STARTER TIER
+                  {t.pricing.freeTag}
                 </Tag>
-                <Title level={3} style={{ margin: "0 0 6px", color: "#0f172a" }}>Free Forever</Title>
+                <Title level={3} style={{ margin: "0 0 6px", color: "#0f172a" }}>{t.pricing.freeTitle}</Title>
                 <div style={{ fontSize: 32, fontWeight: 800, color: "#0f172a", marginBottom: 16 }}>
-                  ₹0 <span style={{ fontSize: 14, fontWeight: 500, color: "#64748b" }}>/ forever</span>
+                  {t.pricing.freePrice} <span style={{ fontSize: 14, fontWeight: 500, color: "#64748b" }}>{t.pricing.freePeriod}</span>
                 </div>
                 <Paragraph style={{ color: "#64748b", fontSize: 13 }}>
-                  Naye vyapariyo ke liye jo apna online catalog aur WhatsApp billing test karna chahte hain.
+                  {t.pricing.freeDesc}
                 </Paragraph>
 
                 <Divider style={{ margin: "16px 0" }} />
 
                 <ul style={{ listStyle: "none", padding: 0, margin: 0, fontSize: 14, lineHeight: 2 }}>
-                  <li><CheckCircleOutlined style={{ color: "#25D366", marginRight: 8 }} /> Up to <strong>15 Products / Services</strong></li>
-                  <li><CheckCircleOutlined style={{ color: "#25D366", marginRight: 8 }} /> <strong>10 Local B2B Leads</strong> discovery</li>
-                  <li><CheckCircleOutlined style={{ color: "#25D366", marginRight: 8 }} /> <strong>1 Staff Account</strong></li>
-                  <li><CheckCircleOutlined style={{ color: "#25D366", marginRight: 8 }} /> Live WhatsApp Web Inbox</li>
-                  <li><CheckCircleOutlined style={{ color: "#25D366", marginRight: 8 }} /> Direct Bank UPI Payments</li>
-                  <li><CheckCircleOutlined style={{ color: "#25D366", marginRight: 8 }} /> Standard Support Helpline</li>
+                  {t.pricing.freeItems.map((item, i) => (
+                    <li key={i}>
+                      <CheckCircleOutlined style={{ color: "#25D366", marginRight: 8 }} /> {item}
+                    </li>
+                  ))}
                 </ul>
               </div>
 
@@ -1620,7 +1616,7 @@ export default function LandingPageClient() {
                   style={{ height: 48, fontWeight: 600, borderRadius: 10 }}
                   onClick={() => router.push("/signup")}
                 >
-                  Start Free Account
+                  {t.pricing.freeCta}
                 </Button>
               </div>
             </Card>
@@ -1644,32 +1640,30 @@ export default function LandingPageClient() {
               <div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                   <Tag color="gold" icon={<CrownOutlined />} style={{ fontWeight: 700, padding: "2px 8px" }}>
-                    👑 MOST POPULAR GROWTH TIER
+                    {t.pricing.proTag}
                   </Tag>
-                  <Tag color="success" style={{ fontWeight: 600 }}>0% Gateway Cut</Tag>
+                  <Tag color="success" style={{ fontWeight: 600 }}>{t.pricing.proZeroCut}</Tag>
                 </div>
 
-                <Title level={3} style={{ margin: "0 0 6px", color: "#92400e" }}>PRO Workspace</Title>
+                <Title level={3} style={{ margin: "0 0 6px", color: "#92400e" }}>{t.pricing.proTitle}</Title>
                 <div style={{ fontSize: 32, fontWeight: 800, color: "#92400e", marginBottom: 16 }}>
                   ₹{billingCycle === "monthly" ? "99" : "999"}{" "}
                   <span style={{ fontSize: 14, fontWeight: 500, color: "#b45309" }}>
-                    / {billingCycle === "monthly" ? "month" : "year"}
+                    {billingCycle === "monthly" ? t.pricing.proPeriodMonthly : t.pricing.proPeriodYearly}
                   </span>
                 </div>
                 <Paragraph style={{ color: "#78350f", fontSize: 13 }}>
-                  Growing dukan aur wholesale business ke liye unlimited inventory, unlimited leads aur broadcast tools.
+                  {t.pricing.proDesc}
                 </Paragraph>
 
                 <Divider style={{ margin: "16px 0" }} />
 
                 <ul style={{ listStyle: "none", padding: 0, margin: 0, fontSize: 14, lineHeight: 2, color: "#451a03" }}>
-                  <li><CheckCircleOutlined style={{ color: "#f59e0b", marginRight: 8 }} /> <strong>Unlimited Catalog</strong> (10,000+ items)</li>
-                  <li><CheckCircleOutlined style={{ color: "#f59e0b", marginRight: 8 }} /> <strong>Unlimited Local B2B Leads</strong> (10,000+ leads)</li>
-                  <li><CheckCircleOutlined style={{ color: "#f59e0b", marginRight: 8 }} /> <strong>5 Team Staff Seats</strong> (Billing &amp; Delivery)</li>
-                  <li><CheckCircleOutlined style={{ color: "#f59e0b", marginRight: 8 }} /> <strong>Store Announcements &amp; Broadcast Tool</strong></li>
-                  <li><CheckCircleOutlined style={{ color: "#f59e0b", marginRight: 8 }} /> <strong>Verified Storefront Badge</strong> on your link</li>
-                  <li><CheckCircleOutlined style={{ color: "#f59e0b", marginRight: 8 }} /> Direct UPI QR + 12-Digit UTR Instant Activation</li>
-                  <li><CheckCircleOutlined style={{ color: "#f59e0b", marginRight: 8 }} /> <strong>Priority WhatsApp Support (+91 92792 59690)</strong></li>
+                  {t.pricing.proItems.map((item, i) => (
+                    <li key={i}>
+                      <CheckCircleOutlined style={{ color: "#f59e0b", marginRight: 8 }} /> {item}
+                    </li>
+                  ))}
                 </ul>
               </div>
 
@@ -1689,7 +1683,7 @@ export default function LandingPageClient() {
                   }}
                   onClick={() => router.push("/signup")}
                 >
-                  Upgrade to PRO (₹{billingCycle === "monthly" ? "99" : "999"})
+                  {t.pricing.proCta} (₹{billingCycle === "monthly" ? "99" : "999"})
                 </Button>
               </div>
             </Card>
@@ -1701,63 +1695,25 @@ export default function LandingPageClient() {
       <section id="faqs" style={{ maxWidth: 880, margin: "64px auto", padding: "0 24px" }}>
         <div style={{ textAlign: "center", marginBottom: 36 }}>
           <Tag color="cyan" style={{ padding: "4px 14px", borderRadius: 999, fontWeight: 600, fontSize: 13 }}>
-            FREQUENTLY ASKED QUESTIONS
+            {t.faqs.tag}
           </Tag>
           <Title level={2} style={{ fontSize: "clamp(1.8rem, 3.2vw, 2.4rem)", fontWeight: 800, marginTop: 12, color: "#0f172a" }}>
-            Aapke Sabhi Sawal, Seedhe Aur Saaf Jawab
+            {t.faqs.title}
           </Title>
         </div>
 
         <Collapse
           defaultActiveKey={["1"]}
           style={{ background: "#ffffff", borderRadius: 14, border: "1px solid #e2e8f0" }}
-          items={[
-            {
-              key: "1",
-              label: <Text strong style={{ fontSize: 15 }}>GinieSpace par customer ki payment mere bank me kaise aati hai?</Text>,
-              children: (
-                <Paragraph style={{ color: "#475569", lineHeight: 1.7 }}>
-                  Seedhe 100% aapke bank me! GinieSpace koi payment gateway middleman nahi hai jo 2% se 3% commission kate. Har invoice aur bill par aapka apna UPI QR code (`9279259690@fam` ya aapka apna UPI ID) hota hai. Grahak PhonePe, Google Pay ya Paytm se scan karke seedhe aapke account me paise bhejta hai.
-                </Paragraph>
-              ),
-            },
-            {
-              key: "2",
-              label: <Text strong style={{ fontSize: 15 }}>WhatsApp connect karne ke liye kisi technical knowledge ki zaroorat hai?</Text>,
-              children: (
-                <Paragraph style={{ color: "#475569", lineHeight: 1.7 }}>
-                  Bilkul nahi! Jaise aap WhatsApp Web apne computer par scan karke chalate hain, waise hi GinieSpace app me jakar sirf 1 baar QR code scan karna hota hai. Aapka WhatsApp turant sync ho jata hai aur background me orders handle karne lagta hai.
-                </Paragraph>
-              ),
-            },
-            {
-              key: "3",
-              label: <Text strong style={{ fontSize: 15 }}>Kya phone ka internet band hone par bhi GinieSpace kaam karega?</Text>,
-              children: (
-                <Paragraph style={{ color: "#475569", lineHeight: 1.7 }}>
-                  Haan! GinieSpace cloud-synced multi-device protocol par chalta hai. Ek baar link hone ke baad aapka shareable store catalog link (`/shop/your-store`) 24 ghante live rehta hai aur grahak kabhi bhi order place kar sakte hain.
-                </Paragraph>
-              ),
-            },
-            {
-              key: "4",
-              label: <Text strong style={{ fontSize: 15 }}>Hyperlocal B2B Leads Finder kya hai aur ye kaise kaam karta hai?</Text>,
-              children: (
-                <Paragraph style={{ color: "#475569", lineHeight: 1.7 }}>
-                  Aap apne city ya pin code me target category (jaise &quot;Kirana stores in Jaipur&quot;, &quot;Pharmacies in Lucknow&quot;) search kar sakte hain. System aapko verified businesses ki details, Google ratings aur verified public phone numbers dikhata hai taaki aap direct 1-click WhatsApp proposal bhej sakein.
-                </Paragraph>
-              ),
-            },
-            {
-              key: "5",
-              label: <Text strong style={{ fontSize: 15 }}>₹99 PRO Plan kaise activate hota hai?</Text>,
-              children: (
-                <Paragraph style={{ color: "#475569", lineHeight: 1.7 }}>
-                  GinieSpace app me jakar &quot;Upgrade to PRO&quot; par click karein, dynamic UPI QR scan karke ₹99 (monthly) ya ₹999 (yearly) transfer karein aur apna 12-digit UTR enter karein. Admin verification ke turant baad aapka PRO plan 30 din ya 365 din ke liye unlock ho jata hai.
-                </Paragraph>
-              ),
-            },
-          ]}
+          items={t.faqs.items.map((faqItem, idx) => ({
+            key: String(idx + 1),
+            label: <Text strong style={{ fontSize: 15 }}>{faqItem.q}</Text>,
+            children: (
+              <Paragraph style={{ color: "#475569", lineHeight: 1.7 }}>
+                {faqItem.a}
+              </Paragraph>
+            ),
+          }))}
         />
       </section>
 
