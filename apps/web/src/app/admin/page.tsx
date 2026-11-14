@@ -30,6 +30,7 @@ import {
   Radio,
   Progress,
   List,
+  Grid,
 } from "antd";
 import {
   UserOutlined,
@@ -60,6 +61,8 @@ import {
   ShoppingOutlined,
   TeamOutlined,
   CheckOutlined,
+  WhatsAppOutlined,
+  CopyOutlined,
 } from "@ant-design/icons";
 import { api } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
@@ -121,6 +124,13 @@ export interface AuditLog {
 export default function AdminPage() {
   const { user } = useAuth();
   const router = useRouter();
+
+  const screens = Grid.useBreakpoint();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  const isMobile = mounted ? (screens.md === false || (typeof window !== "undefined" && window.innerWidth < 768)) : false;
 
   // Navigation
   const [activeTab, setActiveTab] = useState("overview");
@@ -755,17 +765,35 @@ export default function AdminPage() {
 
   return (
     <AppLayout>
-      <div style={{ marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+      <div style={{ marginBottom: isMobile ? 14 : 20, display: "flex", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", flexWrap: "wrap", gap: 10 }}>
         <div>
-          <Title level={4} style={{ margin: 0 }}>GinieSpace Platform Administration</Title>
-          <Text type="secondary">Central management for merchant workspaces, analytics, WhatsApp engine, and support operations</Text>
+          <Title level={isMobile ? 5 : 4} style={{ margin: 0, fontWeight: 800 }}>Platform Administration</Title>
+          <Text type="secondary" style={{ fontSize: isMobile ? 12 : 14 }}>
+            {isMobile ? "Live central admin & monitoring hub" : "Central management for merchant workspaces, analytics, WhatsApp engine, and support operations"}
+          </Text>
         </div>
-        <Space wrap>
-          <Button icon={<DownloadOutlined />} loading={downloadingBackup} onClick={handleDownloadBackup}>
-            Full Backup (JSON)
+        <Space size="small" wrap>
+          <Button
+            size={isMobile ? "small" : "middle"}
+            icon={<DownloadOutlined />}
+            loading={downloadingBackup}
+            onClick={handleDownloadBackup}
+          >
+            {isMobile ? "Backup" : "Full Backup (JSON)"}
           </Button>
-          <Button type="primary" icon={<SyncOutlined />} onClick={() => { loadAnalytics(); loadMerchants(); loadSupportMessages(); loadAuditLogs(); }}>
-            Refresh Data
+          <Button
+            type="primary"
+            size={isMobile ? "small" : "middle"}
+            icon={<SyncOutlined />}
+            onClick={() => {
+              loadAnalytics();
+              loadMerchants();
+              loadSupportMessages();
+              loadAuditLogs();
+              loadSubscriptions();
+            }}
+          >
+            {isMobile ? "Sync" : "Refresh Data"}
           </Button>
         </Space>
       </div>
@@ -773,13 +801,14 @@ export default function AdminPage() {
       <Tabs
         activeKey={activeTab}
         onChange={setActiveTab}
+        tabBarStyle={{ overflowX: "auto", whiteSpace: "nowrap" }}
         items={[
           // TAB 1: PLATFORM OVERVIEW (Analytics & KPIs)
           {
             key: "overview",
             label: (
               <span>
-                <DashboardOutlined /> Platform Overview
+                <DashboardOutlined /> {isMobile ? "Overview" : "Platform Overview"}
               </span>
             ),
             children: (
@@ -790,69 +819,81 @@ export default function AdminPage() {
                   </div>
                 ) : (
                   <div>
-                    {/* Top KPI Cards */}
-                    <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-                      <Col xs={24} sm={12} lg={6}>
-                        <Card style={{ borderRadius: 12, background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", color: "#fff" }}>
+                    {/* Top KPI Cards (2x2 on Mobile) */}
+                    <Row gutter={isMobile ? [10, 10] : [16, 16]} style={{ marginBottom: isMobile ? 16 : 24 }}>
+                      <Col xs={12} sm={12} lg={6}>
+                        <Card
+                          styles={{ body: { padding: isMobile ? "12px 14px" : "20px" } }}
+                          style={{ borderRadius: 12, background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", color: "#fff" }}
+                        >
                           <Statistic
-                            title={<span style={{ color: "rgba(255,255,255,0.85)" }}>Total Platform GMV</span>}
+                            title={<span style={{ color: "rgba(255,255,255,0.85)", fontSize: isMobile ? 11 : 14 }}>Total GMV</span>}
                             value={analytics?.overview?.totalRevenue || 0}
                             precision={0}
-                            prefix={<DollarOutlined style={{ color: "#fff" }} />}
+                            prefix={<DollarOutlined style={{ color: "#fff", fontSize: isMobile ? 14 : 18 }} />}
                             formatter={(val) => `₹${Number(val).toLocaleString("en-IN")}`}
-                            valueStyle={{ color: "#fff", fontWeight: 700 }}
+                            valueStyle={{ color: "#fff", fontWeight: 700, fontSize: isMobile ? 17 : 24 }}
                           />
-                          <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: 12 }}>
-                            From {analytics?.overview?.totalOrders || 0} customer orders
+                          <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: isMobile ? 10 : 12, display: "block", marginTop: 4 }}>
+                            {analytics?.overview?.totalOrders || 0} orders
                           </Text>
                         </Card>
                       </Col>
 
-                      <Col xs={24} sm={12} lg={6}>
-                        <Card style={{ borderRadius: 12, background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)", color: "#fff" }}>
+                      <Col xs={12} sm={12} lg={6}>
+                        <Card
+                          styles={{ body: { padding: isMobile ? "12px 14px" : "20px" } }}
+                          style={{ borderRadius: 12, background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)", color: "#fff" }}
+                        >
                           <Statistic
-                            title={<span style={{ color: "rgba(255,255,255,0.85)" }}>Active Business Accounts</span>}
+                            title={<span style={{ color: "rgba(255,255,255,0.85)", fontSize: isMobile ? 11 : 14 }}>Active Businesses</span>}
                             value={analytics?.overview?.totalMerchants || 0}
-                            prefix={<ShopOutlined style={{ color: "#fff" }} />}
-                            valueStyle={{ color: "#fff", fontWeight: 700 }}
+                            prefix={<ShopOutlined style={{ color: "#fff", fontSize: isMobile ? 14 : 18 }} />}
+                            valueStyle={{ color: "#fff", fontWeight: 700, fontSize: isMobile ? 17 : 24 }}
                           />
-                          <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: 12 }}>
-                            + {analytics?.overview?.totalStaff || 0} team staff accounts
+                          <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: isMobile ? 10 : 12, display: "block", marginTop: 4 }}>
+                            +{analytics?.overview?.totalStaff || 0} staff
                           </Text>
                         </Card>
                       </Col>
 
-                      <Col xs={24} sm={12} lg={6}>
-                        <Card style={{ borderRadius: 12, background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)", color: "#fff" }}>
+                      <Col xs={12} sm={12} lg={6}>
+                        <Card
+                          styles={{ body: { padding: isMobile ? "12px 14px" : "20px" } }}
+                          style={{ borderRadius: 12, background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)", color: "#fff" }}
+                        >
                           <Statistic
-                            title={<span style={{ color: "rgba(255,255,255,0.85)" }}>Active WhatsApp Sessions</span>}
+                            title={<span style={{ color: "rgba(255,255,255,0.85)", fontSize: isMobile ? 11 : 14 }}>WA Sessions</span>}
                             value={analytics?.overview?.activeWhatsAppSessions || 0}
-                            prefix={<PhoneOutlined style={{ color: "#fff" }} />}
-                            valueStyle={{ color: "#fff", fontWeight: 700 }}
+                            prefix={<PhoneOutlined style={{ color: "#fff", fontSize: isMobile ? 14 : 18 }} />}
+                            valueStyle={{ color: "#fff", fontWeight: 700, fontSize: isMobile ? 17 : 24 }}
                           />
-                          <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: 12 }}>
-                            Official Bot: {supportStatus === "connected" ? "ONLINE" : "OFFLINE"}
+                          <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: isMobile ? 10 : 12, display: "block", marginTop: 4 }}>
+                            Bot: {supportStatus === "connected" ? "LIVE" : "OFF"}
                           </Text>
                         </Card>
                       </Col>
 
-                      <Col xs={24} sm={12} lg={6}>
-                        <Card style={{ borderRadius: 12, background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", color: "#fff" }}>
+                      <Col xs={12} sm={12} lg={6}>
+                        <Card
+                          styles={{ body: { padding: isMobile ? "12px 14px" : "20px" } }}
+                          style={{ borderRadius: 12, background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", color: "#fff" }}
+                        >
                           <Statistic
-                            title={<span style={{ color: "rgba(255,255,255,0.85)" }}>Catalog & Leads Engine</span>}
+                            title={<span style={{ color: "rgba(255,255,255,0.85)", fontSize: isMobile ? 11 : 14 }}>Catalog &amp; Leads</span>}
                             value={(analytics?.overview?.totalProducts || 0) + (analytics?.overview?.totalLeads || 0)}
-                            prefix={<ThunderboltOutlined style={{ color: "#fff" }} />}
-                            valueStyle={{ color: "#fff", fontWeight: 700 }}
+                            prefix={<ThunderboltOutlined style={{ color: "#fff", fontSize: isMobile ? 14 : 18 }} />}
+                            valueStyle={{ color: "#fff", fontWeight: 700, fontSize: isMobile ? 17 : 24 }}
                           />
-                          <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: 12 }}>
-                            {analytics?.overview?.totalProducts || 0} products | {analytics?.overview?.totalLeads || 0} leads
+                          <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: isMobile ? 10 : 12, display: "block", marginTop: 4 }}>
+                            {analytics?.overview?.totalProducts || 0} p | {analytics?.overview?.totalLeads || 0} l
                           </Text>
                         </Card>
                       </Col>
                     </Row>
 
                     {/* Breakdown & Leaderboard */}
-                    <Row gutter={[20, 20]} style={{ marginBottom: 24 }}>
+                    <Row gutter={isMobile ? [12, 12] : [20, 20]} style={{ marginBottom: isMobile ? 16 : 24 }}>
                       <Col xs={24} lg={12}>
                         <Card title="Business Mode & Plan Distribution" style={{ borderRadius: 12, height: "100%" }}>
                           <div style={{ marginBottom: 16 }}>
@@ -913,6 +954,7 @@ export default function AdminPage() {
                             rowKey="id"
                             pagination={false}
                             size="small"
+                            scroll={{ x: 420 }}
                             columns={[
                               {
                                 title: "Store & Owner",
@@ -983,17 +1025,17 @@ export default function AdminPage() {
             key: "merchants",
             label: (
               <span>
-                <UserOutlined /> Merchants & Workspaces ({filteredMerchants.length})
+                <UserOutlined /> {isMobile ? "Merchants" : "Merchants & Workspaces"} ({filteredMerchants.length})
               </span>
             ),
             children: (
               <div>
                 {/* Search & Filters */}
-                <Card style={{ marginBottom: 16, borderRadius: 12 }}>
-                  <Row gutter={[16, 12]} align="middle">
+                <Card styles={{ body: { padding: isMobile ? 12 : 20 } }} style={{ marginBottom: 16, borderRadius: 12 }}>
+                  <Row gutter={isMobile ? [8, 8] : [16, 12]} align="middle">
                     <Col xs={24} md={8}>
                       <Input
-                        placeholder="Search by merchant name, email, store, or phone..."
+                        placeholder="Search merchant, store, phone..."
                         prefix={<SearchOutlined style={{ color: "#8c8c8c" }} />}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -1019,9 +1061,9 @@ export default function AdminPage() {
                         onChange={setTypeFilter}
                         options={[
                           { value: "all", label: "All Modes" },
-                          { value: "retail", label: "Retail Stores" },
-                          { value: "wholesale", label: "Wholesale Hubs" },
-                          { value: "services", label: "Service Hubs" },
+                          { value: "retail", label: "Retail" },
+                          { value: "wholesale", label: "Wholesale" },
+                          { value: "services", label: "Services" },
                         ]}
                       />
                     </Col>
@@ -1037,185 +1079,332 @@ export default function AdminPage() {
                         ]}
                       />
                     </Col>
-                    <Col xs={12} md={4} style={{ textAlign: "right" }}>
-                      <Button icon={<DownloadOutlined />} onClick={handleExportMerchantsCSV}>
+                    <Col xs={12} md={4}>
+                      <Button block={isMobile} icon={<DownloadOutlined />} onClick={handleExportMerchantsCSV}>
                         Export CSV
                       </Button>
                     </Col>
                   </Row>
                 </Card>
 
-                {/* Merchants Table */}
-                <Card style={{ borderRadius: 12 }}>
-                  <Table
+                {/* Merchants View: Mobile Cards or Desktop Table */}
+                {isMobile ? (
+                  <List
                     dataSource={filteredMerchants}
-                    rowKey="id"
                     loading={loadingMerchants}
-                    pagination={{ pageSize: 10, showTotal: (total) => `Total ${total} merchants` }}
-                    columns={[
-                      {
-                        title: "Merchant / Owner",
-                        key: "merchant",
-                        render: (_: any, r: MerchantItem) => (
-                          <div>
-                            <Text strong>{r.name}</Text>
-                            <div style={{ fontSize: 12, color: "#595959" }}>{r.email}</div>
-                            {r.business?.phone && (
-                              <div style={{ fontSize: 11, color: "#047857", fontWeight: 600 }}>
-                                📞 {formatDisplayPhone(r.business.phone)}
-                              </div>
-                            )}
-                          </div>
-                        ),
-                      },
-                      {
-                        title: "Storefront",
-                        key: "store",
-                        render: (_: any, r: MerchantItem) => (
-                          <div>
-                            <div style={{ fontWeight: 600 }}>{r.business?.name || "No Store Name"}</div>
-                            <Tag color={r.businessType === "wholesale" ? "blue" : r.businessType === "services" ? "purple" : "green"}>
-                              {r.businessType?.toUpperCase()}
-                            </Tag>
-                            {r.role === "admin" && <Tag color="purple">ADMIN</Tag>}
-                            {r.role === "staff" && <Tag color="cyan">STAFF</Tag>}
-                          </div>
-                        ),
-                      },
-                      {
-                        title: "Plan",
-                        key: "plan",
-                        render: (_: any, r: MerchantItem) => (
-                          <Select
-                            size="small"
-                            value={r.plan || "free"}
-                            style={{ width: 88 }}
-                            loading={updatingUserId === r.id}
-                            onChange={(val) => handleUpdateMerchant(r, { plan: val as "free" | "pro" })}
-                            options={[
-                              { value: "free", label: "FREE" },
-                              { value: "pro", label: "PRO" },
-                            ]}
-                          />
-                        ),
-                      },
-                      {
-                        title: "WA Status",
-                        key: "waStatus",
-                        render: (_: any, r: MerchantItem) => {
-                          const status = r.whatsapp?.status;
-                          return status === "connected" ? (
-                            <Tag icon={<CheckCircleOutlined />} color="success">LINKED</Tag>
-                          ) : status === "connecting" ? (
-                            <Tag icon={<SyncOutlined spin />} color="warning">SCANNING</Tag>
-                          ) : (
-                            <Tag color="default">OFFLINE</Tag>
-                          );
-                        },
-                      },
-                      {
-                        title: "Usage & Activity",
-                        key: "activity",
-                        render: (_: any, r: MerchantItem) => (
-                          <div style={{ fontSize: 12 }}>
-                            <div>📦 {r.counts?.products || 0} items | 🛒 {r.counts?.orders || 0} orders</div>
-                            <div style={{ color: "#10b981", fontWeight: 600 }}>
-                              ₹{Number(r.counts?.revenue || 0).toLocaleString("en-IN")} sales
+                    pagination={{ pageSize: 8, size: "small", align: "center" }}
+                    locale={{ emptyText: "No merchants found matching filters." }}
+                    renderItem={(r: MerchantItem) => (
+                      <Card
+                        key={r.id}
+                        styles={{ body: { padding: "14px" } }}
+                        style={{ marginBottom: 12, borderRadius: 12, border: "1px solid #e2e8f0", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8, gap: 8 }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 700, fontSize: 15, color: "#0f172a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              {r.business?.name || r.name}
+                            </div>
+                            <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>
+                              {r.name} ({r.email})
                             </div>
                           </div>
-                        ),
-                      },
-                      {
-                        title: "Status",
-                        key: "status",
-                        render: (_: any, r: MerchantItem) => {
-                          const isSuspended = r.status === "suspended";
-                          return (
-                            <Tag color={isSuspended ? "red" : "green"}>
-                              {isSuspended ? "SUSPENDED" : "ACTIVE"}
+                          <div style={{ display: "flex", gap: 4, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                            <Tag color={r.plan === "pro" ? "gold" : "default"} style={{ margin: 0, fontWeight: 700 }}>
+                              {r.plan === "pro" ? "👑 PRO" : "FREE"}
                             </Tag>
-                          );
-                        },
-                      },
-                      {
-                        title: "Actions",
-                        key: "actions",
-                        align: "right",
-                        render: (_: any, r: MerchantItem) => (
-                          <Space size="small">
-                            <Tooltip title="View 360° Profile & Stats">
-                              <Button
-                                size="small"
-                                icon={<EyeOutlined />}
-                                onClick={() => {
-                                  setSelectedMerchant(r);
-                                  setMerchantDrawerOpen(true);
-                                }}
-                              />
-                            </Tooltip>
+                            <Tag color={r.status === "suspended" ? "red" : "green"} style={{ margin: 0 }}>
+                              {r.status?.toUpperCase()}
+                            </Tag>
+                          </div>
+                        </div>
 
-                            <Dropdown
-                              menu={{
-                                items: [
-                                  {
-                                    key: "pro-pitch",
-                                    label: "Send Pro Upgrade on WhatsApp",
-                                    icon: <CrownOutlined style={{ color: "#f59e0b" }} />,
-                                    disabled: r.plan === "pro" || !r.business?.phone,
-                                    onClick: () => handleSendProPitch(r),
-                                  },
-                                  {
-                                    key: "reset-pass",
-                                    label: "Reset Password",
-                                    icon: <KeyOutlined />,
-                                    onClick: () => {
-                                      setResetPassModalUser(r);
-                                      setTempPassword("");
-                                    },
-                                  },
-                                  {
-                                    key: "disconnect-wa",
-                                    label: "Force Disconnect WhatsApp",
-                                    icon: <DisconnectOutlined style={{ color: "#ff4d4f" }} />,
-                                    disabled: r.whatsapp?.status === "disconnected",
-                                    onClick: () => handleDisconnectMerchantWhatsApp(r),
-                                  },
-                                  {
-                                    type: "divider",
-                                  },
-                                  {
-                                    key: "toggle-status",
-                                    label: r.status === "suspended" ? "Reactivate Account" : "Suspend Account",
-                                    danger: r.status !== "suspended",
-                                    disabled: r.role === "admin",
-                                    onClick: () => handleUpdateMerchant(r, { status: r.status === "suspended" ? "active" : "suspended" }),
-                                  },
-                                  {
-                                    key: "delete-user",
-                                    label: "Delete User",
-                                    danger: true,
-                                    disabled: r.role === "admin",
-                                    onClick: () => {
-                                      Modal.confirm({
-                                        title: `Delete ${r.name}'s account?`,
-                                        content: `Are you sure you want to delete ${r.email}? This cannot be undone.`,
-                                        okText: "Delete Account",
-                                        okButtonProps: { danger: true },
-                                        onOk: () => handleDeleteUser(r),
-                                      });
-                                    },
-                                  },
-                                ],
-                              }}
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+                          <Tag color={r.businessType === "wholesale" ? "blue" : r.businessType === "services" ? "purple" : "green"} style={{ margin: 0 }}>
+                            {r.businessType?.toUpperCase()}
+                          </Tag>
+                          {r.whatsapp?.status === "connected" ? (
+                            <Tag icon={<CheckCircleOutlined />} color="success" style={{ margin: 0 }}>WA LINKED</Tag>
+                          ) : (
+                            <Tag color="default" style={{ margin: 0 }}>WA OFFLINE</Tag>
+                          )}
+                          {r.role === "admin" && <Tag color="purple" style={{ margin: 0 }}>ADMIN</Tag>}
+                          {r.role === "staff" && <Tag color="cyan" style={{ margin: 0 }}>STAFF</Tag>}
+                        </div>
+
+                        {r.business?.phone && (
+                          <div style={{ marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between", background: "#f8fafc", padding: "8px 10px", borderRadius: 8 }}>
+                            <span style={{ fontSize: 12, color: "#047857", fontWeight: 700 }}>
+                              📱 {formatDisplayPhone(r.business.phone)}
+                            </span>
+                            <a
+                              href={`https://wa.me/${r.business.phone.replace(/\D/g, "")}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ fontSize: 12, color: "#25D366", fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}
                             >
-                              <Button size="small">Manage ▾</Button>
-                            </Dropdown>
-                          </Space>
-                        ),
-                      },
-                    ]}
+                              <WhatsAppOutlined /> WhatsApp Chat
+                            </a>
+                          </div>
+                        )}
+
+                        <div style={{ fontSize: 12, color: "#475569", marginBottom: 12, display: "flex", justifyContent: "space-between", borderTop: "1px dashed #e2e8f0", paddingTop: 8 }}>
+                          <span>📦 {r.counts?.products || 0} items | 🛒 {r.counts?.orders || 0} orders</span>
+                          <span style={{ color: "#10b981", fontWeight: 700 }}>₹{Number(r.counts?.revenue || 0).toLocaleString("en-IN")}</span>
+                        </div>
+
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                          <Button
+                            icon={<EyeOutlined />}
+                            onClick={() => {
+                              setSelectedMerchant(r);
+                              setMerchantDrawerOpen(true);
+                            }}
+                            style={{ height: 38, fontWeight: 600 }}
+                          >
+                            360° Profile
+                          </Button>
+
+                          <Dropdown
+                            trigger={["click"]}
+                            menu={{
+                              items: [
+                                {
+                                  key: "plan-toggle",
+                                  label: r.plan === "pro" ? "Downgrade to FREE" : "Upgrade to PRO",
+                                  icon: <CrownOutlined style={{ color: "#f59e0b" }} />,
+                                  onClick: () => handleUpdateMerchant(r, { plan: r.plan === "pro" ? "free" : "pro" }),
+                                },
+                                {
+                                  key: "pro-pitch",
+                                  label: "Send Pro Offer on WhatsApp",
+                                  icon: <CrownOutlined style={{ color: "#f59e0b" }} />,
+                                  disabled: r.plan === "pro" || !r.business?.phone,
+                                  onClick: () => handleSendProPitch(r),
+                                },
+                                {
+                                  key: "reset-pass",
+                                  label: "Reset Password",
+                                  icon: <KeyOutlined />,
+                                  onClick: () => {
+                                    setResetPassModalUser(r);
+                                    setTempPassword("");
+                                  },
+                                },
+                                {
+                                  key: "disconnect-wa",
+                                  label: "Force Disconnect WhatsApp",
+                                  icon: <DisconnectOutlined style={{ color: "#ff4d4f" }} />,
+                                  disabled: r.whatsapp?.status === "disconnected",
+                                  onClick: () => handleDisconnectMerchantWhatsApp(r),
+                                },
+                                { type: "divider" },
+                                {
+                                  key: "toggle-status",
+                                  label: r.status === "suspended" ? "Reactivate Account" : "Suspend Account",
+                                  danger: r.status !== "suspended",
+                                  disabled: r.role === "admin",
+                                  onClick: () => handleUpdateMerchant(r, { status: r.status === "suspended" ? "active" : "suspended" }),
+                                },
+                                {
+                                  key: "delete-user",
+                                  label: "Delete User",
+                                  danger: true,
+                                  disabled: r.role === "admin",
+                                  onClick: () => {
+                                    Modal.confirm({
+                                      title: `Delete ${r.name}'s account?`,
+                                      content: `Are you sure you want to delete ${r.email}? This cannot be undone.`,
+                                      okText: "Delete Account",
+                                      okButtonProps: { danger: true },
+                                      onOk: () => handleDeleteUser(r),
+                                    });
+                                  },
+                                },
+                              ],
+                            }}
+                          >
+                            <Button type="primary" style={{ height: 38, background: "#0f172a", borderColor: "#0f172a" }}>
+                              Manage ▾
+                            </Button>
+                          </Dropdown>
+                        </div>
+                      </Card>
+                    )}
                   />
-                </Card>
+                ) : (
+                  <Card style={{ borderRadius: 12 }}>
+                    <Table
+                      dataSource={filteredMerchants}
+                      rowKey="id"
+                      loading={loadingMerchants}
+                      scroll={{ x: 1050 }}
+                      pagination={{ pageSize: 10, showTotal: (total) => `Total ${total} merchants` }}
+                      columns={[
+                        {
+                          title: "Merchant / Owner",
+                          key: "merchant",
+                          render: (_: any, r: MerchantItem) => (
+                            <div>
+                              <Text strong>{r.name}</Text>
+                              <div style={{ fontSize: 12, color: "#595959" }}>{r.email}</div>
+                              {r.business?.phone && (
+                                <div style={{ fontSize: 11, color: "#047857", fontWeight: 600 }}>
+                                  📞 {formatDisplayPhone(r.business.phone)}
+                                </div>
+                              )}
+                            </div>
+                          ),
+                        },
+                        {
+                          title: "Storefront",
+                          key: "store",
+                          render: (_: any, r: MerchantItem) => (
+                            <div>
+                              <div style={{ fontWeight: 600 }}>{r.business?.name || "No Store Name"}</div>
+                              <Tag color={r.businessType === "wholesale" ? "blue" : r.businessType === "services" ? "purple" : "green"}>
+                                {r.businessType?.toUpperCase()}
+                              </Tag>
+                              {r.role === "admin" && <Tag color="purple">ADMIN</Tag>}
+                              {r.role === "staff" && <Tag color="cyan">STAFF</Tag>}
+                            </div>
+                          ),
+                        },
+                        {
+                          title: "Plan",
+                          key: "plan",
+                          render: (_: any, r: MerchantItem) => (
+                            <Select
+                              size="small"
+                              value={r.plan || "free"}
+                              style={{ width: 88 }}
+                              loading={updatingUserId === r.id}
+                              onChange={(val) => handleUpdateMerchant(r, { plan: val as "free" | "pro" })}
+                              options={[
+                                { value: "free", label: "FREE" },
+                                { value: "pro", label: "PRO" },
+                              ]}
+                            />
+                          ),
+                        },
+                        {
+                          title: "WA Status",
+                          key: "waStatus",
+                          render: (_: any, r: MerchantItem) => {
+                            const status = r.whatsapp?.status;
+                            return status === "connected" ? (
+                              <Tag icon={<CheckCircleOutlined />} color="success">LINKED</Tag>
+                            ) : status === "connecting" ? (
+                              <Tag icon={<SyncOutlined spin />} color="warning">SCANNING</Tag>
+                            ) : (
+                              <Tag color="default">OFFLINE</Tag>
+                            );
+                          },
+                        },
+                        {
+                          title: "Usage & Activity",
+                          key: "activity",
+                          render: (_: any, r: MerchantItem) => (
+                            <div style={{ fontSize: 12 }}>
+                              <div>📦 {r.counts?.products || 0} items | 🛒 {r.counts?.orders || 0} orders</div>
+                              <div style={{ color: "#10b981", fontWeight: 600 }}>
+                                ₹{Number(r.counts?.revenue || 0).toLocaleString("en-IN")} sales
+                              </div>
+                            </div>
+                          ),
+                        },
+                        {
+                          title: "Status",
+                          key: "status",
+                          render: (_: any, r: MerchantItem) => {
+                            const isSuspended = r.status === "suspended";
+                            return (
+                              <Tag color={isSuspended ? "red" : "green"}>
+                                {isSuspended ? "SUSPENDED" : "ACTIVE"}
+                              </Tag>
+                            );
+                          },
+                        },
+                        {
+                          title: "Actions",
+                          key: "actions",
+                          align: "right",
+                          render: (_: any, r: MerchantItem) => (
+                            <Space size="small">
+                              <Tooltip title="View 360° Profile & Stats">
+                                <Button
+                                  size="small"
+                                  icon={<EyeOutlined />}
+                                  onClick={() => {
+                                    setSelectedMerchant(r);
+                                    setMerchantDrawerOpen(true);
+                                  }}
+                                />
+                              </Tooltip>
+
+                              <Dropdown
+                                menu={{
+                                  items: [
+                                    {
+                                      key: "pro-pitch",
+                                      label: "Send Pro Upgrade on WhatsApp",
+                                      icon: <CrownOutlined style={{ color: "#f59e0b" }} />,
+                                      disabled: r.plan === "pro" || !r.business?.phone,
+                                      onClick: () => handleSendProPitch(r),
+                                    },
+                                    {
+                                      key: "reset-pass",
+                                      label: "Reset Password",
+                                      icon: <KeyOutlined />,
+                                      onClick: () => {
+                                        setResetPassModalUser(r);
+                                        setTempPassword("");
+                                      },
+                                    },
+                                    {
+                                      key: "disconnect-wa",
+                                      label: "Force Disconnect WhatsApp",
+                                      icon: <DisconnectOutlined style={{ color: "#ff4d4f" }} />,
+                                      disabled: r.whatsapp?.status === "disconnected",
+                                      onClick: () => handleDisconnectMerchantWhatsApp(r),
+                                    },
+                                    {
+                                      type: "divider",
+                                    },
+                                    {
+                                      key: "toggle-status",
+                                      label: r.status === "suspended" ? "Reactivate Account" : "Suspend Account",
+                                      danger: r.status !== "suspended",
+                                      disabled: r.role === "admin",
+                                      onClick: () => handleUpdateMerchant(r, { status: r.status === "suspended" ? "active" : "suspended" }),
+                                    },
+                                    {
+                                      key: "delete-user",
+                                      label: "Delete User",
+                                      danger: true,
+                                      disabled: r.role === "admin",
+                                      onClick: () => {
+                                        Modal.confirm({
+                                          title: `Delete ${r.name}'s account?`,
+                                          content: `Are you sure you want to delete ${r.email}? This cannot be undone.`,
+                                          okText: "Delete Account",
+                                          okButtonProps: { danger: true },
+                                          onOk: () => handleDeleteUser(r),
+                                        });
+                                      },
+                                    },
+                                  ],
+                                }}
+                              >
+                                <Button size="small">Manage ▾</Button>
+                              </Dropdown>
+                            </Space>
+                          ),
+                        },
+                      ]}
+                    />
+                  </Card>
+                )}
               </div>
             ),
           },
@@ -1225,7 +1414,7 @@ export default function AdminPage() {
             key: "subscriptions",
             label: (
               <span>
-                <CrownOutlined style={{ color: "#d97706" }} /> Subscriptions &amp; Revenue
+                <CrownOutlined style={{ color: "#d97706" }} /> {isMobile ? "Subs" : "Subscriptions & Revenue"}
                 {subscriptions.filter((s) => s.subscriptionStatus === "pending").length > 0 && (
                   <Badge
                     count={subscriptions.filter((s) => s.subscriptionStatus === "pending").length}
@@ -1236,106 +1425,124 @@ export default function AdminPage() {
             ),
             children: (
               <div>
-                {/* Revenue & Subscription KPIs */}
-                <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
-                  <Col xs={24} sm={12} lg={6}>
-                    <Card style={{ borderRadius: 12, background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", color: "#fff" }}>
+                {/* Revenue & Subscription KPIs (2x2 on Mobile) */}
+                <Row gutter={isMobile ? [10, 10] : [16, 16]} style={{ marginBottom: isMobile ? 16 : 20 }}>
+                  <Col xs={12} sm={12} lg={6}>
+                    <Card
+                      styles={{ body: { padding: isMobile ? "12px 14px" : "20px" } }}
+                      style={{ borderRadius: 12, background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", color: "#fff" }}
+                    >
                       <Statistic
-                        title={<span style={{ color: "rgba(255,255,255,0.85)" }}>Active PRO Merchants</span>}
+                        title={<span style={{ color: "rgba(255,255,255,0.85)", fontSize: isMobile ? 11 : 14 }}>Active PRO</span>}
                         value={subscriptions.filter((s) => s.plan === "pro").length}
-                        prefix={<CrownOutlined style={{ color: "#fff" }} />}
-                        valueStyle={{ color: "#fff", fontWeight: 700 }}
+                        prefix={<CrownOutlined style={{ color: "#fff", fontSize: isMobile ? 14 : 18 }} />}
+                        valueStyle={{ color: "#fff", fontWeight: 700, fontSize: isMobile ? 18 : 24 }}
                       />
-                      <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: 12 }}>
-                        Unlimited Catalog &amp; B2B Leads Active
+                      <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: isMobile ? 10 : 12, display: "block", marginTop: 4 }}>
+                        Paid PRO active
                       </Text>
                     </Card>
                   </Col>
 
-                  <Col xs={24} sm={12} lg={6}>
-                    <Card style={{ borderRadius: 12, background: subscriptions.filter((s) => s.subscriptionStatus === "pending").length > 0 ? "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)" : "linear-gradient(135deg, #10b981 0%, #059669 100%)", color: "#fff" }}>
+                  <Col xs={12} sm={12} lg={6}>
+                    <Card
+                      styles={{ body: { padding: isMobile ? "12px 14px" : "20px" } }}
+                      style={{ borderRadius: 12, background: subscriptions.filter((s) => s.subscriptionStatus === "pending").length > 0 ? "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)" : "linear-gradient(135deg, #10b981 0%, #059669 100%)", color: "#fff" }}
+                    >
                       <Statistic
-                        title={<span style={{ color: "rgba(255,255,255,0.85)" }}>Pending Upgrade Verifications</span>}
+                        title={<span style={{ color: "rgba(255,255,255,0.85)", fontSize: isMobile ? 11 : 14 }}>Pending UTR</span>}
                         value={subscriptions.filter((s) => s.subscriptionStatus === "pending").length}
-                        prefix={<CheckCircleOutlined style={{ color: "#fff" }} />}
-                        valueStyle={{ color: "#fff", fontWeight: 700 }}
+                        prefix={<CheckCircleOutlined style={{ color: "#fff", fontSize: isMobile ? 14 : 18 }} />}
+                        valueStyle={{ color: "#fff", fontWeight: 700, fontSize: isMobile ? 18 : 24 }}
                       />
-                      <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: 12 }}>
-                        {subscriptions.filter((s) => s.subscriptionStatus === "pending").length > 0 ? "⚠️ Requires admin approval" : "All payments verified"}
+                      <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: isMobile ? 10 : 12, display: "block", marginTop: 4 }}>
+                        {subscriptions.filter((s) => s.subscriptionStatus === "pending").length > 0 ? "Needs approval" : "All verified"}
                       </Text>
                     </Card>
                   </Col>
 
-                  <Col xs={24} sm={12} lg={6}>
-                    <Card style={{ borderRadius: 12, background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)", color: "#fff" }}>
+                  <Col xs={12} sm={12} lg={6}>
+                    <Card
+                      styles={{ body: { padding: isMobile ? "12px 14px" : "20px" } }}
+                      style={{ borderRadius: 12, background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)", color: "#fff" }}
+                    >
                       <Statistic
-                        title={<span style={{ color: "rgba(255,255,255,0.85)" }}>Estimated Monthly Run Rate (MRR)</span>}
+                        title={<span style={{ color: "rgba(255,255,255,0.85)", fontSize: isMobile ? 11 : 14 }}>MRR Run Rate</span>}
                         value={subscriptions.filter((s) => s.plan === "pro").length * 99}
                         precision={0}
-                        prefix={<DollarOutlined style={{ color: "#fff" }} />}
+                        prefix={<DollarOutlined style={{ color: "#fff", fontSize: isMobile ? 14 : 18 }} />}
                         formatter={(val) => `₹${Number(val).toLocaleString("en-IN")}`}
-                        valueStyle={{ color: "#fff", fontWeight: 700 }}
+                        valueStyle={{ color: "#fff", fontWeight: 700, fontSize: isMobile ? 18 : 24 }}
                       />
-                      <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: 12 }}>
-                        At ₹99/mo per PRO subscriber
+                      <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: isMobile ? 10 : 12, display: "block", marginTop: 4 }}>
+                        ₹99/mo per sub
                       </Text>
                     </Card>
                   </Col>
 
-                  <Col xs={24} sm={12} lg={6}>
-                    <Card style={{ borderRadius: 12, background: "linear-gradient(135deg, #64748b 0%, #475569 100%)", color: "#fff" }}>
+                  <Col xs={12} sm={12} lg={6}>
+                    <Card
+                      styles={{ body: { padding: isMobile ? "12px 14px" : "20px" } }}
+                      style={{ borderRadius: 12, background: "linear-gradient(135deg, #64748b 0%, #475569 100%)", color: "#fff" }}
+                    >
                       <Statistic
-                        title={<span style={{ color: "rgba(255,255,255,0.85)" }}>Free Tier Conversion Pool</span>}
+                        title={<span style={{ color: "rgba(255,255,255,0.85)", fontSize: isMobile ? 11 : 14 }}>Free Pool</span>}
                         value={subscriptions.filter((s) => s.plan !== "pro").length}
-                        prefix={<TeamOutlined style={{ color: "#fff" }} />}
-                        valueStyle={{ color: "#fff", fontWeight: 700 }}
+                        prefix={<TeamOutlined style={{ color: "#fff", fontSize: isMobile ? 14 : 18 }} />}
+                        valueStyle={{ color: "#fff", fontWeight: 700, fontSize: isMobile ? 18 : 24 }}
                       />
-                      <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: 12 }}>
-                        Potential upgrades to ₹99 PRO plan
+                      <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: isMobile ? 10 : 12, display: "block", marginTop: 4 }}>
+                        Upgrade pool
                       </Text>
                     </Card>
                   </Col>
                 </Row>
 
-                {/* Subscriptions Table */}
-                <Card style={{ borderRadius: 12 }}>
-                  <Row gutter={[16, 12]} align="middle" style={{ marginBottom: 16 }}>
+                {/* Subscriptions Search & Filter Controls */}
+                <Card styles={{ body: { padding: isMobile ? 12 : 20 } }} style={{ borderRadius: 12, marginBottom: 16 }}>
+                  <Row gutter={isMobile ? [8, 10] : [16, 12]} align="middle">
                     <Col xs={24} md={10}>
                       <Input
-                        placeholder="Search merchant, phone, or 12-digit UTR..."
+                        placeholder="Search merchant, phone, UTR..."
                         prefix={<SearchOutlined style={{ color: "#8c8c8c" }} />}
                         value={subscriptionSearch}
                         onChange={(e) => setSubscriptionSearch(e.target.value)}
                         allowClear
                       />
                     </Col>
-                    <Col xs={24} md={10}>
-                      <Radio.Group
-                        value={subscriptionFilter}
-                        onChange={(e) => setSubscriptionFilter(e.target.value)}
-                        optionType="button"
-                        buttonStyle="solid"
-                      >
-                        <Radio.Button value="all">All ({subscriptions.length})</Radio.Button>
-                        <Radio.Button value="pending">
-                          Pending ({subscriptions.filter((s) => s.subscriptionStatus === "pending").length})
-                        </Radio.Button>
-                        <Radio.Button value="pro">
-                          PRO Active ({subscriptions.filter((s) => s.plan === "pro").length})
-                        </Radio.Button>
-                        <Radio.Button value="free">
-                          Free ({subscriptions.filter((s) => s.plan !== "pro").length})
-                        </Radio.Button>
-                      </Radio.Group>
+                    <Col xs={18} md={10}>
+                      <div style={{ overflowX: "auto", whiteSpace: "nowrap", paddingBottom: 4 }}>
+                        <Radio.Group
+                          value={subscriptionFilter}
+                          onChange={(e) => setSubscriptionFilter(e.target.value)}
+                          optionType="button"
+                          buttonStyle="solid"
+                          size={isMobile ? "small" : "middle"}
+                        >
+                          <Radio.Button value="all">All ({subscriptions.length})</Radio.Button>
+                          <Radio.Button value="pending">
+                            Pending ({subscriptions.filter((s) => s.subscriptionStatus === "pending").length})
+                          </Radio.Button>
+                          <Radio.Button value="pro">
+                            PRO ({subscriptions.filter((s) => s.plan === "pro").length})
+                          </Radio.Button>
+                          <Radio.Button value="free">
+                            Free ({subscriptions.filter((s) => s.plan !== "pro").length})
+                          </Radio.Button>
+                        </Radio.Group>
+                      </div>
                     </Col>
-                    <Col xs={24} md={4} style={{ textAlign: "right" }}>
-                      <Button icon={<SyncOutlined />} onClick={loadSubscriptions} loading={loadingSubscriptions}>
-                        Refresh
+                    <Col xs={6} md={4} style={{ textAlign: "right" }}>
+                      <Button size={isMobile ? "small" : "middle"} icon={<SyncOutlined />} onClick={loadSubscriptions} loading={loadingSubscriptions}>
+                        {isMobile ? "" : "Refresh"}
                       </Button>
                     </Col>
                   </Row>
+                </Card>
 
-                  <Table
+                {/* Subscriptions View: Mobile Cards or Desktop Table */}
+                {isMobile ? (
+                  <List
                     dataSource={subscriptions
                       .filter((s) => {
                         if (subscriptionFilter === "pending") return s.subscriptionStatus === "pending";
@@ -1354,146 +1561,315 @@ export default function AdminPage() {
                           s.paymentUtr?.toLowerCase().includes(q)
                         );
                       })}
-                    rowKey="userId"
                     loading={loadingSubscriptions}
-                    pagination={{ pageSize: 10 }}
+                    pagination={{ pageSize: 8, size: "small", align: "center" }}
                     locale={{ emptyText: "No subscription records found." }}
-                    columns={[
-                      {
-                        title: "Merchant & Store",
-                        key: "merchant",
-                        render: (_: any, r: any) => (
-                          <div>
-                            <Text strong style={{ fontSize: 13 }}>{r.name}</Text>
-                            <div style={{ fontSize: 12, color: "#64748b" }}>🏬 {r.storeName}</div>
-                            <div style={{ fontSize: 11, color: "#8c8c8c" }}>{r.email}</div>
+                    renderItem={(r: any) => (
+                      <Card
+                        key={r.userId}
+                        styles={{ body: { padding: "14px" } }}
+                        style={{
+                          marginBottom: 12,
+                          borderRadius: 12,
+                          border: r.subscriptionStatus === "pending" ? "2px solid #f59e0b" : "1px solid #e2e8f0",
+                          background: "#fff",
+                          boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+                        }}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8, gap: 8 }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 700, fontSize: 15, color: "#0f172a" }}>
+                              {r.name}
+                            </div>
+                            <div style={{ fontSize: 12, color: "#64748b" }}>
+                              🏬 {r.storeName} ({r.email})
+                            </div>
                           </div>
-                        ),
-                      },
-                      {
-                        title: "WhatsApp Phone",
-                        key: "phone",
-                        render: (_: any, r: any) => (
-                          <Text strong style={{ color: "#047857" }}>
-                            📱 {formatDisplayPhone(r.phone)}
-                          </Text>
-                        ),
-                      },
-                      {
-                        title: "Plan",
-                        key: "plan",
-                        render: (_: any, r: any) =>
-                          r.plan === "pro" ? (
-                            <Tag color="gold" style={{ fontWeight: 700 }}>👑 PRO</Tag>
-                          ) : (
-                            <Tag>FREE</Tag>
-                          ),
-                      },
-                      {
-                        title: "Status",
-                        key: "status",
-                        render: (_: any, r: any) => {
-                          const status = r.subscriptionStatus;
-                          if (status === "pending") return <Tag color="orange" style={{ fontWeight: 700 }}>PENDING VERIFICATION</Tag>;
-                          if (status === "active") return <Tag color="green">ACTIVE</Tag>;
-                          if (status === "expired") return <Tag color="red">EXPIRED</Tag>;
-                          return <Tag color="default">FREE TIER</Tag>;
-                        },
-                      },
-                      {
-                        title: "Payment UTR",
-                        key: "utr",
-                        render: (_: any, r: any) =>
-                          r.paymentUtr ? (
-                            <Tag color="blue" style={{ fontFamily: "monospace", fontSize: 12 }}>
-                              {r.paymentUtr}
-                            </Tag>
-                          ) : (
-                            <Text type="secondary" style={{ fontSize: 12 }}>-</Text>
-                          ),
-                      },
-                      {
-                        title: "Expiry Date",
-                        key: "expires",
-                        render: (_: any, r: any) =>
-                          r.planExpiresAt ? (
-                            <Text style={{ fontSize: 12 }}>
-                              {new Date(r.planExpiresAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                            </Text>
-                          ) : (
-                            <Text type="secondary" style={{ fontSize: 12 }}>-</Text>
-                          ),
-                      },
-                      {
-                        title: "Actions",
-                        key: "actions",
-                        align: "right",
-                        render: (_: any, r: any) => (
-                          <Space size="small">
-                            {r.subscriptionStatus === "pending" ? (
-                              <>
-                                <Button
-                                  type="primary"
-                                  size="small"
-                                  icon={<CheckCircleOutlined />}
-                                  loading={approvingUserId === r.userId}
-                                  onClick={() => handleApproveSubscription(r.userId, "monthly")}
-                                  style={{ background: "#10b981", borderColor: "#10b981", fontWeight: 600 }}
-                                >
-                                  Approve (₹99 / 1 Mo)
-                                </Button>
-                                <Button
-                                  size="small"
-                                  loading={approvingUserId === r.userId}
-                                  onClick={() => handleApproveSubscription(r.userId, "yearly")}
-                                >
-                                  Approve (₹999 / 1 Yr)
-                                </Button>
-                                <Popconfirm
-                                  title="Reject upgrade request?"
-                                  description="Aapka decision audit log me save hoga aur merchant ko re-submit karna hoga."
-                                  onConfirm={() => handleRejectSubscription(r.userId)}
-                                >
-                                  <Button size="small" danger loading={rejectingUserId === r.userId}>
-                                    Reject
-                                  </Button>
-                                </Popconfirm>
-                              </>
-                            ) : r.plan === "pro" ? (
-                              <>
-                                <Button
-                                  size="small"
-                                  icon={<CrownOutlined />}
-                                  loading={approvingUserId === r.userId}
-                                  onClick={() => handleApproveSubscription(r.userId, "monthly")}
-                                >
-                                  +30 Days
-                                </Button>
-                                <Popconfirm
-                                  title="Downgrade user to Free tier?"
-                                  onConfirm={() => handleRejectSubscription(r.userId)}
-                                >
-                                  <Button size="small" danger>
-                                    Downgrade
-                                  </Button>
-                                </Popconfirm>
-                              </>
+                          <div style={{ display: "flex", gap: 4, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                            {r.plan === "pro" ? (
+                              <Tag color="gold" style={{ margin: 0, fontWeight: 700 }}>👑 PRO</Tag>
                             ) : (
-                              <Button
-                                size="small"
-                                icon={<CrownOutlined style={{ color: "#d97706" }} />}
-                                loading={approvingUserId === r.userId}
-                                onClick={() => handleApproveSubscription(r.userId, "monthly")}
-                              >
-                                Grant 30D PRO
-                              </Button>
+                              <Tag style={{ margin: 0 }}>FREE</Tag>
                             )}
-                          </Space>
-                        ),
-                      },
-                    ]}
+                            {r.subscriptionStatus === "pending" ? (
+                              <Tag color="orange" style={{ margin: 0, fontWeight: 700 }}>VERIFY UTR</Tag>
+                            ) : r.subscriptionStatus === "active" ? (
+                              <Tag color="green" style={{ margin: 0 }}>ACTIVE</Tag>
+                            ) : r.subscriptionStatus === "expired" ? (
+                              <Tag color="red" style={{ margin: 0 }}>EXPIRED</Tag>
+                            ) : null}
+                          </div>
+                        </div>
+
+                        {r.phone && (
+                          <div style={{ marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between", background: "#f8fafc", padding: "8px 10px", borderRadius: 8 }}>
+                            <span style={{ fontSize: 12, color: "#047857", fontWeight: 700 }}>
+                              📱 {formatDisplayPhone(r.phone)}
+                            </span>
+                            <a
+                              href={`https://wa.me/${String(r.phone).replace(/\D/g, "")}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ fontSize: 12, color: "#25D366", fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}
+                            >
+                              <WhatsAppOutlined /> Chat
+                            </a>
+                          </div>
+                        )}
+
+                        {r.paymentUtr && (
+                          <div style={{ background: "#f1f5f9", padding: "8px 10px", borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                            <div>
+                              <span style={{ fontSize: 11, color: "#64748b", display: "block" }}>Payment UTR:</span>
+                              <span style={{ fontFamily: "monospace", fontWeight: 700, fontSize: 13, color: "#0f172a" }}>{r.paymentUtr}</span>
+                            </div>
+                            <Button
+                              size="small"
+                              icon={<CopyOutlined />}
+                              onClick={() => {
+                                if (typeof navigator !== "undefined" && navigator.clipboard) {
+                                  navigator.clipboard.writeText(r.paymentUtr);
+                                  message.success("UTR Copied!");
+                                }
+                              }}
+                            >
+                              Copy
+                            </Button>
+                          </div>
+                        )}
+
+                        {r.planExpiresAt && (
+                          <div style={{ fontSize: 12, color: "#64748b", marginBottom: 10 }}>
+                            Plan Expiry: <Text strong>{new Date(r.planExpiresAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</Text>
+                          </div>
+                        )}
+
+                        {r.subscriptionStatus === "pending" ? (
+                          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10 }}>
+                            <Button
+                              type="primary"
+                              icon={<CheckCircleOutlined />}
+                              loading={approvingUserId === r.userId}
+                              onClick={() => handleApproveSubscription(r.userId, "monthly")}
+                              style={{ background: "#10b981", borderColor: "#10b981", height: 42, fontWeight: 700, fontSize: 14 }}
+                            >
+                              Approve ₹99 (1 Month PRO)
+                            </Button>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                              <Button
+                                loading={approvingUserId === r.userId}
+                                onClick={() => handleApproveSubscription(r.userId, "yearly")}
+                                style={{ height: 38 }}
+                              >
+                                Approve 1 Yr (₹999)
+                              </Button>
+                              <Popconfirm
+                                title="Reject upgrade request?"
+                                description="Decision audit log me save hoga."
+                                onConfirm={() => handleRejectSubscription(r.userId)}
+                              >
+                                <Button danger loading={rejectingUserId === r.userId} style={{ height: 38 }}>
+                                  Reject
+                                </Button>
+                              </Popconfirm>
+                            </div>
+                          </div>
+                        ) : r.plan === "pro" ? (
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 10 }}>
+                            <Button
+                              icon={<CrownOutlined />}
+                              loading={approvingUserId === r.userId}
+                              onClick={() => handleApproveSubscription(r.userId, "monthly")}
+                              style={{ height: 38 }}
+                            >
+                              +30 Days
+                            </Button>
+                            <Popconfirm
+                              title="Downgrade user to Free tier?"
+                              onConfirm={() => handleRejectSubscription(r.userId)}
+                            >
+                              <Button danger style={{ height: 38 }}>
+                                Downgrade
+                              </Button>
+                            </Popconfirm>
+                          </div>
+                        ) : (
+                          <Button
+                            block
+                            icon={<CrownOutlined style={{ color: "#d97706" }} />}
+                            loading={approvingUserId === r.userId}
+                            onClick={() => handleApproveSubscription(r.userId, "monthly")}
+                            style={{ height: 38, marginTop: 10 }}
+                          >
+                            Grant 30D PRO
+                          </Button>
+                        )}
+                      </Card>
+                    )}
                   />
-                </Card>
+                ) : (
+                  <Card style={{ borderRadius: 12 }}>
+                    <Table
+                      dataSource={subscriptions
+                        .filter((s) => {
+                          if (subscriptionFilter === "pending") return s.subscriptionStatus === "pending";
+                          if (subscriptionFilter === "pro") return s.plan === "pro";
+                          if (subscriptionFilter === "free") return s.plan !== "pro";
+                          return true;
+                        })
+                        .filter((s) => {
+                          if (!subscriptionSearch.trim()) return true;
+                          const q = subscriptionSearch.toLowerCase();
+                          return (
+                            s.name?.toLowerCase().includes(q) ||
+                            s.email?.toLowerCase().includes(q) ||
+                            s.storeName?.toLowerCase().includes(q) ||
+                            s.phone?.includes(q) ||
+                            s.paymentUtr?.toLowerCase().includes(q)
+                          );
+                        })}
+                      rowKey="userId"
+                      loading={loadingSubscriptions}
+                      scroll={{ x: 1000 }}
+                      pagination={{ pageSize: 10 }}
+                      locale={{ emptyText: "No subscription records found." }}
+                      columns={[
+                        {
+                          title: "Merchant & Store",
+                          key: "merchant",
+                          render: (_: any, r: any) => (
+                            <div>
+                              <Text strong style={{ fontSize: 13 }}>{r.name}</Text>
+                              <div style={{ fontSize: 12, color: "#64748b" }}>🏬 {r.storeName}</div>
+                              <div style={{ fontSize: 11, color: "#8c8c8c" }}>{r.email}</div>
+                            </div>
+                          ),
+                        },
+                        {
+                          title: "WhatsApp Phone",
+                          key: "phone",
+                          render: (_: any, r: any) => (
+                            <Text strong style={{ color: "#047857" }}>
+                              📱 {formatDisplayPhone(r.phone)}
+                            </Text>
+                          ),
+                        },
+                        {
+                          title: "Plan",
+                          key: "plan",
+                          render: (_: any, r: any) =>
+                            r.plan === "pro" ? (
+                              <Tag color="gold" style={{ fontWeight: 700 }}>👑 PRO</Tag>
+                            ) : (
+                              <Tag>FREE</Tag>
+                            ),
+                        },
+                        {
+                          title: "Status",
+                          key: "status",
+                          render: (_: any, r: any) => {
+                            const status = r.subscriptionStatus;
+                            if (status === "pending") return <Tag color="orange" style={{ fontWeight: 700 }}>PENDING VERIFICATION</Tag>;
+                            if (status === "active") return <Tag color="green">ACTIVE</Tag>;
+                            if (status === "expired") return <Tag color="red">EXPIRED</Tag>;
+                            return <Tag color="default">FREE TIER</Tag>;
+                          },
+                        },
+                        {
+                          title: "Payment UTR",
+                          key: "utr",
+                          render: (_: any, r: any) =>
+                            r.paymentUtr ? (
+                              <Tag color="blue" style={{ fontFamily: "monospace", fontSize: 12 }}>
+                                {r.paymentUtr}
+                              </Tag>
+                            ) : (
+                              <Text type="secondary" style={{ fontSize: 12 }}>-</Text>
+                            ),
+                        },
+                        {
+                          title: "Expiry Date",
+                          key: "expires",
+                          render: (_: any, r: any) =>
+                            r.planExpiresAt ? (
+                              <Text style={{ fontSize: 12 }}>
+                                {new Date(r.planExpiresAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                              </Text>
+                            ) : (
+                              <Text type="secondary" style={{ fontSize: 12 }}>-</Text>
+                            ),
+                        },
+                        {
+                          title: "Actions",
+                          key: "actions",
+                          align: "right",
+                          render: (_: any, r: any) => (
+                            <Space size="small">
+                              {r.subscriptionStatus === "pending" ? (
+                                <>
+                                  <Button
+                                    type="primary"
+                                    size="small"
+                                    icon={<CheckCircleOutlined />}
+                                    loading={approvingUserId === r.userId}
+                                    onClick={() => handleApproveSubscription(r.userId, "monthly")}
+                                    style={{ background: "#10b981", borderColor: "#10b981", fontWeight: 600 }}
+                                  >
+                                    Approve (₹99 / 1 Mo)
+                                  </Button>
+                                  <Button
+                                    size="small"
+                                    loading={approvingUserId === r.userId}
+                                    onClick={() => handleApproveSubscription(r.userId, "yearly")}
+                                  >
+                                    Approve (₹999 / 1 Yr)
+                                  </Button>
+                                  <Popconfirm
+                                    title="Reject upgrade request?"
+                                    description="Aapka decision audit log me save hoga aur merchant ko re-submit karna hoga."
+                                    onConfirm={() => handleRejectSubscription(r.userId)}
+                                  >
+                                    <Button size="small" danger loading={rejectingUserId === r.userId}>
+                                      Reject
+                                    </Button>
+                                  </Popconfirm>
+                                </>
+                              ) : r.plan === "pro" ? (
+                                <>
+                                  <Button
+                                    size="small"
+                                    icon={<CrownOutlined />}
+                                    loading={approvingUserId === r.userId}
+                                    onClick={() => handleApproveSubscription(r.userId, "monthly")}
+                                  >
+                                    +30 Days
+                                  </Button>
+                                  <Popconfirm
+                                    title="Downgrade user to Free tier?"
+                                    onConfirm={() => handleRejectSubscription(r.userId)}
+                                  >
+                                    <Button size="small" danger>
+                                      Downgrade
+                                    </Button>
+                                  </Popconfirm>
+                                </>
+                              ) : (
+                                <Button
+                                  size="small"
+                                  icon={<CrownOutlined style={{ color: "#d97706" }} />}
+                                  loading={approvingUserId === r.userId}
+                                  onClick={() => handleApproveSubscription(r.userId, "monthly")}
+                                >
+                                  Grant 30D PRO
+                                </Button>
+                              )}
+                            </Space>
+                          ),
+                        },
+                      ]}
+                    />
+                  </Card>
+                )}
               </div>
             ),
           },
@@ -1503,11 +1879,11 @@ export default function AdminPage() {
             key: "broadcast",
             label: (
               <span>
-                <NotificationOutlined /> Broadcast & Notices
+                <NotificationOutlined /> {isMobile ? "Broadcast" : "Broadcast & Notices"}
               </span>
             ),
             children: (
-              <Row gutter={[24, 24]}>
+              <Row gutter={isMobile ? [14, 14] : [24, 24]}>
                 {/* Platform Announcement Banner Manager */}
                 <Col xs={24} lg={12}>
                   <Card
@@ -1517,6 +1893,7 @@ export default function AdminPage() {
                         <span>Platform Announcement Banner</span>
                       </Space>
                     }
+                    styles={{ body: { padding: isMobile ? 14 : 24 } }}
                     style={{ borderRadius: 12, height: "100%" }}
                   >
                     <Paragraph type="secondary" style={{ fontSize: 13 }}>
@@ -1533,15 +1910,18 @@ export default function AdminPage() {
 
                     <Form layout="vertical">
                       <Form.Item label="Banner Type">
-                        <Radio.Group
-                          value={announcement.type}
-                          onChange={(e) => setAnnouncement((prev) => ({ ...prev, type: e.target.value }))}
-                        >
-                          <Radio.Button value="info">Info</Radio.Button>
-                          <Radio.Button value="warning">Warning</Radio.Button>
-                          <Radio.Button value="success">Success</Radio.Button>
-                          <Radio.Button value="error">Critical</Radio.Button>
-                        </Radio.Group>
+                        <div style={{ overflowX: "auto", whiteSpace: "nowrap", paddingBottom: 4 }}>
+                          <Radio.Group
+                            value={announcement.type}
+                            onChange={(e) => setAnnouncement((prev) => ({ ...prev, type: e.target.value }))}
+                            size={isMobile ? "small" : "middle"}
+                          >
+                            <Radio.Button value="info">Info</Radio.Button>
+                            <Radio.Button value="warning">Warning</Radio.Button>
+                            <Radio.Button value="success">Success</Radio.Button>
+                            <Radio.Button value="error">Critical</Radio.Button>
+                          </Radio.Group>
+                        </div>
                       </Form.Item>
 
                       <Form.Item label="Banner Headline">
@@ -1574,10 +1954,12 @@ export default function AdminPage() {
                       )}
 
                       <Button
+                        block={isMobile}
                         type="primary"
                         icon={<CheckOutlined />}
                         loading={savingAnnouncement}
                         onClick={handleSaveAnnouncement}
+                        style={{ height: isMobile ? 40 : 36, fontWeight: 600 }}
                       >
                         Publish Announcement
                       </Button>
@@ -1594,6 +1976,7 @@ export default function AdminPage() {
                         <span>Bulk WhatsApp Broadcast (+91 9279259690)</span>
                       </Space>
                     }
+                    styles={{ body: { padding: isMobile ? 14 : 24 } }}
                     style={{ borderRadius: 12, height: "100%" }}
                   >
                     <Paragraph type="secondary" style={{ fontSize: 13 }}>
@@ -1625,37 +2008,39 @@ export default function AdminPage() {
 
                       <Form.Item label="Broadcast Message">
                         <Input.TextArea
-                          rows={5}
+                          rows={4}
                           placeholder="Namaste {{name}}! GinieSpace has introduced new service features to help your business grow..."
                           value={broadcastText}
                           onChange={(e) => setBroadcastText(e.target.value)}
                         />
                       </Form.Item>
 
-                      <Space wrap>
-                        <Button
-                          size="small"
-                          onClick={() =>
-                            setBroadcastText(
-                              "Namaste {{name}}! 🚀 GinieSpace par ab naye Services aur Booking features live ho chuke hain. Aap apne catalog me services add kar sakte hain aur Google Maps leads search kar sakte hain!\n\n- GinieSpace Official Support (+91 9279259690)"
-                            )
-                          }
-                        >
-                          Template: New Features
-                        </Button>
-                        <Button
-                          size="small"
-                          onClick={() =>
-                            setBroadcastText(
-                              "🌟 Special Pro Upgrade Offer for {{name}}! Unlimited catalog, B2B leads aur 5 team staff accounts unlock karein only ₹99/month me. UPI ID: 9279259690@fam par pay karein aur app me 12-digit UTR submit karein!\n\n- GinieSpace Official Support (+91 92792 59690)"
-                            )
-                          }
-                        >
-                          Template: Pro Offer (₹99)
-                        </Button>
-                      </Space>
+                      <div style={{ overflowX: "auto", whiteSpace: "nowrap", paddingBottom: 6, marginBottom: 12 }}>
+                        <Space size={6}>
+                          <Button
+                            size="small"
+                            onClick={() =>
+                              setBroadcastText(
+                                "Namaste {{name}}! 🚀 GinieSpace par ab naye Services aur Booking features live ho chuke hain. Aap apne catalog me services add kar sakte hain aur Google Maps leads search kar sakte hain!\n\n- GinieSpace Official Support (+91 9279259690)"
+                              )
+                            }
+                          >
+                            Template: New Features
+                          </Button>
+                          <Button
+                            size="small"
+                            onClick={() =>
+                              setBroadcastText(
+                                "🌟 Special Pro Upgrade Offer for {{name}}! Unlimited catalog, B2B leads aur 5 team staff accounts unlock karein only ₹99/month me. UPI ID: 9279259690@fam par pay karein aur app me 12-digit UTR submit karein!\n\n- GinieSpace Official Support (+91 92792 59690)"
+                              )
+                            }
+                          >
+                            Template: Pro Offer (₹99)
+                          </Button>
+                        </Space>
+                      </div>
 
-                      <Divider style={{ margin: "16px 0" }} />
+                      <Divider style={{ margin: "14px 0" }} />
 
                       <Popconfirm
                         title="Send Broadcast Message?"
@@ -1665,11 +2050,14 @@ export default function AdminPage() {
                         disabled={supportStatus !== "connected" || !broadcastText.trim()}
                       >
                         <Button
+                          block={isMobile}
                           type="primary"
                           icon={<SendOutlined />}
                           loading={sendingBroadcast}
                           disabled={supportStatus !== "connected" || !broadcastText.trim()}
                           style={{
+                            height: isMobile ? 42 : 38,
+                            fontWeight: 700,
                             background: supportStatus === "connected" && broadcastText.trim() ? "#25D366" : undefined,
                             borderColor: supportStatus === "connected" && broadcastText.trim() ? "#25D366" : undefined,
                           }}
@@ -1684,128 +2072,192 @@ export default function AdminPage() {
             ),
           },
 
-          // TAB 4: SUPPORT QUERIES & SMART INBOX
+          // TAB 5: SUPPORT QUERIES & SMART INBOX
           {
             key: "support",
             label: (
               <span>
-                <MessageOutlined /> Smart Support Inbox ({conversationThreads.length})
+                <MessageOutlined /> {isMobile ? "Support" : "Smart Support Inbox"} ({conversationThreads.length})
               </span>
             ),
             children: (
               <div>
-                <Card style={{ marginBottom: 16, borderRadius: 12 }}>
-                  <Row gutter={[16, 12]} align="middle">
+                <Card styles={{ body: { padding: isMobile ? 12 : 20 } }} style={{ marginBottom: 16, borderRadius: 12 }}>
+                  <Row gutter={isMobile ? [8, 10] : [16, 12]} align="middle">
                     <Col xs={24} md={10}>
                       <Input
-                        placeholder="Search chats by contact number, name, or message text..."
+                        placeholder="Search chats by contact number, name, or text..."
                         prefix={<SearchOutlined style={{ color: "#8c8c8c" }} />}
                         value={supportSearch}
                         onChange={(e) => setSupportSearch(e.target.value)}
                         allowClear
                       />
                     </Col>
-                    <Col xs={12} md={6}>
+                    <Col xs={14} md={6}>
                       <Space>
                         <Switch checked={needsReplyOnly} onChange={setNeedsReplyOnly} />
-                        <Text strong>Needs Reply Only</Text>
+                        <Text strong style={{ fontSize: isMobile ? 12 : 14 }}>Needs Reply Only</Text>
                       </Space>
                     </Col>
-                    <Col xs={12} md={8} style={{ textAlign: "right" }}>
-                      <Button icon={<SyncOutlined />} onClick={loadSupportMessages} loading={loadingMessages}>
-                        Refresh Chats
+                    <Col xs={10} md={8} style={{ textAlign: "right" }}>
+                      <Button icon={<SyncOutlined />} onClick={loadSupportMessages} loading={loadingMessages} size={isMobile ? "small" : "middle"}>
+                        Refresh
                       </Button>
                     </Col>
                   </Row>
                 </Card>
 
-                <Card style={{ borderRadius: 12 }}>
-                  <Table
+                {/* Support Chats View: Mobile Cards or Desktop Table */}
+                {isMobile ? (
+                  <List
                     dataSource={conversationThreads}
-                    rowKey="phone"
                     loading={loadingMessages}
-                    pagination={{ pageSize: 10 }}
+                    pagination={{ pageSize: 8, size: "small", align: "center" }}
                     locale={{ emptyText: "No incoming support queries found." }}
-                    columns={[
-                      {
-                        title: "Customer / Contact",
-                        key: "contact",
-                        render: (_: any, t: any) => (
+                    renderItem={(t: any) => (
+                      <Card
+                        key={t.phone}
+                        styles={{ body: { padding: "14px" } }}
+                        style={{
+                          marginBottom: 10,
+                          borderRadius: 12,
+                          border: t.lastFromMe ? "1px solid #e2e8f0" : "1px solid #f59e0b",
+                          background: t.lastFromMe ? "#fff" : "#fffbeb",
+                          boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
+                        }}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
                           <div>
-                            <Text strong>{t.name}</Text>
+                            <div style={{ fontWeight: 700, fontSize: 15, color: "#0f172a" }}>
+                              {t.name}
+                            </div>
                             <div style={{ fontSize: 12, color: "#047857", fontWeight: 600 }}>
                               📞 {formatDisplayPhone(t.phone)}
                             </div>
                           </div>
-                        ),
-                      },
-                      {
-                        title: "Last Message",
-                        key: "msg",
-                        render: (_: any, t: any) => (
                           <div>
-                            <div style={{ maxWidth: 420, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                              {t.latestText}
-                            </div>
-                            <div style={{ fontSize: 11, color: "#8c8c8c" }}>
-                              {t.latestTimestamp ? new Date(t.latestTimestamp).toLocaleString() : ""}
-                            </div>
+                            {t.lastFromMe ? (
+                              <Tag color="green" style={{ margin: 0 }}>REPLIED</Tag>
+                            ) : (
+                              <Tag color="orange" style={{ margin: 0, fontWeight: 700 }}>PENDING REPLY</Tag>
+                            )}
                           </div>
-                        ),
-                      },
-                      {
-                        title: "Status",
-                        key: "status",
-                        render: (_: any, t: any) =>
-                          t.lastFromMe ? (
-                            <Tag color="green">REPLIED</Tag>
-                          ) : (
-                            <Tag color="orange">PENDING REPLY</Tag>
-                          ),
-                      },
-                      {
-                        title: "Total Messages",
-                        dataIndex: "messageCount",
-                        key: "count",
-                        align: "center",
-                      },
-                      {
-                        title: "Action",
-                        key: "action",
-                        align: "right",
-                        render: (_: any, t: any) => (
-                          <Button
-                            type="primary"
-                            size="small"
-                            icon={<SendOutlined />}
-                            style={{ background: "#25D366", borderColor: "#25D366" }}
-                            onClick={() => {
-                              setActiveChatPhone(t.phone);
-                              setReplyText("");
-                            }}
-                          >
-                            Open Chat & Reply
-                          </Button>
-                        ),
-                      },
-                    ]}
+                        </div>
+
+                        <div style={{ background: "#f8fafc", padding: "8px 10px", borderRadius: 8, fontSize: 13, color: "#334155", marginBottom: 10 }}>
+                          <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            {t.latestText || "No text"}
+                          </div>
+                          <div style={{ fontSize: 10, color: "#94a3b8", textAlign: "right", marginTop: 2 }}>
+                            {t.latestTimestamp ? new Date(t.latestTimestamp).toLocaleString() : ""}
+                          </div>
+                        </div>
+
+                        <Button
+                          block
+                          type="primary"
+                          icon={<SendOutlined />}
+                          style={{ background: "#25D366", borderColor: "#25D366", height: 40, fontWeight: 600 }}
+                          onClick={() => {
+                            setActiveChatPhone(t.phone);
+                            setReplyText("");
+                          }}
+                        >
+                          Open Chat &amp; Reply
+                        </Button>
+                      </Card>
+                    )}
                   />
-                </Card>
+                ) : (
+                  <Card style={{ borderRadius: 12 }}>
+                    <Table
+                      dataSource={conversationThreads}
+                      rowKey="phone"
+                      loading={loadingMessages}
+                      scroll={{ x: 800 }}
+                      pagination={{ pageSize: 10 }}
+                      locale={{ emptyText: "No incoming support queries found." }}
+                      columns={[
+                        {
+                          title: "Customer / Contact",
+                          key: "contact",
+                          render: (_: any, t: any) => (
+                            <div>
+                              <Text strong>{t.name}</Text>
+                              <div style={{ fontSize: 12, color: "#047857", fontWeight: 600 }}>
+                                📞 {formatDisplayPhone(t.phone)}
+                              </div>
+                            </div>
+                          ),
+                        },
+                        {
+                          title: "Last Message",
+                          key: "msg",
+                          render: (_: any, t: any) => (
+                            <div>
+                              <div style={{ maxWidth: 420, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                {t.latestText}
+                              </div>
+                              <div style={{ fontSize: 11, color: "#8c8c8c" }}>
+                                {t.latestTimestamp ? new Date(t.latestTimestamp).toLocaleString() : ""}
+                              </div>
+                            </div>
+                          ),
+                        },
+                        {
+                          title: "Status",
+                          key: "status",
+                          render: (_: any, t: any) =>
+                            t.lastFromMe ? (
+                              <Tag color="green">REPLIED</Tag>
+                            ) : (
+                              <Tag color="orange">PENDING REPLY</Tag>
+                            ),
+                        },
+                        {
+                          title: "Total Messages",
+                          dataIndex: "messageCount",
+                          key: "count",
+                          align: "center",
+                        },
+                        {
+                          title: "Action",
+                          key: "action",
+                          align: "right",
+                          render: (_: any, t: any) => (
+                            <Button
+                              type="primary"
+                              size="small"
+                              icon={<SendOutlined />}
+                              style={{ background: "#25D366", borderColor: "#25D366" }}
+                              onClick={() => {
+                                setActiveChatPhone(t.phone);
+                                setReplyText("");
+                              }}
+                            >
+                              Open Chat &amp; Reply
+                            </Button>
+                          ),
+                        },
+                      ]}
+                    />
+                  </Card>
+                )}
               </div>
             ),
           },
 
-          // TAB 5: OFFICIAL SUPPORT BOT & AUDIT LOGS
+          // TAB 6: OFFICIAL SUPPORT BOT & AUDIT LOGS
           {
             key: "support-bot",
             label: (
               <span>
-                <PhoneOutlined /> Official Bot (+91 9279259690)
+                <PhoneOutlined /> {isMobile ? "Bot" : "Official Bot (+91 9279259690)"}
               </span>
             ),
             children: (
               <div>
-                <Row gutter={[20, 20]} style={{ marginBottom: 24 }}>
+                <Row gutter={isMobile ? [14, 14] : [20, 20]} style={{ marginBottom: 24 }}>
                   {/* Bot Connection Card */}
                   <Col xs={24} lg={12}>
                     <Card
@@ -1815,6 +2267,7 @@ export default function AdminPage() {
                           <span>Support Bot Connection Status</span>
                         </Space>
                       }
+                      styles={{ body: { padding: isMobile ? 14 : 24 } }}
                       style={{ borderRadius: 12, height: "100%" }}
                     >
                       <div style={{ marginBottom: 20 }}>
@@ -1850,44 +2303,47 @@ export default function AdminPage() {
 
                       <Divider />
 
-                      <Space wrap>
+                      <Space wrap direction={isMobile ? "vertical" : "horizontal"} style={{ width: isMobile ? "100%" : "auto" }}>
                         {supportStatus === "connected" ? (
                           <>
                             <Popconfirm
                               title="Disconnect Official Support WhatsApp?"
-                              description="Disconnect karne par 9279259690 se system alerts aur notifications pause ho jayenge jab tak dobara QR scan na kiya jaye."
+                              description="Disconnect karne par 9279259690 se system alerts pause ho jayenge."
                               onConfirm={handleDisconnectSupport}
                               okText="Yes, Disconnect"
                               cancelText="Cancel"
                               okButtonProps={{ danger: true }}
                             >
-                              <Button danger loading={disconnecting}>
+                              <Button block={isMobile} danger loading={disconnecting} style={{ height: isMobile ? 40 : 32 }}>
                                 Disconnect Session
                               </Button>
                             </Popconfirm>
                             <Button
+                              block={isMobile}
                               icon={<SyncOutlined />}
                               loading={resettingRatchets}
                               onClick={handleResetRatchets}
                               title="Purge stale contact encryption keys and re-sync fresh Signal ratchets"
+                              style={{ height: isMobile ? 40 : 32 }}
                             >
                               Fix E2EE Keys (Clear Bad MAC)
                             </Button>
                           </>
                         ) : (
                           <Button
+                            block={isMobile}
                             type="primary"
                             icon={<QrcodeOutlined />}
                             loading={connecting}
                             onClick={handleConnectSupport}
-                            style={{ background: "#25D366", borderColor: "#25D366", fontWeight: 600 }}
+                            style={{ background: "#25D366", borderColor: "#25D366", fontWeight: 600, height: isMobile ? 42 : 36 }}
                           >
                             Link Support WhatsApp (+91 9279259690)
                           </Button>
                         )}
 
                         {supportStatus === "connecting" && (
-                          <Button onClick={() => setQrModalVisible(true)} icon={<QrcodeOutlined />}>
+                          <Button block={isMobile} onClick={() => setQrModalVisible(true)} icon={<QrcodeOutlined />} style={{ height: isMobile ? 40 : 32 }}>
                             View QR Code
                           </Button>
                         )}
@@ -1904,6 +2360,7 @@ export default function AdminPage() {
                           <span>Direct Test Notification</span>
                         </Space>
                       }
+                      styles={{ body: { padding: isMobile ? 14 : 24 } }}
                       style={{ borderRadius: 12, height: "100%" }}
                     >
                       <Paragraph type="secondary" style={{ fontSize: 13 }}>
@@ -1929,12 +2386,15 @@ export default function AdminPage() {
                         </Form.Item>
 
                         <Button
+                          block={isMobile}
                           type="primary"
                           htmlType="submit"
                           icon={<SendOutlined />}
                           loading={sendingTest}
                           disabled={supportStatus !== "connected"}
                           style={{
+                            height: isMobile ? 40 : 34,
+                            fontWeight: 600,
                             background: supportStatus === "connected" ? "#25D366" : undefined,
                             borderColor: supportStatus === "connected" ? "#25D366" : undefined,
                           }}
@@ -1945,7 +2405,7 @@ export default function AdminPage() {
                     </Card>
                   </Col>
 
-                  {/* Notification Rules */}
+                  {/* Notification Rules (2x2 on Mobile) */}
                   <Col xs={24}>
                     <Card
                       title={
@@ -1954,69 +2414,74 @@ export default function AdminPage() {
                           <span>Automated Platform Notification Rules (Via +91 9279259690)</span>
                         </Space>
                       }
+                      styles={{ body: { padding: isMobile ? 12 : 24 } }}
                       style={{ borderRadius: 12 }}
                     >
-                      <Row gutter={[24, 24]}>
-                        <Col xs={24} sm={12} md={6}>
-                          <Card type="inner" style={{ borderRadius: 8, height: "100%" }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                              <Text strong>New User Welcome</Text>
+                      <Row gutter={isMobile ? [10, 10] : [24, 24]}>
+                        <Col xs={12} sm={12} md={6}>
+                          <Card type="inner" styles={{ body: { padding: isMobile ? "10px" : "16px" } }} style={{ borderRadius: 8, height: "100%" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                              <Text strong style={{ fontSize: isMobile ? 12 : 14 }}>Welcome</Text>
                               <Switch
                                 checked={rules.newUserWelcome}
                                 onChange={(c) => handleRuleToggle("newUserWelcome", c)}
                                 loading={savingRules}
+                                size={isMobile ? "small" : "default"}
                               />
                             </div>
-                            <Text type="secondary" style={{ fontSize: 12 }}>
-                              Naye user ke register hote hi onboarding greeting aur support links bhejna.
+                            <Text type="secondary" style={{ fontSize: 11 }}>
+                              New user onboarding greeting.
                             </Text>
                           </Card>
                         </Col>
 
-                        <Col xs={24} sm={12} md={6}>
-                          <Card type="inner" style={{ borderRadius: 8, height: "100%" }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                              <Text strong>Order Placed Alerts</Text>
+                        <Col xs={12} sm={12} md={6}>
+                          <Card type="inner" styles={{ body: { padding: isMobile ? "10px" : "16px" } }} style={{ borderRadius: 8, height: "100%" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                              <Text strong style={{ fontSize: isMobile ? 12 : 14 }}>Orders</Text>
                               <Switch
                                 checked={rules.orderPlacedAlert}
                                 onChange={(c) => handleRuleToggle("orderPlacedAlert", c)}
                                 loading={savingRules}
+                                size={isMobile ? "small" : "default"}
                               />
                             </div>
-                            <Text type="secondary" style={{ fontSize: 12 }}>
-                              Naya order aane par customer ko order confirmation message bhejna.
+                            <Text type="secondary" style={{ fontSize: 11 }}>
+                              Order confirmation alerts.
                             </Text>
                           </Card>
                         </Col>
 
-                        <Col xs={24} sm={12} md={6}>
-                          <Card type="inner" style={{ borderRadius: 8, height: "100%" }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                              <Text strong>Lead Converted Alerts</Text>
+                        <Col xs={12} sm={12} md={6}>
+                          <Card type="inner" styles={{ body: { padding: isMobile ? "10px" : "16px" } }} style={{ borderRadius: 8, height: "100%" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                              <Text strong style={{ fontSize: isMobile ? 12 : 14 }}>Leads</Text>
                               <Switch
                                 checked={rules.leadConvertedAlert}
                                 onChange={(c) => handleRuleToggle("leadConvertedAlert", c)}
                                 loading={savingRules}
+                                size={isMobile ? "small" : "default"}
                               />
                             </div>
-                            <Text type="secondary" style={{ fontSize: 12 }}>
-                              Lead ke customer me convert hone par merchant ko instant confirmation alert.
+                            <Text type="secondary" style={{ fontSize: 11 }}>
+                              Lead conversion alert.
                             </Text>
                           </Card>
                         </Col>
 
-                        <Col xs={24} sm={12} md={6}>
-                          <Card type="inner" style={{ borderRadius: 8, height: "100%" }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                              <Text strong>Support Auto-Responder</Text>
+                        <Col xs={12} sm={12} md={6}>
+                          <Card type="inner" styles={{ body: { padding: isMobile ? "10px" : "16px" } }} style={{ borderRadius: 8, height: "100%" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                              <Text strong style={{ fontSize: isMobile ? 12 : 14 }}>Auto-Reply</Text>
                               <Switch
                                 checked={rules.supportAutoReply}
                                 onChange={(c) => handleRuleToggle("supportAutoReply", c)}
                                 loading={savingRules}
+                                size={isMobile ? "small" : "default"}
                               />
                             </div>
-                            <Text type="secondary" style={{ fontSize: 12 }}>
-                              Jab koi user 9279259690 par text kare to automatic support greeting bhejna.
+                            <Text type="secondary" style={{ fontSize: 11 }}>
+                              Helpline auto-greeting.
                             </Text>
                           </Card>
                         </Col>
@@ -2034,17 +2499,19 @@ export default function AdminPage() {
                         </Space>
                       }
                       extra={
-                        <Button icon={<SyncOutlined />} onClick={loadAuditLogs} loading={loadingAuditLogs}>
-                          Refresh Logs
+                        <Button icon={<SyncOutlined />} onClick={loadAuditLogs} loading={loadingAuditLogs} size={isMobile ? "small" : "middle"}>
+                          Refresh
                         </Button>
                       }
+                      styles={{ body: { padding: isMobile ? 10 : 24 } }}
                       style={{ borderRadius: 12 }}
                     >
                       <Table
                         dataSource={auditLogs}
                         rowKey="id"
                         loading={loadingAuditLogs}
-                        pagination={{ pageSize: 8 }}
+                        scroll={{ x: 750 }}
+                        pagination={{ pageSize: 8, size: "small" }}
                         locale={{ emptyText: "No admin actions recorded yet." }}
                         columns={[
                           {
@@ -2081,7 +2548,7 @@ export default function AdminPage() {
         ]}
       />
 
-      {/* 360° Merchant Profile Drawer */}
+      {/* 360° Merchant Profile Drawer (Responsive width) */}
       <Drawer
         title={
           <Space>
@@ -2091,7 +2558,7 @@ export default function AdminPage() {
         }
         open={merchantDrawerOpen}
         onClose={() => setMerchantDrawerOpen(false)}
-        width={560}
+        width={isMobile ? "100%" : 560}
       >
         {selectedMerchant && (
           <div>
@@ -2139,11 +2606,11 @@ export default function AdminPage() {
             </Card>
 
             <Card type="inner" title="Workspace Usage Metrics" style={{ marginBottom: 20, borderRadius: 8 }}>
-              <Row gutter={[16, 16]}>
-                <Col span={12}>
+              <Row gutter={[12, 12]}>
+                <Col xs={12} sm={12}>
                   <Statistic title="Total Orders" value={selectedMerchant.counts?.orders || 0} prefix={<ShoppingOutlined />} />
                 </Col>
-                <Col span={12}>
+                <Col xs={12} sm={12}>
                   <Statistic
                     title="Total Revenue (GMV)"
                     value={selectedMerchant.counts?.revenue || 0}
@@ -2151,16 +2618,16 @@ export default function AdminPage() {
                     valueStyle={{ color: "#10b981", fontWeight: 700 }}
                   />
                 </Col>
-                <Col span={12}>
+                <Col xs={12} sm={12}>
                   <Statistic title="Catalog Products" value={selectedMerchant.counts?.products || 0} />
                 </Col>
-                <Col span={12}>
+                <Col xs={12} sm={12}>
                   <Statistic title="Saved Customers" value={selectedMerchant.counts?.customers || 0} prefix={<TeamOutlined />} />
                 </Col>
-                <Col span={12}>
+                <Col xs={12} sm={12}>
                   <Statistic title="Leads Discovered" value={selectedMerchant.counts?.leads || 0} />
                 </Col>
-                <Col span={12}>
+                <Col xs={12} sm={12}>
                   <Statistic title="Team Staff Accounts" value={selectedMerchant.counts?.staff || 0} />
                 </Col>
               </Row>
@@ -2216,7 +2683,7 @@ export default function AdminPage() {
         )}
       </Drawer>
 
-      {/* Reset Password Modal */}
+      {/* Reset Password Modal (Responsive width) */}
       <Modal
         title={`Reset Password for ${resetPassModalUser?.name || ""}`}
         open={Boolean(resetPassModalUser)}
@@ -2224,6 +2691,8 @@ export default function AdminPage() {
         onOk={handleResetPassword}
         confirmLoading={resettingPassword}
         okText="Set New Password"
+        centered
+        width={isMobile ? "92%" : 480}
       >
         <Paragraph type="secondary">
           Enter a new password or leave blank to automatically generate a secure temporary password:
@@ -2237,21 +2706,21 @@ export default function AdminPage() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <Switch checked={notifyOnWhatsApp} onChange={setNotifyOnWhatsApp} />
-          <Text>Send temporary password to merchant via WhatsApp bot (+91 9279259690)</Text>
+          <Text style={{ fontSize: 13 }}>Send temporary password to merchant via WhatsApp bot (+91 9279259690)</Text>
         </div>
       </Modal>
 
-      {/* Support Conversation & Reply Drawer */}
+      {/* Support Conversation & Reply Drawer (Responsive width) */}
       <Drawer
         title={
           <Space>
             <MessageOutlined style={{ color: "#25D366" }} />
-            <span>Chat History: {activeThread?.name} ({formatDisplayPhone(activeChatPhone || "")})</span>
+            <span>Chat: {activeThread?.name} ({formatDisplayPhone(activeChatPhone || "")})</span>
           </Space>
         }
         open={Boolean(activeChatPhone)}
         onClose={() => setActiveChatPhone(null)}
-        width={540}
+        width={isMobile ? "100%" : 540}
       >
         <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
           {/* Messages Feed */}
@@ -2270,7 +2739,7 @@ export default function AdminPage() {
                   >
                     <div
                       style={{
-                        maxWidth: "80%",
+                        maxWidth: isMobile ? "90%" : "80%",
                         padding: "10px 14px",
                         borderRadius: 12,
                         background: isOut ? "#dcf8c6" : "#ffffff",
@@ -2293,22 +2762,24 @@ export default function AdminPage() {
             />
           </div>
 
-          {/* Quick Replies Buttons */}
+          {/* Quick Replies Buttons (Horizontal Scroll on Mobile) */}
           <div style={{ borderTop: "1px solid #f0f0f0", paddingTop: 10, marginBottom: 10 }}>
             <Text type="secondary" style={{ fontSize: 11, display: "block", marginBottom: 4 }}>Quick Canned Responses:</Text>
-            <Space wrap size={4}>
-              {CANNED_REPLIES.map((c, i) => (
-                <Button key={i} size="small" onClick={() => setReplyText(c.text)}>
-                  {c.title}
-                </Button>
-              ))}
-            </Space>
+            <div style={{ overflowX: "auto", whiteSpace: "nowrap", paddingBottom: 4 }}>
+              <Space size={6}>
+                {CANNED_REPLIES.map((c, i) => (
+                  <Button key={i} size="small" onClick={() => setReplyText(c.text)}>
+                    {c.title}
+                  </Button>
+                ))}
+              </Space>
+            </div>
           </div>
 
           {/* Reply Input */}
-          <div style={{ borderTop: "1px solid #f0f0f0", paddingTop: 12 }}>
+          <div style={{ borderTop: "1px solid #f0f0f0", paddingTop: 10 }}>
             <Input.TextArea
-              rows={3}
+              rows={isMobile ? 2 : 3}
               placeholder="Type official reply to send via +91 9279259690..."
               value={replyText}
               onChange={(e) => setReplyText(e.target.value)}
@@ -2320,7 +2791,7 @@ export default function AdminPage() {
                 icon={<SendOutlined />}
                 loading={sendingReply}
                 disabled={!replyText.trim()}
-                style={{ background: "#25D366", borderColor: "#25D366" }}
+                style={{ background: "#25D366", borderColor: "#25D366", height: 36, fontWeight: 600 }}
                 onClick={async () => {
                   if (!activeChatPhone || !replyText.trim()) return;
                   setSendingReply(true);
@@ -2346,7 +2817,7 @@ export default function AdminPage() {
         </div>
       </Drawer>
 
-      {/* QR Code Modal for Support WhatsApp */}
+      {/* QR Code Modal for Support WhatsApp (Responsive width) */}
       <Modal
         title={
           <Space>
@@ -2358,7 +2829,7 @@ export default function AdminPage() {
         onCancel={() => setQrModalVisible(false)}
         footer={null}
         centered
-        width={420}
+        width={isMobile ? "92%" : 420}
       >
         <div style={{ textAlign: "center", padding: "16px 0" }}>
           <Paragraph style={{ color: "#595959", marginBottom: 18 }}>

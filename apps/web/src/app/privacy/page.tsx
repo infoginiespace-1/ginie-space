@@ -8,7 +8,6 @@ import {
   LockFilled,
   PhoneOutlined,
   MailOutlined,
-  ShieldCheckOutlined,
 } from "@ant-design/icons";
 
 const { Title, Paragraph } = Typography;

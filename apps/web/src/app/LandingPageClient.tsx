@@ -115,10 +115,13 @@ export default function LandingPageClient() {
   const traditionalGatewayFee = Math.round(monthlySales * 0.025); // ~2.5% avg gateway charge
   const ginieSpaceFee = billingCycle === "monthly" ? 99 : 83; // ₹83/mo on yearly
   const monthlySavings = Math.max(0, traditionalGatewayFee - ginieSpaceFee);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   const handleCopyLink = (text: string) => {
     navigator.clipboard?.writeText(text);
+    setCopiedLink(true);
     message.success("Link copied to clipboard!");
+    setTimeout(() => setCopiedLink(false), 2000);
   };
 
   return (

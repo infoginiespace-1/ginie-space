@@ -35,7 +35,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const screens = Grid.useBreakpoint();
-  const isMobile = screens.md === false;
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  const isMobile = mounted ? (screens.md === false || (typeof window !== "undefined" && window.innerWidth < 768)) : false;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const [waStatus, setWaStatus] = useState<"disconnected" | "connecting" | "connected">("disconnected");
@@ -266,152 +270,288 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           className="no-print"
           style={{
             background: "#fff",
-            padding: isMobile ? "0 12px" : "0 24px",
+            padding: isMobile ? "0 10px" : "0 24px",
             borderBottom: "1px solid #f0f0f0",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
             gap: 8,
-            flexWrap: "wrap",
-            height: "auto",
-            minHeight: 64,
+            flexWrap: "nowrap",
+            height: isMobile ? 56 : 64,
+            minHeight: isMobile ? 56 : 64,
+            position: "sticky",
+            top: 0,
+            zIndex: 100,
           }}
         >
-          <Space direction="horizontal" size="small" wrap>
-            {isMobile && (
-              <Button
-                icon={<MenuOutlined />}
-                onClick={() => setMobileMenuOpen(true)}
-                aria-label="Open navigation menu"
-              />
-            )}
-            {waStatus === "connected" ? (
-              <Space size="small">
-                <Tag icon={<CheckCircleOutlined />} color="success" style={{ padding: "4px 10px", fontSize: 12 }}>
-                  {isMobile ? "WA Connected" : `WhatsApp Connected ${waPhone ? `(${waPhone})` : ""}`}
-                </Tag>
-                <Button size="small" danger onClick={handleDisconnectWhatsApp}>
-                  Disconnect
-                </Button>
-              </Space>
-            ) : waStatus === "connecting" ? (
-              <Space size="small">
-                <Tag icon={<SyncOutlined spin />} color="warning" style={{ padding: "4px 10px", fontSize: 12 }}>
-                  Connecting...
-                </Tag>
-                <Button size="small" type="primary" onClick={() => setQrModalVisible(true)}>
-                  QR
-                </Button>
-              </Space>
-            ) : (
-              <Space size="small">
-                <Tag icon={<CloseCircleOutlined />} color="error" style={{ padding: "4px 10px", fontSize: 12 }}>
-                  {isMobile ? "WA Offline" : "WhatsApp Disconnected"}
-                </Tag>
+          {isMobile ? (
+            /* Mobile-First Compact Header Row */
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: 6 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <Button
-                  size="small"
-                  type="primary"
-                  icon={<QrcodeOutlined />}
-                  loading={connecting}
-                  onClick={handleConnectWhatsApp}
-                  style={{ background: "#25D366", borderColor: "#25D366" }}
-                >
-                  Link WhatsApp
-                </Button>
-              </Space>
-            )}
-          </Space>
-
-          <Space size="small">
-            {user?.role !== "admin" && user?.role !== "staff" && (
-              user?.plan === "pro" ? (
-                <Tag
-                  icon={<CrownOutlined style={{ color: "#d97706" }} />}
-                  color="gold"
-                  style={{
-                    fontWeight: 700,
-                    padding: isMobile ? "2px 6px" : "3px 10px",
-                    fontSize: 12,
-                    cursor: "pointer",
-                    borderRadius: 6,
-                  }}
-                  onClick={() => setUpgradeModalOpen(true)}
-                >
-                  👑 PRO
-                </Tag>
-              ) : (
-                <Button
-                  size={isMobile ? "small" : "middle"}
-                  icon={<CrownOutlined style={{ color: "#b45309" }} />}
-                  onClick={() => setUpgradeModalOpen(true)}
-                  style={{
-                    background: "linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)",
-                    borderColor: "#f59e0b",
-                    color: "#92400e",
-                    fontWeight: 700,
-                    boxShadow: "0 2px 8px rgba(245, 158, 11, 0.18)",
-                  }}
-                >
-                  {isMobile ? "PRO ₹99" : "👑 Upgrade to PRO (₹99)"}
-                </Button>
-              )
-            )}
-            <Popover
-              placement="bottomRight"
-              trigger="click"
-              title="Notifications & Store Alerts"
-              content={
-                <div style={{ width: 290 }}>
-                  <List
-                    size="small"
-                    dataSource={[
-                      ...(pendingOrdersCount > 0
-                        ? [{ key: "pending", title: `${pendingOrdersCount} Pending Order(s)`, desc: "Awaiting confirmation/dispatch", href: "/orders" }]
-                        : []),
-                      ...(unreadChatsCount > 0
-                        ? [{ key: "chats", title: `${unreadChatsCount} New WhatsApp Message(s)`, desc: "Reply in Live Inbox", href: "/inbox" }]
-                        : []),
-                      ...lowStockItems.slice(0, 4).map((p) => ({
-                        key: `stock_${p.id}`,
-                        title: `Low Stock: ${p.name}`,
-                        desc: `Only ${p.stock} ${p.unit || "pcs"} left`,
-                        href: "/products",
-                      })),
-                    ]}
-                    locale={{ emptyText: "All caught up! Zero pending alerts." }}
-                    renderItem={(item: any) => (
-                      <List.Item
-                        style={{ cursor: "pointer", padding: "6px 0" }}
-                        onClick={() => router.push(item.href)}
-                      >
-                        <List.Item.Meta title={<Text strong style={{ fontSize: 13 }}>{item.title}</Text>} description={<Text type="secondary" style={{ fontSize: 11 }}>{item.desc}</Text>} />
-                      </List.Item>
-                    )}
-                  />
+                  size="middle"
+                  icon={<MenuOutlined />}
+                  onClick={() => setMobileMenuOpen(true)}
+                  aria-label="Open navigation menu"
+                  style={{ border: "none", background: "#f1f5f9" }}
+                />
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <div
+                    style={{
+                      width: 26,
+                      height: 26,
+                      borderRadius: 6,
+                      background: "#25D366",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#fff",
+                      fontWeight: 800,
+                      fontSize: 14,
+                    }}
+                  >
+                    G
+                  </div>
+                  <span style={{ fontWeight: 700, fontSize: 15, color: "#0f172a", letterSpacing: "-0.3px" }}>
+                    GinieSpace
+                  </span>
                 </div>
-              }
-            >
-              <Badge count={pendingOrdersCount + unreadChatsCount + lowStockItems.length} size="small">
-                <Button size={isMobile ? "small" : "middle"} icon={<BellOutlined />} aria-label="Notifications" />
-              </Badge>
-            </Popover>
-            {!isMobile && (
-              <Space direction="horizontal" size={4}>
-                <Text strong>{user?.name}</Text>
-                <Tag color={user?.role === "admin" ? "purple" : user?.role === "staff" ? "cyan" : "blue"}>
-                  {user?.role === "admin" ? "Admin" : user?.role === "staff" ? "Staff" : "Business"}
-                </Tag>
-                {user?.role !== "admin" && (
-                  <Tag color={user?.plan === "pro" ? "gold" : "default"}>
-                    {user?.plan === "pro" ? "PRO" : "FREE"}
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                {waStatus === "connected" ? (
+                  <Tag
+                    icon={<CheckCircleOutlined />}
+                    color="success"
+                    style={{ margin: 0, padding: "2px 6px", fontSize: 11, cursor: "pointer", borderRadius: 4 }}
+                    onClick={handleDisconnectWhatsApp}
+                    title="WhatsApp Connected (Tap to disconnect)"
+                  >
+                    WA Live
+                  </Tag>
+                ) : waStatus === "connecting" ? (
+                  <Tag
+                    icon={<SyncOutlined spin />}
+                    color="warning"
+                    style={{ margin: 0, padding: "2px 6px", fontSize: 11, cursor: "pointer", borderRadius: 4 }}
+                    onClick={() => setQrModalVisible(true)}
+                  >
+                    Scan QR
+                  </Tag>
+                ) : (
+                  <Tag
+                    color="error"
+                    style={{ margin: 0, padding: "2px 6px", fontSize: 11, cursor: "pointer", borderRadius: 4 }}
+                    onClick={handleConnectWhatsApp}
+                  >
+                    WA Off
                   </Tag>
                 )}
+
+                {user?.role !== "admin" && user?.role !== "staff" && (
+                  user?.plan === "pro" ? (
+                    <Tag
+                      color="gold"
+                      style={{ fontWeight: 700, margin: 0, padding: "1px 5px", fontSize: 11, cursor: "pointer" }}
+                      onClick={() => setUpgradeModalOpen(true)}
+                    >
+                      👑 PRO
+                    </Tag>
+                  ) : (
+                    <Button
+                      size="small"
+                      onClick={() => setUpgradeModalOpen(true)}
+                      style={{
+                        background: "linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)",
+                        borderColor: "#f59e0b",
+                        color: "#92400e",
+                        fontWeight: 700,
+                        fontSize: 11,
+                        padding: "0 6px",
+                      }}
+                    >
+                      PRO ₹99
+                    </Button>
+                  )
+                )}
+
+                <Popover
+                  placement="bottomRight"
+                  trigger="click"
+                  title="Notifications & Alerts"
+                  content={
+                    <div style={{ width: 280, maxWidth: "85vw" }}>
+                      <List
+                        size="small"
+                        dataSource={[
+                          ...(pendingOrdersCount > 0
+                            ? [{ key: "pending", title: `${pendingOrdersCount} Pending Order(s)`, desc: "Awaiting dispatch", href: "/orders" }]
+                            : []),
+                          ...(unreadChatsCount > 0
+                            ? [{ key: "chats", title: `${unreadChatsCount} WhatsApp Message(s)`, desc: "Reply in Live Inbox", href: "/inbox" }]
+                            : []),
+                          ...lowStockItems.slice(0, 4).map((p) => ({
+                            key: `stock_${p.id}`,
+                            title: `Low Stock: ${p.name}`,
+                            desc: `${p.stock} ${p.unit || "pcs"} left`,
+                            href: "/products",
+                          })),
+                        ]}
+                        locale={{ emptyText: "All caught up! Zero pending alerts." }}
+                        renderItem={(item: any) => (
+                          <List.Item
+                            style={{ cursor: "pointer", padding: "6px 0" }}
+                            onClick={() => router.push(item.href)}
+                          >
+                            <List.Item.Meta
+                              title={<Text strong style={{ fontSize: 12 }}>{item.title}</Text>}
+                              description={<Text type="secondary" style={{ fontSize: 11 }}>{item.desc}</Text>}
+                            />
+                          </List.Item>
+                        )}
+                      />
+                    </div>
+                  }
+                >
+                  <Badge count={pendingOrdersCount + unreadChatsCount + lowStockItems.length} size="small">
+                    <Button size="small" icon={<BellOutlined />} aria-label="Notifications" style={{ border: "none" }} />
+                  </Badge>
+                </Popover>
+
+                <Button size="small" icon={<LogoutOutlined />} onClick={logout} aria-label="Logout" style={{ border: "none" }} />
+              </div>
+            </div>
+          ) : (
+            /* Desktop Full Header Row */
+            <>
+              <Space direction="horizontal" size="small" wrap>
+                {waStatus === "connected" ? (
+                  <Space size="small">
+                    <Tag icon={<CheckCircleOutlined />} color="success" style={{ padding: "4px 10px", fontSize: 12 }}>
+                      WhatsApp Connected {waPhone ? `(${waPhone})` : ""}
+                    </Tag>
+                    <Button size="small" danger onClick={handleDisconnectWhatsApp}>
+                      Disconnect
+                    </Button>
+                  </Space>
+                ) : waStatus === "connecting" ? (
+                  <Space size="small">
+                    <Tag icon={<SyncOutlined spin />} color="warning" style={{ padding: "4px 10px", fontSize: 12 }}>
+                      Connecting...
+                    </Tag>
+                    <Button size="small" type="primary" onClick={() => setQrModalVisible(true)}>
+                      QR
+                    </Button>
+                  </Space>
+                ) : (
+                  <Space size="small">
+                    <Tag icon={<CloseCircleOutlined />} color="error" style={{ padding: "4px 10px", fontSize: 12 }}>
+                      WhatsApp Disconnected
+                    </Tag>
+                    <Button
+                      size="small"
+                      type="primary"
+                      icon={<QrcodeOutlined />}
+                      loading={connecting}
+                      onClick={handleConnectWhatsApp}
+                      style={{ background: "#25D366", borderColor: "#25D366" }}
+                    >
+                      Link WhatsApp
+                    </Button>
+                  </Space>
+                )}
               </Space>
-            )}
-            <Button size={isMobile ? "small" : "middle"} icon={<LogoutOutlined />} onClick={logout}>
-              {isMobile ? "" : "Log out"}
-            </Button>
-          </Space>
+
+              <Space size="small">
+                {user?.role !== "admin" && user?.role !== "staff" && (
+                  user?.plan === "pro" ? (
+                    <Tag
+                      icon={<CrownOutlined style={{ color: "#d97706" }} />}
+                      color="gold"
+                      style={{
+                        fontWeight: 700,
+                        padding: "3px 10px",
+                        fontSize: 12,
+                        cursor: "pointer",
+                        borderRadius: 6,
+                      }}
+                      onClick={() => setUpgradeModalOpen(true)}
+                    >
+                      👑 PRO
+                    </Tag>
+                  ) : (
+                    <Button
+                      size="middle"
+                      icon={<CrownOutlined style={{ color: "#b45309" }} />}
+                      onClick={() => setUpgradeModalOpen(true)}
+                      style={{
+                        background: "linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)",
+                        borderColor: "#f59e0b",
+                        color: "#92400e",
+                        fontWeight: 700,
+                        boxShadow: "0 2px 8px rgba(245, 158, 11, 0.18)",
+                      }}
+                    >
+                      👑 Upgrade to PRO (₹99)
+                    </Button>
+                  )
+                )}
+                <Popover
+                  placement="bottomRight"
+                  trigger="click"
+                  title="Notifications & Store Alerts"
+                  content={
+                    <div style={{ width: 290 }}>
+                      <List
+                        size="small"
+                        dataSource={[
+                          ...(pendingOrdersCount > 0
+                            ? [{ key: "pending", title: `${pendingOrdersCount} Pending Order(s)`, desc: "Awaiting confirmation/dispatch", href: "/orders" }]
+                            : []),
+                          ...(unreadChatsCount > 0
+                            ? [{ key: "chats", title: `${unreadChatsCount} New WhatsApp Message(s)`, desc: "Reply in Live Inbox", href: "/inbox" }]
+                            : []),
+                          ...lowStockItems.slice(0, 4).map((p) => ({
+                            key: `stock_${p.id}`,
+                            title: `Low Stock: ${p.name}`,
+                            desc: `Only ${p.stock} ${p.unit || "pcs"} left`,
+                            href: "/products",
+                          })),
+                        ]}
+                        locale={{ emptyText: "All caught up! Zero pending alerts." }}
+                        renderItem={(item: any) => (
+                          <List.Item
+                            style={{ cursor: "pointer", padding: "6px 0" }}
+                            onClick={() => router.push(item.href)}
+                          >
+                            <List.Item.Meta title={<Text strong style={{ fontSize: 13 }}>{item.title}</Text>} description={<Text type="secondary" style={{ fontSize: 11 }}>{item.desc}</Text>} />
+                          </List.Item>
+                        )}
+                      />
+                    </div>
+                  }
+                >
+                  <Badge count={pendingOrdersCount + unreadChatsCount + lowStockItems.length} size="small">
+                    <Button size="middle" icon={<BellOutlined />} aria-label="Notifications" />
+                  </Badge>
+                </Popover>
+                <Space direction="horizontal" size={4}>
+                  <Text strong>{user?.name}</Text>
+                  <Tag color={user?.role === "admin" ? "purple" : user?.role === "staff" ? "cyan" : "blue"}>
+                    {user?.role === "admin" ? "Admin" : user?.role === "staff" ? "Staff" : "Business"}
+                  </Tag>
+                  {user?.role !== "admin" && (
+                    <Tag color={user?.plan === "pro" ? "gold" : "default"}>
+                      {user?.plan === "pro" ? "PRO" : "FREE"}
+                    </Tag>
+                  )}
+                </Space>
+                <Button size="middle" icon={<LogoutOutlined />} onClick={logout}>
+                  Log out
+                </Button>
+              </Space>
+            </>
+          )}
         </Header>
 
         {announcement && !announcementDismissed && (

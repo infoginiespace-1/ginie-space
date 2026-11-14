@@ -633,7 +633,7 @@ export default function InboxPage() {
                     type="link"
                     style={{ fontSize: 11, padding: 0, height: "auto", color: "#047857", fontWeight: 600 }}
                     onClick={() => {
-                      setInputMessage("Namaste! Kripya apna official mobile number share karein taki hum order status & delivery updates bhej sakein.");
+                      setInputText("Namaste! Kripya apna official mobile number share karein taki hum order status & delivery updates bhej sakein.");
                     }}
                   >
                     Ask for Mobile Number 📲
