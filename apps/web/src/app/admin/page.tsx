@@ -2698,13 +2698,13 @@ export default function AdminPage() {
                         >
                           <Statistic
                             title={<span style={{ color: "rgba(255,255,255,0.85)", fontSize: isMobile ? 11 : 14 }}>Page Load Speed</span>}
-                            value={webAnalytics?.summary?.avgPageLoadMs || 320}
-                            suffix="ms"
+                            value={webAnalytics?.summary?.avgPageLoadMs ? webAnalytics.summary.avgPageLoadMs : 0}
+                            suffix={webAnalytics?.summary?.avgPageLoadMs ? "ms" : ""}
                             prefix={<ThunderboltOutlined style={{ color: "#fff", fontSize: isMobile ? 14 : 18 }} />}
                             valueStyle={{ color: "#fff", fontWeight: 700, fontSize: isMobile ? 18 : 26 }}
                           />
                           <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: isMobile ? 10 : 12, display: "block", marginTop: 4 }}>
-                            {webAnalytics?.summary?.speedRating || "Grade A+ (Superfast)"}
+                            {webAnalytics?.summary?.avgPageLoadMs ? (webAnalytics?.summary?.speedRating || "Grade A+ (Superfast)") : "Realtime Active"}
                           </Text>
                         </Card>
                       </Col>
@@ -2745,7 +2745,7 @@ export default function AdminPage() {
                                 </span>
                               </div>
                               <Progress
-                                percent={Math.min(100, Math.round(webAnalytics?.funnel?.visitorToSignupRate || 20))}
+                                percent={Math.min(100, Math.round(webAnalytics?.funnel?.visitorToSignupRate || 0))}
                                 strokeColor="#f59e0b"
                                 showInfo={false}
                                 size="small"
@@ -2761,7 +2761,7 @@ export default function AdminPage() {
                                 </span>
                               </div>
                               <Progress
-                                percent={Math.min(100, Math.round(webAnalytics?.funnel?.overallConversionRate || 10))}
+                                percent={Math.min(100, Math.round(webAnalytics?.funnel?.overallConversionRate || 0))}
                                 strokeColor="#10b981"
                                 showInfo={false}
                                 size="small"
@@ -2784,13 +2784,16 @@ export default function AdminPage() {
                           style={{ borderRadius: 12, height: "100%" }}
                         >
                           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                            {(webAnalytics?.sources || [
-                              { channel: "WhatsApp Viral", count: 54, percent: 54 },
-                              { channel: "Google Organic", count: 26, percent: 26 },
-                              { channel: "Direct Navigation", count: 14, percent: 14 },
-                              { channel: "Instagram / Social", count: 6, percent: 6 },
-                            ]).map((src: any, idx: number) => {
-                              const colors = ["#25D366", "#3b82f6", "#8b5cf6", "#ec4899"];
+                            {(webAnalytics?.sources && webAnalytics.sources.length > 0
+                              ? webAnalytics.sources
+                              : [
+                                  { channel: "WhatsApp Viral", count: 0, percent: 0 },
+                                  { channel: "Google Organic", count: 0, percent: 0 },
+                                  { channel: "Direct Navigation", count: 0, percent: 0 },
+                                  { channel: "Instagram / Social", count: 0, percent: 0 },
+                                ]
+                            ).map((src: any, idx: number) => {
+                              const colors = ["#25D366", "#3b82f6", "#8b5cf6", "#ec4899", "#f59e0b"];
                               const color = colors[idx % colors.length];
                               return (
                                 <div key={src.channel}>
@@ -2856,30 +2859,30 @@ export default function AdminPage() {
                               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, fontSize: 13 }}>
                                 <span style={{ fontWeight: 600 }}>📱 Mobile Browsers</span>
                                 <span style={{ fontWeight: 700, color: "#25D366" }}>
-                                  {webAnalytics?.devices?.Mobile || 78}%
+                                  {webAnalytics?.devices?.Mobile ?? webAnalytics?.devices?.mobile ?? 0}%
                                 </span>
                               </div>
-                              <Progress percent={webAnalytics?.devices?.Mobile || 78} strokeColor="#25D366" showInfo={false} size="small" />
+                              <Progress percent={webAnalytics?.devices?.Mobile ?? webAnalytics?.devices?.mobile ?? 0} strokeColor="#25D366" showInfo={false} size="small" />
                             </div>
 
                             <div>
                               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, fontSize: 13 }}>
                                 <span style={{ fontWeight: 600 }}>💻 Desktop & Laptop</span>
                                 <span style={{ fontWeight: 700, color: "#3b82f6" }}>
-                                  {webAnalytics?.devices?.Desktop || 20}%
+                                  {webAnalytics?.devices?.Desktop ?? webAnalytics?.devices?.desktop ?? 0}%
                                 </span>
                               </div>
-                              <Progress percent={webAnalytics?.devices?.Desktop || 20} strokeColor="#3b82f6" showInfo={false} size="small" />
+                              <Progress percent={webAnalytics?.devices?.Desktop ?? webAnalytics?.devices?.desktop ?? 0} strokeColor="#3b82f6" showInfo={false} size="small" />
                             </div>
 
                             <div>
                               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, fontSize: 13 }}>
                                 <span style={{ fontWeight: 600 }}>📟 Tablets</span>
                                 <span style={{ fontWeight: 700, color: "#8b5cf6" }}>
-                                  {webAnalytics?.devices?.Tablet || 2}%
+                                  {webAnalytics?.devices?.Tablet ?? webAnalytics?.devices?.tablet ?? 0}%
                                 </span>
                               </div>
-                              <Progress percent={webAnalytics?.devices?.Tablet || 2} strokeColor="#8b5cf6" showInfo={false} size="small" />
+                              <Progress percent={webAnalytics?.devices?.Tablet ?? webAnalytics?.devices?.tablet ?? 0} strokeColor="#8b5cf6" showInfo={false} size="small" />
                             </div>
                           </div>
                         </Card>
@@ -2917,7 +2920,7 @@ export default function AdminPage() {
                             ✅ Google Search Indexing & Sitemap Ready
                           </div>
                           <div style={{ fontSize: 12, color: "#047857", marginTop: 2 }}>
-                            XML Sitemap: <a href="https://ginie.space/sitemap.xml" target="_blank" rel="noopener noreferrer">https://ginie.space/sitemap.xml</a> | Robots: <a href="https://ginie.space/robots.txt" target="_blank" rel="noopener noreferrer">https://ginie.space/robots.txt</a>
+                            XML Sitemap: <a href="https://app.ginie.space/sitemap.xml" target="_blank" rel="noopener noreferrer">https://app.ginie.space/sitemap.xml</a> | Robots: <a href="https://app.ginie.space/robots.txt" target="_blank" rel="noopener noreferrer">https://app.ginie.space/robots.txt</a>
                           </div>
                         </div>
                         <Tag color="success" style={{ fontWeight: 700 }}>GOOGLE INDEXED</Tag>

@@ -265,69 +265,113 @@ export class AnalyticsService {
     const allUsers = await this.db.users.findMany().catch(() => []);
     const completedSignups = allUsers.filter((u) => u.role !== "staff").length;
 
-    // Calculate baseline/realistic traffic numbers (fallbacks to make dashboard meaningful on clean install)
-    const totalPageviews = Math.max(this.allTimeStats.totalPageviews, 1420);
-    const totalVisitors = Math.max(this.allTimeStats.totalVisitors, 480);
-    const todayPageviews = Math.max(this.todayStats.pageviews, 84);
-    const todayVisitors = Math.max(this.todayStats.uniqueVisitors, 28);
-    const liveCount = Math.max(activeLive.length, 3); // minimum 3 live sessions demo
+    // 100% Real Tracking Numbers (pure real-time data, no dummy baselines)
+    const totalPageviews = this.allTimeStats.totalPageviews;
+    const totalVisitors = this.allTimeStats.totalVisitors;
+    const todayPageviews = this.todayStats.pageviews;
+    const todayVisitors = this.todayStats.uniqueVisitors;
+    const liveCount = activeLive.length;
 
-    // Funnel calculations
-    const landingViews = Math.max(this.allTimeStats.landingViews, 420);
-    const signupViews = Math.max(this.allTimeStats.signupViews, 86);
-    const visitorToSignupRate = Math.min(100, Math.round((signupViews / Math.max(1, landingViews)) * 1000) / 10);
-    const signupToRegisteredRate = Math.min(100, Math.round((completedSignups / Math.max(1, signupViews)) * 1000) / 10);
-    const overallConversionRate = Math.min(100, Math.round((completedSignups / Math.max(1, landingViews)) * 1000) / 10);
+    // Real Funnel calculations
+    const landingViews = this.allTimeStats.landingViews;
+    const signupViews = this.allTimeStats.signupViews;
+    const visitorToSignupRate = landingViews > 0
+      ? Math.min(100, Math.round((signupViews / landingViews) * 1000) / 10)
+      : 0;
+    const signupToRegisteredRate = signupViews > 0
+      ? Math.min(100, Math.round((completedSignups / signupViews) * 1000) / 10)
+      : 0;
+    const overallConversionRate = landingViews > 0
+      ? Math.min(100, Math.round((completedSignups / landingViews) * 1000) / 10)
+      : 0;
 
-    // Channel breakdown
-    const defaultChannels: Record<string, number> = {
-      "WhatsApp Viral": 54,
-      "Google Organic": 26,
-      "Direct Navigation": 14,
-      "Instagram / Social": 6,
-    };
-    const channelCounts: Record<string, number> = { ...defaultChannels };
+    // Real Channel breakdown strictly from actual tracked visits
+    const channelCounts: Record<string, number> = {};
     for (const [ch, count] of Object.entries(this.allTimeStats.channels)) {
-      channelCounts[ch] = (channelCounts[ch] || 0) + count;
+      if (count > 0) {
+        channelCounts[ch] = count;
+      }
     }
     const totalChannelHits = Object.values(channelCounts).reduce((a, b) => a + b, 0);
-    const sources = Object.entries(channelCounts).map(([channel, count]) => ({
-      channel,
-      count,
-      percent: Math.round((count / Math.max(1, totalChannelHits)) * 100),
-    }));
+    const sources = totalChannelHits > 0
+      ? Object.entries(channelCounts).map(([channel, count]) => ({
+          channel,
+          count,
+          percent: Math.round((count / totalChannelHits) * 100),
+        }))
+      : [
+          { channel: "WhatsApp Viral", count: 0, percent: 0 },
+          { channel: "Google Organic", count: 0, percent: 0 },
+          { channel: "Direct Navigation", count: 0, percent: 0 },
+          { channel: "Instagram / Social", count: 0, percent: 0 },
+        ];
 
-    // Device breakdown
-    const mobileCount = (this.allTimeStats.devices["Mobile"] || 0) + 78;
-    const desktopCount = (this.allTimeStats.devices["Desktop"] || 0) + 18;
-    const tabletCount = (this.allTimeStats.devices["Tablet"] || 0) + 4;
+    // Real Device breakdown strictly from actual tracked hits (supporting both lowercase and capitalized keys)
+    const mobileCount = this.allTimeStats.devices["Mobile"] || 0;
+    const desktopCount = this.allTimeStats.devices["Desktop"] || 0;
+    const tabletCount = this.allTimeStats.devices["Tablet"] || 0;
     const totalDevices = mobileCount + desktopCount + tabletCount;
+    const mobilePct = totalDevices > 0 ? Math.round((mobileCount / totalDevices) * 100) : 0;
+    const desktopPct = totalDevices > 0 ? Math.round((desktopCount / totalDevices) * 100) : 0;
+    const tabletPct = totalDevices > 0 ? Math.round((tabletCount / totalDevices) * 100) : 0;
     const devices = {
-      mobile: Math.round((mobileCount / totalDevices) * 100),
-      desktop: Math.round((desktopCount / totalDevices) * 100),
-      tablet: Math.round((tabletCount / totalDevices) * 100),
+      mobile: mobilePct,
+      desktop: desktopPct,
+      tablet: tabletPct,
+      Mobile: mobilePct,
+      Desktop: desktopPct,
+      Tablet: tabletPct,
     };
 
-    // Average page load speed
+    // Real Average page load speed
     const avgLoadMs = this.todayStats.loadCount > 0
       ? Math.round(this.todayStats.totalLoadMs / this.todayStats.loadCount)
-      : 580; // default 580ms (Sub-second / Fast)
+      : 0;
+    const speedRating = avgLoadMs === 0
+      ? "Realtime Active"
+      : avgLoadMs < 800
+      ? "Grade A+ (Superfast)"
+      : avgLoadMs < 1500
+      ? "Grade A (Good)"
+      : "Needs Optimization";
 
     // Read SEO Settings from db.settings
     const seoSetting = await this.db.settings.findOne({ userId: "admin", key: "platform_seo_settings" }).catch(() => null);
     let seoConfig = {
-      ga4MeasurementId: "G-9K7X8W9P2M",
-      googleSiteVerification: "google-site-verification=giniespace_verified_hub",
+      ga4MeasurementId: "",
+      googleSiteVerification: "",
       targetKeywords: "whatsapp store builder, free online dukaan, b2b catalog, giniespace",
       indexingStatus: "Active & Indexed",
-      sitemapUrl: "https://ginie.space/sitemap.xml",
-      robotsUrl: "https://ginie.space/robots.txt",
+      sitemapUrl: "https://app.ginie.space/sitemap.xml",
+      robotsUrl: "https://app.ginie.space/robots.txt",
     };
     if (seoSetting?.value) {
       try {
         seoConfig = { ...seoConfig, ...JSON.parse(seoSetting.value) };
       } catch {}
     }
+
+    // Real Top Pages list
+    const topPagesList = Object.entries(this.todayStats.topPages || {})
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 10)
+      .map(([path, views]) => {
+        let name = path;
+        if (path === "/" || path === "") name = "Landing Page & Store Showcase";
+        else if (path === "/signup") name = "Merchant Signup & Onboarding";
+        else if (path === "/login") name = "Merchant Login Portal";
+        else if (path.startsWith("/shop/")) name = "Public Storefronts & Catalogs";
+        else if (path.startsWith("/admin")) name = "Admin Command Portal";
+        return { path, name, views };
+      });
+
+    const topPages = topPagesList.length > 0
+      ? topPagesList
+      : [
+          { path: "/", name: "Landing Page & Store Showcase", views: landingViews },
+          { path: "/signup", name: "Merchant Signup & Onboarding", views: signupViews },
+          { path: "/shop/*", name: "Public Storefronts & Catalogs", views: this.todayStats.storefrontViews },
+        ];
 
     return {
       liveVisitorsCount: liveCount,
@@ -337,7 +381,7 @@ export class AnalyticsService {
         totalVisitors,
         totalPageviews,
         avgPageLoadMs: avgLoadMs,
-        speedRating: avgLoadMs < 800 ? "Grade A+ (Superfast)" : avgLoadMs < 1500 ? "Grade A (Good)" : "Needs Optimization",
+        speedRating,
         overallConversionRate,
       },
       funnel: {
@@ -350,12 +394,7 @@ export class AnalyticsService {
       },
       sources,
       devices,
-      topPages: [
-        { path: "/", name: "Landing Page & Store Showcase", views: landingViews },
-        { path: "/signup", name: "Merchant Signup & Onboarding", views: signupViews },
-        { path: "/shop/*", name: "Public Storefronts & Catalogs", views: Math.max(this.todayStats.storefrontViews, 340) },
-        { path: "/login", name: "Merchant Login Portal", views: Math.round(signupViews * 0.7) },
-      ],
+      topPages,
       seo: seoConfig,
     };
   }
@@ -367,8 +406,8 @@ export class AnalyticsService {
       googleSiteVerification: config.googleSiteVerification || "",
       targetKeywords: config.targetKeywords || "",
       updatedAt: new Date().toISOString(),
-      sitemapUrl: "https://ginie.space/sitemap.xml",
-      robotsUrl: "https://ginie.space/robots.txt",
+      sitemapUrl: "https://app.ginie.space/sitemap.xml",
+      robotsUrl: "https://app.ginie.space/robots.txt",
       indexingStatus: "Active & Indexed",
     };
     if (existing) {
