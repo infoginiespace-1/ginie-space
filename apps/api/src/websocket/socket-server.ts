@@ -203,21 +203,29 @@ export function setupSocketServer(
         const storeSlugOrId = business?.slug || event.userId;
         const storeLink = `https://app.ginie.space/shop/${storeSlugOrId}`;
 
-        const sendBotReply = async (replyText: string) => {
+        const sendBotReply = async (replyText: string, imageUrl?: string) => {
           const targetRecipient = isLid && !realPhone ? event.senderJid : contactIdentifier;
+          const cleanImageUrl = imageUrl?.trim() || undefined;
+
           await waManager.sendMessage({
             userId: event.userId,
             recipientPhone: targetRecipient,
             messageText: replyText,
+            mediaType: cleanImageUrl ? "image" : undefined,
+            mediaUrl: cleanImageUrl,
           });
 
           const autoId = `auto_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
           const autoTs = new Date().toISOString();
+          const savedText = cleanImageUrl
+            ? `${replyText ? replyText.trim() + " " : ""}[Media: ${cleanImageUrl}]`
+            : replyText;
+
           await db.messages.create({
             userId: event.userId,
             contactPhone: contactIdentifier,
             contactName: event.senderName || (realPhone ? `+${realPhone}` : ""),
-            text: replyText,
+            text: savedText,
             fromMe: "true",
             messageId: autoId,
             timestamp: autoTs,
@@ -228,16 +236,103 @@ export function setupSocketServer(
             senderJid: targetRecipient,
             contactPhone: contactIdentifier,
             senderName: event.senderName,
-            messageText: replyText,
+            messageText: savedText,
             timestamp: autoTs,
             messageId: autoId,
             fromMe: true,
           });
         };
 
-        // 1. Smart Keyword Auto-Responder (Catalog / Services / Booking / Order Status) with 45s per-keyword cooldown
-        let handledByKeyword = false;
-        if (parsed.smartKeywordBot !== false && incomingLower.length <= 60) {
+        let handled = false;
+
+        // 1. Custom Keyword-Based Auto-Reply Rules (Configured by Merchant in Settings)
+        const customRules: any[] = Array.isArray(parsed.customRules) ? parsed.customRules : [];
+        const activeRules = customRules.filter(
+          (r) => r && r.enabled !== false && Array.isArray(r.keywords) && r.keywords.length > 0 && r.replyText
+        );
+
+        for (const rule of activeRules) {
+          const ruleKey = `rule_${rule.id || rule.name}:${cooldownKey}`;
+          if (nowMs - (merchantAutoReplyCooldown.get(ruleKey) || 0) < 30000) {
+            // 30s per-rule cooldown to prevent spam loops
+            continue;
+          }
+
+          let isMatch = false;
+          for (const rawKw of rule.keywords) {
+            const kw = String(rawKw || "").trim().toLowerCase();
+            if (!kw) continue;
+            if (rule.matchType === "exact") {
+              if (incomingLower === kw) {
+                isMatch = true;
+                break;
+              }
+            } else {
+              // Contains match
+              if (incomingLower.includes(kw)) {
+                isMatch = true;
+                break;
+              }
+            }
+          }
+
+          if (isMatch) {
+            merchantAutoReplyCooldown.set(ruleKey, nowMs);
+            handled = true;
+            let response = String(rule.replyText)
+              .replace(/\{store_name\}/gi, business?.name || "Our Store")
+              .replace(/\{catalog_link\}/gi, storeLink)
+              .replace(/\{phone\}/gi, business?.phone || "");
+
+            await sendBotReply(response, rule.imageUrl);
+            break;
+          }
+        }
+
+        // 2. Business Working Hours & Away Responder (e.g. 9 AM - 9 PM)
+        if (!handled) {
+          const wh = parsed.workingHours;
+          let isOutsideWorkingHours = false;
+
+          if (wh?.enabled && wh.openTime && wh.closeTime) {
+            // Compute current time in India Standard Time (UTC+5:30)
+            const istOffsetMs = 5.5 * 60 * 60 * 1000;
+            const istDate = new Date(Date.now() + istOffsetMs);
+            const currentDay = istDate.getUTCDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
+            const currentMinutesOfDay = istDate.getUTCHours() * 60 + istDate.getUTCMinutes();
+
+            const [openH, openM] = String(wh.openTime).split(":").map(Number);
+            const [closeH, closeM] = String(wh.closeTime).split(":").map(Number);
+            const openMinutes = (openH || 9) * 60 + (openM || 0);
+            const closeMinutes = (closeH || 21) * 60 + (closeM || 0);
+
+            const activeDays: number[] = Array.isArray(wh.days) && wh.days.length > 0 ? wh.days : [1, 2, 3, 4, 5, 6];
+            if (!activeDays.includes(currentDay) || currentMinutesOfDay < openMinutes || currentMinutesOfDay >= closeMinutes) {
+              isOutsideWorkingHours = true;
+            }
+          }
+
+          if (isOutsideWorkingHours) {
+            const awayKey = `away_hours:${cooldownKey}`;
+            if (nowMs - (merchantAutoReplyCooldown.get(awayKey) || 0) > 4 * 60 * 60 * 1000) {
+              merchantAutoReplyCooldown.set(awayKey, nowMs);
+              handled = true;
+              const awayMsg = String(wh.awayMessage || "Our store is currently closed. We will respond as soon as we reopen!").trim();
+              await sendBotReply(`🌙 *${business?.name || "Store"}*\n${awayMsg}\n\n🛍️ *Browse Catalog Online:* ${storeLink}`);
+            }
+          } else if (parsed.isOpen === false) {
+            const awayKey = `away_closed:${cooldownKey}`;
+            if (nowMs - (merchantAutoReplyCooldown.get(awayKey) || 0) > 4 * 60 * 60 * 1000) {
+              merchantAutoReplyCooldown.set(awayKey, nowMs);
+              handled = true;
+              const awayText = String(parsed.closedMessage || "Our store is currently closed. We will respond as soon as we reopen!").trim();
+              await sendBotReply(`🌙 *${business?.name || "Store"}*\n${awayText}\n\n🛍️ Catalog: ${storeLink}`);
+            }
+          }
+        }
+
+        // 3. Smart Keyword Auto-Responder (Catalog / Services / Booking / Order Status) with 45s per-keyword cooldown
+        if (!handled && parsed.smartKeywordBot !== false && incomingLower.length <= 60) {
           const isCatalogAsk = /\b(catalog|menu|price|rate|items|products|list|book|appointment|service|services|fees|timing|duration)\b/.test(incomingLower);
           const isTrackAsk = /\b(track|order status|status|my order|my booking|booking status)\b/.test(incomingLower);
 
@@ -245,7 +340,7 @@ export function setupSocketServer(
             const kwKey = `kw_cat:${cooldownKey}`;
             if (nowMs - (merchantAutoReplyCooldown.get(kwKey) || 0) > 45000) {
               merchantAutoReplyCooldown.set(kwKey, nowMs);
-              handledByKeyword = true;
+              handled = true;
               const prods = await db.products.findMany({ userId: event.userId }).catch(() => []);
               const inStock = prods.filter((p) => p.itemType === "service" || Number(p.stock) > 0).slice(0, 8);
               const listStr = inStock.length
@@ -263,7 +358,7 @@ export function setupSocketServer(
             const kwKey = `kw_trk:${cooldownKey}`;
             if (nowMs - (merchantAutoReplyCooldown.get(kwKey) || 0) > 45000) {
               merchantAutoReplyCooldown.set(kwKey, nowMs);
-              handledByKeyword = true;
+              handled = true;
               const orders = await db.orders.findMany({ userId: event.userId }).catch(() => []);
               const myOrders = orders
                 .filter((o) => {
@@ -290,19 +385,8 @@ export function setupSocketServer(
           }
         }
 
-        // 2. Closed / Away Auto-Reply when Store is marked Closed
-        if (!handledByKeyword && parsed.isOpen === false) {
-          const awayKey = `away:${cooldownKey}`;
-          if (nowMs - (merchantAutoReplyCooldown.get(awayKey) || 0) > 6 * 60 * 60 * 1000) {
-            merchantAutoReplyCooldown.set(awayKey, nowMs);
-            handledByKeyword = true;
-            const awayText = String(parsed.closedMessage || "Our store is currently closed. We will respond as soon as we reopen!").trim();
-            await sendBotReply(`🌙 *${business?.name || "Store"}*\n${awayText}\n\n🛍️ Catalog: ${storeLink}`);
-          }
-        }
-
-        // 3. First-time 24h Welcome Auto-Reply
-        if (!handledByKeyword && nowMs - lastRepliedAt > 24 * 60 * 60 * 1000) {
+        // 4. First-time 24h Welcome Auto-Reply
+        if (!handled && nowMs - lastRepliedAt > 24 * 60 * 60 * 1000) {
           const autoReplyEnabled = parsed.autoReply !== false;
           const welcomeText = (parsed.welcomeMessage && String(parsed.welcomeMessage).trim())
             ? String(parsed.welcomeMessage).trim()
@@ -310,8 +394,19 @@ export function setupSocketServer(
 
           if (autoReplyEnabled) {
             merchantAutoReplyCooldown.set(cooldownKey, nowMs);
+            handled = true;
             const fullGreeting = `${welcomeText}\n\n🛍️ *Browse Our Catalog & Order Online:* ${storeLink}\n💡 Tip: Reply *"catalog"* for price list or *"status"* to check your order.`;
             await sendBotReply(fullGreeting);
+          }
+        }
+
+        // 5. Default Fallback Navigation Menu
+        if (!handled && parsed.fallbackReply?.enabled && parsed.fallbackReply.message?.trim()) {
+          const fallbackKey = `fallback:${cooldownKey}`;
+          if (nowMs - (merchantAutoReplyCooldown.get(fallbackKey) || 0) > 2 * 60 * 60 * 1000) {
+            merchantAutoReplyCooldown.set(fallbackKey, nowMs);
+            handled = true;
+            await sendBotReply(parsed.fallbackReply.message.trim());
           }
         }
       } catch {

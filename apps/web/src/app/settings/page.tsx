@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { AppLayout } from "../../components/AppLayout";
 import {
   Card,
@@ -24,6 +24,10 @@ import {
   Progress,
   Popconfirm,
   Select,
+  Radio,
+  Tooltip,
+  Badge,
+  Avatar,
 } from "antd";
 import {
   SaveOutlined,
@@ -40,6 +44,17 @@ import {
   DeleteOutlined,
   UserAddOutlined,
   CrownOutlined,
+  RobotOutlined,
+  ClockCircleOutlined,
+  PlusOutlined,
+  EditOutlined,
+  PictureOutlined,
+  MessageOutlined,
+  BulbOutlined,
+  EyeOutlined,
+  SendOutlined,
+  CheckOutlined,
+  LinkOutlined,
 } from "@ant-design/icons";
 import { api } from "../../lib/api";
 import { getSocket } from "../../lib/socket";
@@ -47,6 +62,63 @@ import { UpgradeModal } from "../../components/UpgradeModal";
 import { useAuth } from "../../context/AuthContext";
 
 const { Title, Text, Paragraph } = Typography;
+
+export interface AutoReplyCustomRule {
+  id: string;
+  name: string;
+  keywords: string[];
+  matchType: "contains" | "exact";
+  replyText: string;
+  imageUrl?: string;
+  enabled: boolean;
+}
+
+export interface WorkingHoursConfig {
+  enabled: boolean;
+  openTime: string;
+  closeTime: string;
+  days: number[];
+  awayMessage: string;
+}
+
+export interface FallbackReplyConfig {
+  enabled: boolean;
+  message: string;
+}
+
+const DEFAULT_SAMPLE_RULES: AutoReplyCustomRule[] = [
+  {
+    id: "sample_location",
+    name: "Store Location & Address",
+    keywords: ["location", "address", "map", "kahan hai", "dukaan kahan"],
+    matchType: "contains",
+    replyText: "Namaste! Hamari dukaan yahan sthit hai:\n📍 {store_name}, Main Market.\n📞 Sampark: {phone}\n\n🛍️ Digital Catalog: {catalog_link}",
+    imageUrl: "",
+    enabled: true,
+  },
+  {
+    id: "sample_payment",
+    name: "Payment & UPI QR Code",
+    keywords: ["upi", "payment", "pay", "gpay", "phonepe", "paytm", "qr"],
+    matchType: "contains",
+    replyText: "Aap niche diye gaye UPI par payment kar sakte hain aur payment ka screenshot yahan bhej sakte hain. Thank you!",
+    imageUrl: "",
+    enabled: true,
+  },
+];
+
+const DEFAULT_WORKING_HOURS: WorkingHoursConfig = {
+  enabled: false,
+  openTime: "09:00",
+  closeTime: "21:00",
+  days: [1, 2, 3, 4, 5, 6],
+  awayMessage: "Namaste! Hamara store abhi closed hai. Hamare working hours subah 09:00 AM se raat 09:00 PM tak hain. Aap hamara digital catalog browse kar sakte hain: {catalog_link}",
+};
+
+const DEFAULT_FALLBACK_REPLY: FallbackReplyConfig = {
+  enabled: false,
+  message: "Namaste! 🙏 {store_name} me aapka swagat hai.\n\nAap niche diye gaye vikalpo me se chun sakte hain:\n1️⃣ *Catalog & Rates* dekhne ke liye reply karein: *\"catalog\"*\n2️⃣ *Order Status* janne ke liye reply karein: *\"status\"*\n3️⃣ *Store Address* ke liye reply karein: *\"address\"*\n\n🛒 Direct Online Order: {catalog_link}",
+};
 
 async function compressLogoJpg(file: File): Promise<string> {
   const raw: string = await new Promise((resolve, reject) => {
@@ -86,23 +158,32 @@ export default function SettingsPage() {
   const [form] = Form.useForm();
   const [passwordForm] = Form.useForm();
   const [staffForm] = Form.useForm();
+  const [ruleForm] = Form.useForm();
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
-  const savedQuickRepliesRef = React.useRef<Array<{ label: string; text: string }> | undefined>(undefined);
+  const savedQuickRepliesRef = useRef<Array<{ label: string; text: string }> | undefined>(undefined);
   const [logoPreview, setLogoPreview] = useState<string>("");
   const [currentSlug, setCurrentSlug] = useState<string>("");
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
-  const [planUsage, setPlanUsage] = useState<{
-    plan: "free" | "pro";
-    subscriptionStatus?: "active" | "pending" | "expired" | "none";
-    planExpiresAt?: string | null;
-    planPurchasedAt?: string | null;
-    paymentUtr?: string | null;
-    usage: { productsCount: number; leadsCount: number; staffCount: number };
-    limits: { maxProducts: number; maxLeads: number; maxStaff: number; allowBulkBroadcast: boolean };
-    pricing?: { monthly: number; yearly: number; upiId: string; supportPhone: string };
-  } | null>(null);
+  const [planUsage, setPlanUsage] = useState<any>(null);
+
+  // Auto-Reply Rules Engine State
+  const [customRules, setCustomRules] = useState<AutoReplyCustomRule[]>(DEFAULT_SAMPLE_RULES);
+  const [workingHours, setWorkingHours] = useState<WorkingHoursConfig>(DEFAULT_WORKING_HOURS);
+  const [fallbackReply, setFallbackReply] = useState<FallbackReplyConfig>(DEFAULT_FALLBACK_REPLY);
+  const [ruleModalOpen, setRuleModalOpen] = useState(false);
+  const [editingRule, setEditingRule] = useState<AutoReplyCustomRule | null>(null);
+  const [ruleKeywordsInput, setRuleKeywordsInput] = useState("");
+  const [savingAutoReply, setSavingAutoReply] = useState(false);
+
+  // Live Simulator State
+  const [simulatorInput, setSimulatorInput] = useState("");
+  const [simulatorLogs, setSimulatorLogs] = useState<Array<{ fromUser: boolean; text: string; image?: string; time: string }>>([
+    { fromUser: true, text: "location kahan hai?", time: "10:30 AM" },
+    { fromUser: false, text: "Namaste! Hamari dukaan yahan sthit hai:\n📍 Main Market\n📞 Sampark: +91 9279259690\n\n🛍️ Digital Catalog: https://app.ginie.space/shop/demo", time: "10:30 AM" },
+  ]);
 
   const fetchPlanUsage = () => {
     api.get("/api/settings/plan-usage").then((r) => setPlanUsage(r.data)).catch(() => {});
@@ -122,22 +203,7 @@ export default function SettingsPage() {
       .then((res) => {
         const b = res.data.business || {};
         setCurrentSlug(b.slug || "");
-        let parsedSettings: {
-          autoReply: boolean;
-          welcomeMessage: string;
-          upiId?: string;
-          gstin?: string;
-          gstRate?: number;
-          deliveryFee?: number;
-          couponCode?: string;
-          couponPercent?: number;
-          quickReplies?: Array<{ label: string; text: string }>;
-          logoUrl?: string;
-          isOpen?: boolean;
-          closedMessage?: string;
-          smartKeywordBot?: boolean;
-          dailySummaryEnabled?: boolean;
-        } = {
+        let parsedSettings: any = {
           autoReply: true,
           welcomeMessage: "Hello! Welcome to our store.",
           upiId: "",
@@ -156,13 +222,28 @@ export default function SettingsPage() {
             parsedSettings = { ...parsedSettings, ...JSON.parse(b.settingsJson) };
           } catch {}
         }
+
+        if (parsedSettings.customRules && Array.isArray(parsedSettings.customRules)) {
+          setCustomRules(parsedSettings.customRules);
+        } else {
+          setCustomRules(DEFAULT_SAMPLE_RULES);
+        }
+
+        if (parsedSettings.workingHours) {
+          setWorkingHours({ ...DEFAULT_WORKING_HOURS, ...parsedSettings.workingHours });
+        }
+
+        if (parsedSettings.fallbackReply) {
+          setFallbackReply({ ...DEFAULT_FALLBACK_REPLY, ...parsedSettings.fallbackReply });
+        }
+
         if (parsedSettings.quickReplies) {
           savedQuickRepliesRef.current = parsedSettings.quickReplies;
         }
         if (parsedSettings.logoUrl) {
           setLogoPreview(parsedSettings.logoUrl);
         }
-        const firstCoupon = Array.isArray((parsedSettings as any).coupons) ? (parsedSettings as any).coupons[0] : null;
+        const firstCoupon = Array.isArray(parsedSettings.coupons) ? parsedSettings.coupons[0] : null;
         form.setFieldsValue({
           name: b.name || "",
           businessType: res.data?.businessType || user?.businessType || "retail",
@@ -177,10 +258,10 @@ export default function SettingsPage() {
           couponPercent: firstCoupon?.discountPercent || 0,
           isOpen: parsedSettings.isOpen !== false,
           closedMessage: parsedSettings.closedMessage,
-          autoReply: parsedSettings.autoReply,
+          autoReply: parsedSettings.autoReply !== false,
           smartKeywordBot: parsedSettings.smartKeywordBot !== false,
           dailySummaryEnabled: Boolean(parsedSettings.dailySummaryEnabled),
-          welcomeMessage: parsedSettings.welcomeMessage,
+          welcomeMessage: parsedSettings.welcomeMessage || "Hello! Welcome to our store.",
         });
       })
       .catch(() => message.error("Could not load settings"))
@@ -224,9 +305,9 @@ export default function SettingsPage() {
         socket.off("whatsapp:qr");
       }
     };
-  }, [form]);
+  }, [user, form]);
 
-  const handleConnectWhatsApp = async () => {
+  const handleConnect = async () => {
     try {
       setConnecting(true);
       const res = await api.post("/api/whatsapp/connect");
@@ -234,37 +315,32 @@ export default function SettingsPage() {
         setQrCode(res.data.session.qrCode);
       }
       setQrModalVisible(true);
-    } catch (err: any) {
-      message.error(err.message || "Could not start WhatsApp connection");
+    } catch {
+      message.error("Could not start WhatsApp connection");
     } finally {
       setConnecting(false);
     }
   };
 
-  const handleDisconnectWhatsApp = async () => {
+  const handleDisconnect = async () => {
     try {
       await api.post("/api/whatsapp/disconnect");
       setWaStatus("disconnected");
-      setWaPhone(undefined);
       setQrCode(null);
-      message.info("Your store WhatsApp has been disconnected");
-    } catch (err: any) {
-      message.error(err.message || "Could not disconnect WhatsApp");
+      message.info("WhatsApp disconnected");
+    } catch {
+      message.error("Could not disconnect");
     }
   };
 
-  const handleChangePassword = async (values: { currentPassword: string; newPassword: string; confirmPassword: string }) => {
-    if (values.newPassword !== values.confirmPassword) {
-      message.error("New password and confirm password do not match");
-      return;
-    }
+  const handleChangePassword = async (values: any) => {
     try {
       setChangingPassword(true);
-      const res = await api.post("/api/auth/change-password", {
+      await api.put("/api/auth/password", {
         currentPassword: values.currentPassword,
         newPassword: values.newPassword,
       });
-      message.success(res.data?.message || "Password updated successfully!");
+      message.success("Password changed successfully!");
       passwordForm.resetFields();
     } catch (err: any) {
       message.error(err.message || "Could not update password");
@@ -273,6 +349,37 @@ export default function SettingsPage() {
     }
   };
 
+  const handleCreateStaff = async (values: any) => {
+    try {
+      setCreatingStaff(true);
+      const res = await api.post("/api/settings/staff", values);
+      message.success(res.data?.message || "Staff account created!");
+      staffForm.resetFields();
+      setStaffList((prev) => [res.data.staff, ...prev]);
+      fetchPlanUsage();
+    } catch (err: any) {
+      if (err.response?.status === 403 && err.response?.data?.upgradeRequired) {
+        setUpgradeModalOpen(true);
+      } else {
+        message.error(err.response?.data?.error || err.message || "Could not create staff account");
+      }
+    } finally {
+      setCreatingStaff(false);
+    }
+  };
+
+  const handleDeleteStaff = async (staffId: string) => {
+    try {
+      await api.delete(`/api/settings/staff/${staffId}`);
+      message.success("Staff account removed");
+      setStaffList((prev) => prev.filter((s) => s.id !== staffId));
+      fetchPlanUsage();
+    } catch (err: any) {
+      message.error(err.message || "Could not remove staff account");
+    }
+  };
+
+  // Save Settings Handler (combines Profile + Auto-Reply Rules)
   const handleSave = async (values: any) => {
     try {
       setSaving(true);
@@ -281,7 +388,7 @@ export default function SettingsPage() {
       const coupons = cleanCoupon && pct > 0 ? [{ code: cleanCoupon, discountPercent: pct }] : [];
 
       const settingsJson = JSON.stringify({
-        autoReply: values.autoReply,
+        autoReply: values.autoReply !== false,
         welcomeMessage: values.welcomeMessage,
         smartKeywordBot: values.smartKeywordBot !== false,
         dailySummaryEnabled: Boolean(values.dailySummaryEnabled),
@@ -295,6 +402,9 @@ export default function SettingsPage() {
         deliveryFee: Math.max(0, Number(values.deliveryFee) || 0),
         coupons,
         quickReplies: savedQuickRepliesRef.current,
+        customRules,
+        workingHours,
+        fallbackReply,
       });
 
       const res = await api.put("/api/settings/business", {
@@ -310,7 +420,7 @@ export default function SettingsPage() {
         updateUserLocal({ businessType: res.data.businessType });
       }
       setCurrentSlug(res.data?.business?.slug || "");
-      message.success("Settings saved successfully!");
+      message.success("Settings & Auto-Reply Rules saved successfully!");
     } catch (err: any) {
       message.error(err.message || "Failed to update settings");
     } finally {
@@ -318,96 +428,300 @@ export default function SettingsPage() {
     }
   };
 
-  const handleCreateStaff = async (values: any) => {
-    setCreatingStaff(true);
+  // Dedicated Auto-Reply Saver
+  const handleSaveAutoReplyOnly = async (
+    updatedRules?: AutoReplyCustomRule[],
+    updatedWh?: WorkingHoursConfig,
+    updatedFb?: FallbackReplyConfig
+  ) => {
     try {
-      const res = await api.post("/api/settings/staff", values);
-      setStaffList((prev) => [res.data.staff, ...prev]);
-      staffForm.resetFields();
-      message.success("Staff member added!");
-      api.get("/api/settings/plan-usage").then((r) => setPlanUsage(r.data)).catch(() => {});
+      setSavingAutoReply(true);
+      const bRes = await api.get("/api/settings");
+      const currentBiz = bRes.data.business || {};
+      let existingSettings: any = {};
+      if (currentBiz.settingsJson) {
+        try {
+          existingSettings = JSON.parse(currentBiz.settingsJson);
+        } catch {}
+      }
+
+      const nextRules = updatedRules !== undefined ? updatedRules : customRules;
+      const nextWh = updatedWh !== undefined ? updatedWh : workingHours;
+      const nextFb = updatedFb !== undefined ? updatedFb : fallbackReply;
+      const welcomeMsg = form.getFieldValue("welcomeMessage") || existingSettings.welcomeMessage || "Hello! Welcome to our store.";
+      const welcomeEnabled = form.getFieldValue("autoReply") !== false;
+      const smartBot = form.getFieldValue("smartKeywordBot") !== false;
+
+      const mergedSettings = {
+        ...existingSettings,
+        autoReply: welcomeEnabled,
+        welcomeMessage: welcomeMsg,
+        smartKeywordBot: smartBot,
+        customRules: nextRules,
+        workingHours: nextWh,
+        fallbackReply: nextFb,
+      };
+
+      await api.put("/api/settings/business", {
+        name: currentBiz.name,
+        businessType: currentBiz.businessType,
+        phone: currentBiz.phone,
+        address: currentBiz.address,
+        slug: currentBiz.slug,
+        settingsJson: JSON.stringify(mergedSettings),
+      });
+
+      message.success("WhatsApp Auto-Reply & Bot Rules updated successfully!");
     } catch (err: any) {
-      message.error(err.message || "Could not create staff account");
+      message.error(err.message || "Failed to save auto-reply rules");
     } finally {
-      setCreatingStaff(false);
+      setSavingAutoReply(false);
     }
   };
 
-  const handleDeleteStaff = async (staffId: string) => {
-    try {
-      await api.delete(`/api/settings/staff/${staffId}`);
-      setStaffList((prev) => prev.filter((s) => s.id !== staffId));
-      message.success("Staff account removed");
-      api.get("/api/settings/plan-usage").then((r) => setPlanUsage(r.data)).catch(() => {});
-    } catch (err: any) {
-      message.error(err.message || "Could not delete staff member");
+  // Add or Edit Rule Modal Handlers
+  const handleOpenAddRuleModal = () => {
+    setEditingRule(null);
+    setRuleKeywordsInput("");
+    ruleForm.resetFields();
+    ruleForm.setFieldsValue({
+      name: "",
+      keywords: "",
+      matchType: "contains",
+      replyText: "",
+      imageUrl: "",
+      enabled: true,
+    });
+    setRuleModalOpen(true);
+  };
+
+  const handleOpenEditRuleModal = (rule: AutoReplyCustomRule) => {
+    setEditingRule(rule);
+    setRuleKeywordsInput(rule.keywords.join(", "));
+    ruleForm.setFieldsValue({
+      name: rule.name,
+      keywords: rule.keywords.join(", "),
+      matchType: rule.matchType || "contains",
+      replyText: rule.replyText,
+      imageUrl: rule.imageUrl || "",
+      enabled: rule.enabled !== false,
+    });
+    setRuleModalOpen(true);
+  };
+
+  const handleSaveRuleModal = () => {
+    ruleForm.validateFields().then((vals) => {
+      const parsedKeywords = String(vals.keywords || "")
+        .split(",")
+        .map((k) => k.trim().toLowerCase())
+        .filter(Boolean);
+
+      if (parsedKeywords.length === 0) {
+        message.warning("Kam se kam ek keyword enter karein (e.g. address, upi)");
+        return;
+      }
+
+      let nextRules: AutoReplyCustomRule[];
+      if (editingRule) {
+        nextRules = customRules.map((r) =>
+          r.id === editingRule.id
+            ? {
+                ...r,
+                name: vals.name.trim(),
+                keywords: parsedKeywords,
+                matchType: vals.matchType,
+                replyText: vals.replyText.trim(),
+                imageUrl: vals.imageUrl?.trim() || "",
+                enabled: vals.enabled !== false,
+              }
+            : r
+        );
+      } else {
+        const newRule: AutoReplyCustomRule = {
+          id: `rule_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+          name: vals.name.trim(),
+          keywords: parsedKeywords,
+          matchType: vals.matchType,
+          replyText: vals.replyText.trim(),
+          imageUrl: vals.imageUrl?.trim() || "",
+          enabled: vals.enabled !== false,
+        };
+        nextRules = [...customRules, newRule];
+      }
+
+      setCustomRules(nextRules);
+      setRuleModalOpen(false);
+      handleSaveAutoReplyOnly(nextRules);
+    });
+  };
+
+  const handleDeleteRule = (ruleId: string) => {
+    const nextRules = customRules.filter((r) => r.id !== ruleId);
+    setCustomRules(nextRules);
+    handleSaveAutoReplyOnly(nextRules);
+  };
+
+  const handleToggleRuleStatus = (ruleId: string, enabled: boolean) => {
+    const nextRules = customRules.map((r) => (r.id === ruleId ? { ...r, enabled } : r));
+    setCustomRules(nextRules);
+    handleSaveAutoReplyOnly(nextRules);
+  };
+
+  // Bot Simulator Handler
+  const handleSimulateMessage = (textToTest: string) => {
+    if (!textToTest.trim()) return;
+    const q = textToTest.trim().toLowerCase();
+    const timeStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+    const newLogs = [...simulatorLogs, { fromUser: true, text: textToTest.trim(), time: timeStr }];
+
+    let matchedReply: { text: string; image?: string } | null = null;
+    const storeName = form.getFieldValue("name") || "Our Store";
+    const storeLink = `https://app.ginie.space/shop/${currentSlug || user?.id || "demo"}`;
+    const phone = form.getFieldValue("phone") || "+91 9279259690";
+
+    // 1. Custom Rules check
+    const active = customRules.filter((r) => r.enabled !== false && r.keywords?.length > 0 && r.replyText);
+    for (const rule of active) {
+      let match = false;
+      for (const rawKw of rule.keywords) {
+        const kw = String(rawKw || "").trim().toLowerCase();
+        if (!kw) continue;
+        if (rule.matchType === "exact") {
+          if (q === kw) {
+            match = true;
+            break;
+          }
+        } else {
+          if (q.includes(kw)) {
+            match = true;
+            break;
+          }
+        }
+      }
+
+      if (match) {
+        matchedReply = {
+          text: String(rule.replyText)
+            .replace(/\{store_name\}/gi, storeName)
+            .replace(/\{catalog_link\}/gi, storeLink)
+            .replace(/\{phone\}/gi, phone),
+          image: rule.imageUrl || undefined,
+        };
+        break;
+      }
     }
+
+    // 2. Working Hours check
+    if (!matchedReply && workingHours.enabled) {
+      matchedReply = {
+        text: `🌙 *${storeName}*\n${workingHours.awayMessage.replace(/\{catalog_link\}/gi, storeLink)}`,
+      };
+    }
+
+    // 3. Smart Catalog check
+    if (!matchedReply && form.getFieldValue("smartKeywordBot") !== false && /\b(catalog|menu|price|rate|items|products|list)\b/.test(q)) {
+      matchedReply = {
+        text: `📋 *${storeName} Price List & Offerings*\n\n• Sample Special Product — ₹199 / pcs\n• Premium Offering — ₹499 / pack\n\n🛒 *Full Catalog & Online Booking:* ${storeLink}`,
+      };
+    }
+
+    // 4. Default / Welcome check
+    if (!matchedReply) {
+      if (fallbackReply.enabled && fallbackReply.message) {
+        matchedReply = {
+          text: fallbackReply.message.replace(/\{store_name\}/gi, storeName).replace(/\{catalog_link\}/gi, storeLink),
+        };
+      } else {
+        const welcomeText = form.getFieldValue("welcomeMessage") || "Hello! Welcome to our store.";
+        matchedReply = {
+          text: `${welcomeText}\n\n🛍️ *Browse Catalog & Order Online:* ${storeLink}\n💡 Tip: Reply *"catalog"* for price list.`,
+        };
+      }
+    }
+
+    if (matchedReply) {
+      newLogs.push({
+        fromUser: false,
+        text: matchedReply.text,
+        image: matchedReply.image,
+        time: timeStr,
+      });
+    }
+
+    setSimulatorLogs(newLogs);
+    setSimulatorInput("");
   };
 
   return (
     <AppLayout>
       <div style={{ marginBottom: 20 }}>
-        <Title level={4} style={{ margin: 0 }}>Business Profile & Settings</Title>
-        <Text type="secondary">Manage your store WhatsApp connection, business details, and automated greetings</Text>
+        <Title level={4} style={{ margin: 0, fontWeight: 800 }}>Business Profile &amp; Settings</Title>
+        <Text type="secondary">Manage your store WhatsApp connection, automated bot rules, and business profile</Text>
       </div>
 
       <Row gutter={[20, 20]}>
+        {/* LEFT COLUMN: Store Profile & Public Info */}
         <Col xs={24} lg={14}>
-          <Card style={{ borderRadius: 12 }}>
-            <Form form={form} layout="vertical" onFinish={handleSave} disabled={loading}>
-              <Title level={5}>Business Profile</Title>
-              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 12 }}>
-                <Form.Item name="name" label="Business Name" rules={[{ required: true, message: "Enter business name" }]}>
-                  <Input placeholder="e.g. Ginie Retail Store" />
-                </Form.Item>
-                <Form.Item name="businessType" label="Business Mode" extra="Switch anytime">
-                  <Select
-                    options={[
-                      { value: "retail", label: "Retail Store" },
-                      { value: "wholesale", label: "Wholesale / B2B" },
-                      { value: "services", label: "Service & Bookings" },
-                    ]}
-                  />
-                </Form.Item>
-              </div>
+          <Card
+            title={
+              <Space>
+                <ShopOutlined style={{ color: "#25D366" }} />
+                <span>Business Details &amp; Catalog</span>
+              </Space>
+            }
+            style={{ borderRadius: 12, marginBottom: 20 }}
+          >
+            <Form form={form} layout="vertical" onFinish={handleSave}>
+              <Row gutter={16}>
+                <Col xs={24} md={12}>
+                  <Form.Item
+                    name="name"
+                    label="Business Name"
+                    rules={[{ required: true, message: "Please enter your business name" }]}
+                  >
+                    <Input placeholder="e.g. Acme Retail" />
+                  </Form.Item>
+                </Col>
 
-              <Form.Item name="phone" label="Store Contact Phone">
-                <Input placeholder="e.g. +91 98765 43210" />
+                <Col xs={24} md={12}>
+                  <Form.Item name="businessType" label="Business Type / Industry" rules={[{ required: true }]}>
+                    <Select
+                      options={[
+                        { label: "Retail Store / Dukaan", value: "retail" },
+                        { label: "Wholesale / B2B Trader", value: "wholesale" },
+                        { label: "Services / Freelancer", value: "services" },
+                      ]}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Row gutter={16}>
+                <Col xs={24} md={12}>
+                  <Form.Item
+                    name="phone"
+                    label="WhatsApp Business Phone"
+                    rules={[{ required: true, message: "Please enter your WhatsApp phone number" }]}
+                  >
+                    <Input placeholder="e.g. +91 98765 43210" />
+                  </Form.Item>
+                </Col>
+
+                <Col xs={24} md={12}>
+                  <Form.Item
+                    name="upiId"
+                    label="Merchant UPI ID (for Invoices &amp; QR)"
+                    extra="Included on WhatsApp Bills, Storefront Checkout &amp; UPI QR"
+                  >
+                    <Input placeholder="e.g. yourstore@ybl or paytmqr...@paytm" />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Form.Item name="address" label="Physical Store Address">
+                <Input.TextArea rows={2} placeholder="e.g. Shop #4, Main Market, MG Road, New Delhi" />
               </Form.Item>
-
-              <Form.Item name="address" label="Store / Office Address">
-                <Input.TextArea rows={2} placeholder="Shop 12, Main Market, MG Road..." />
-              </Form.Item>
-
-              <Form.Item
-                name="upiId"
-                label="Merchant UPI ID (for Bills &amp; Payment Reminders)"
-                extra="Automatically included on WhatsApp Order Bills, Storefront Checkout &amp; Scannable UPI QR Codes"
-              >
-                <Input placeholder="e.g. yourstore@ybl or 9876543210@paytm" />
-              </Form.Item>
-
-              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 12 }}>
-                <Form.Item name="gstin" label="GSTIN (Optional for Invoices)">
-                  <Input placeholder="e.g. 27ABCDE1234F1Z5" />
-                </Form.Item>
-
-                <Form.Item name="gstRate" label="Default GST %">
-                  <Input type="number" min={0} max={28} placeholder="0 or 18" />
-                </Form.Item>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
-                <Form.Item name="deliveryFee" label="Storefront Delivery Fee (₹)">
-                  <Input type="number" min={0} placeholder="0" />
-                </Form.Item>
-                <Form.Item name="couponCode" label="Storefront Coupon Code">
-                  <Input placeholder="e.g. WELCOME10" />
-                </Form.Item>
-                <Form.Item name="couponPercent" label="Coupon Discount %">
-                  <Input type="number" min={0} max={90} placeholder="10" />
-                </Form.Item>
-              </div>
 
               {user?.id && (
                 <Card size="small" style={{ marginBottom: 16, background: "#f0fdf4", borderColor: "#bbf7d0" }}>
@@ -415,123 +729,79 @@ export default function SettingsPage() {
                     <Text strong style={{ color: "#15803d" }}>
                       <ShopOutlined /> Your Public Digital Storefront Link
                     </Text>
-                    <Space wrap>
-                      <Text code>{`https://app.ginie.space/shop/${currentSlug || user.id}`}</Text>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                      <Tag color="green" style={{ fontSize: 13, padding: "4px 8px" }}>
+                        https://app.ginie.space/shop/{currentSlug || user.id}
+                      </Tag>
                       <Button
                         size="small"
                         icon={<CopyOutlined />}
                         onClick={() => {
-                          const url = `${window.location.origin}/shop/${currentSlug || user.id}`;
-                          navigator.clipboard?.writeText(url);
-                          message.success("Storefront link copied!");
+                          const url = `https://app.ginie.space/shop/${currentSlug || user.id}`;
+                          navigator.clipboard.writeText(url);
+                          message.success("Store link copied!");
                         }}
                       >
-                        Copy Link
+                        Copy
                       </Button>
-                    </Space>
+                      <a href={`/shop/${currentSlug || user.id}`} target="_blank" rel="noopener noreferrer">
+                        <Button size="small" type="link">Open Store</Button>
+                      </a>
+                    </div>
                   </Space>
                 </Card>
               )}
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <Form.Item name="slug" label="Custom Store URL Slug (Optional)" extra="e.g. bharat-gold -> /shop/bharat-gold">
-                  <Input placeholder="my-store-name" />
-                </Form.Item>
-
-                <Form.Item label="Store Logo (JPG max 60 KB)">
-                  <Space>
-                    {logoPreview && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={logoPreview} alt="Logo" style={{ width: 38, height: 38, borderRadius: 8, objectFit: "cover", border: "1px solid #d9d9d9" }} />
-                    )}
-                    <Upload
-                      accept=".jpg,.jpeg,image/jpeg"
-                      showUploadList={false}
-                      beforeUpload={async (file) => {
-                        if (file.size > 60 * 1024) {
-                          message.error("Logo JPG size must be under 60 KB");
-                          return Upload.LIST_IGNORE;
-                        }
-                        try {
-                          const compressed = await compressLogoJpg(file);
-                          setLogoPreview(compressed);
-                          message.success("Store logo ready!");
-                        } catch (e: any) {
-                          message.error(e.message || "Invalid JPG");
-                        }
-                        return false;
-                      }}
-                    >
-                      <Button icon={<UploadOutlined />}>{logoPreview ? "Change Logo" : "Upload Logo"}</Button>
-                    </Upload>
-                    {logoPreview && <Button danger size="small" onClick={() => setLogoPreview("")}>Clear</Button>}
-                  </Space>
-                </Form.Item>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 12 }}>
-                <Form.Item name="isOpen" label="Store Open for Orders" valuePropName="checked">
-                  <Switch checkedChildren="OPEN" unCheckedChildren="CLOSED" />
-                </Form.Item>
-                <Form.Item name="closedMessage" label="Closed / Away Notice">
-                  <Input placeholder="Store is closed right now. Opening tomorrow at 9 AM!" />
-                </Form.Item>
-              </div>
-
-              <Divider />
-
-              <Title level={5}>WhatsApp Automation &amp; Reports</Title>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
-                <Form.Item
-                  name="autoReply"
-                  label="Welcome Greeting"
-                  valuePropName="checked"
-                >
-                  <Switch />
-                </Form.Item>
-                <Form.Item
-                  name="smartKeywordBot"
-                  label="Catalog / Order Status Bot"
-                  valuePropName="checked"
-                >
-                  <Switch />
-                </Form.Item>
-                <Form.Item
-                  name="dailySummaryEnabled"
-                  label="Nightly 9 PM Report"
-                  valuePropName="checked"
-                >
-                  <Switch />
-                </Form.Item>
-              </div>
-
               <Form.Item
-                name="welcomeMessage"
-                label="Automated Greeting for First-Time Callers"
+                name="slug"
+                label="Custom Storefront URL Slug"
+                extra="Create a branded short link (e.g. entering 'mydukaan' gives app.ginie.space/shop/mydukaan)"
               >
-                <Input.TextArea
-                  rows={3}
-                  placeholder="Hello! Thank you for reaching out to us on WhatsApp. How can we assist you today?"
-                />
+                <Input addonBefore="app.ginie.space/shop/" placeholder="e.g. modern-store" />
               </Form.Item>
 
-              <Form.Item style={{ marginTop: 24 }}>
+              <Row gutter={16}>
+                <Col xs={24} md={12}>
+                  <Form.Item name="gstin" label="GSTIN (Optional)">
+                    <Input placeholder="e.g. 07AAAAA0000A1Z5" maxLength={15} />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item name="deliveryFee" label="Flat Delivery Fee (₹)">
+                    <Input type="number" min={0} placeholder="0 for Free Delivery" />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, background: "#f8fafc", padding: "10px 14px", borderRadius: 8 }}>
+                <div>
+                  <Text strong>Store Open / Closed Toggle</Text>
+                  <div style={{ fontSize: 12, color: "#64748b" }}>Mark closed during holidays or renovations</div>
+                </div>
+                <Form.Item name="isOpen" valuePropName="checked" noStyle>
+                  <Switch checkedChildren="Open" unCheckedChildren="Closed" />
+                </Form.Item>
+              </div>
+
+              <Form.Item style={{ marginTop: 20 }}>
                 <Button
                   type="primary"
                   htmlType="submit"
                   icon={<SaveOutlined />}
                   loading={saving}
                   size="large"
-                  style={{ background: "#25D366", borderColor: "#25D366", fontWeight: 600 }}
+                  style={{ background: "#25D366", borderColor: "#25D366", fontWeight: 600, width: "100%" }}
                 >
-                  Save Settings
+                  Save Business Details
                 </Button>
               </Form.Item>
             </Form>
           </Card>
         </Col>
 
+        {/* RIGHT COLUMN: WhatsApp Connection, Security, Staff */}
         <Col xs={24} lg={10}>
+          {/* WhatsApp Connection Card */}
           <Card
             title={
               <Space>
@@ -542,7 +812,7 @@ export default function SettingsPage() {
             style={{ borderRadius: 12, marginBottom: 20 }}
           >
             <Paragraph type="secondary" style={{ fontSize: 13 }}>
-              Apne business ka khud ka WhatsApp yahan link karein taaki aap Live Inbox me apne customers ko direct message aur order bills bhej sakein.
+              Apne business ka WhatsApp link karein taaki aap Live Inbox me customers ko direct message aur automated bills bhej sakein.
             </Paragraph>
 
             <div style={{ marginBottom: 16 }}>
@@ -553,7 +823,7 @@ export default function SettingsPage() {
                 </Tag>
               ) : waStatus === "connecting" ? (
                 <Tag icon={<SyncOutlined spin />} color="warning" style={{ padding: "5px 12px", fontSize: 13 }}>
-                  Connecting... Scan QR
+                  Connecting... Scan QR Code
                 </Tag>
               ) : (
                 <Tag icon={<CloseCircleOutlined />} color="error" style={{ padding: "5px 12px", fontSize: 13 }}>
@@ -564,251 +834,585 @@ export default function SettingsPage() {
 
             <Space wrap>
               {waStatus === "connected" ? (
-                <Button danger onClick={handleDisconnectWhatsApp}>
-                  Disconnect My WhatsApp
-                </Button>
+                <Popconfirm
+                  title="Disconnect your WhatsApp?"
+                  description="Aapke WhatsApp se live messaging pause ho jayegi."
+                  onConfirm={handleDisconnect}
+                  okText="Yes, Disconnect"
+                  cancelText="Cancel"
+                  okButtonProps={{ danger: true }}
+                >
+                  <Button danger>Disconnect WhatsApp</Button>
+                </Popconfirm>
               ) : (
                 <Button
                   type="primary"
                   icon={<QrcodeOutlined />}
                   loading={connecting}
-                  onClick={handleConnectWhatsApp}
+                  onClick={handleConnect}
                   style={{ background: "#25D366", borderColor: "#25D366", fontWeight: 600 }}
                 >
-                  Scan QR & Link My WhatsApp
+                  Link My WhatsApp
                 </Button>
               )}
+
               {waStatus === "connecting" && (
-                <Button onClick={() => setQrModalVisible(true)}>View QR</Button>
+                <Button onClick={() => setQrModalVisible(true)} icon={<QrcodeOutlined />}>
+                  View QR Code
+                </Button>
               )}
             </Space>
           </Card>
 
+          {/* Plan Quotas & PRO Upgrade */}
+          {planUsage && (
+            <Card
+              title={
+                <Space>
+                  <CrownOutlined style={{ color: "#faad14" }} />
+                  <span>Subscription Tier &amp; Limits</span>
+                </Space>
+              }
+              style={{ borderRadius: 12, marginBottom: 20 }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <Text strong>Current Plan:</Text>
+                <Tag color={planUsage.plan === "pro" ? "gold" : "default"} style={{ fontWeight: 700, padding: "2px 8px" }}>
+                  {planUsage.plan === "pro" ? "👑 PRO ACTIVE" : "FREE PLAN"}
+                </Tag>
+              </div>
+
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
+                  <span>Catalog Products</span>
+                  <span>{planUsage.usage?.productsCount || 0} / {planUsage.limits?.maxProducts || 50}</span>
+                </div>
+                <Progress percent={Math.round(((planUsage.usage?.productsCount || 0) / (planUsage.limits?.maxProducts || 50)) * 100)} size="small" status="active" />
+              </div>
+
+              {planUsage.plan !== "pro" && (
+                <Button
+                  block
+                  type="primary"
+                  icon={<CrownOutlined />}
+                  onClick={() => setUpgradeModalOpen(true)}
+                  style={{ background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", borderColor: "#d97706", fontWeight: 700 }}
+                >
+                  Upgrade to PRO (₹99 / Mo)
+                </Button>
+              )}
+            </Card>
+          )}
+
+          {/* Change Password Card */}
           <Card
             title={
               <Space>
-                <LockOutlined style={{ color: "#15803d" }} />
-                <span>Account Security — Change Password</span>
+                <LockOutlined style={{ color: "#1677ff" }} />
+                <span>Security &amp; Password</span>
               </Space>
             }
             style={{ borderRadius: 12, marginBottom: 20 }}
           >
             <Form form={passwordForm} layout="vertical" onFinish={handleChangePassword}>
-              <Form.Item
-                name="currentPassword"
-                label="Current Password"
-                rules={[{ required: true, message: "Enter current password" }]}
-              >
-                <Input.Password placeholder="Current password" />
+              <Form.Item name="currentPassword" label="Current Password" rules={[{ required: true }]}>
+                <Input.Password placeholder="Enter current password" />
               </Form.Item>
-              <Form.Item
-                name="newPassword"
-                label="New Password"
-                rules={[
-                  { required: true, message: "Enter new password" },
-                  { min: 6, message: "Minimum 6 characters required" },
-                ]}
-              >
-                <Input.Password placeholder="At least 6 characters" />
+              <Form.Item name="newPassword" label="New Password" rules={[{ required: true, min: 6 }]}>
+                <Input.Password placeholder="Min 6 characters" />
               </Form.Item>
-              <Form.Item
-                name="confirmPassword"
-                label="Confirm New Password"
-                rules={[{ required: true, message: "Confirm new password" }]}
-              >
-                <Input.Password placeholder="Repeat new password" />
-              </Form.Item>
-              <Button type="primary" htmlType="submit" loading={changingPassword} block>
-                Update Password
+              <Button type="primary" htmlType="submit" loading={changingPassword}>
+                Change Password
               </Button>
             </Form>
           </Card>
+        </Col>
 
-          <Alert
-            type="info"
-            showIcon
-            message="GinieSpace Official Support Helpline"
-            description="Platform alerts, system notifications, aur support queries ke liye official helpline number +91 9279259690 hai."
-            style={{ borderRadius: 12, marginBottom: 20 }}
-          />
-
-          {planUsage && (
+        {/* ======================================================== */}
+        {/* FULL-WIDTH DEDICATED SECTION: WHATSAPP AUTO-REPLY HUB */}
+        {/* ======================================================== */}
+        <Col xs={24}>
+          <div id="autoreply">
             <Card
               title={
-                <Space>
-                  <CrownOutlined style={{ color: planUsage.plan === "pro" ? "#d97706" : "#64748b" }} />
-                  <span>Workspace Plan &amp; Quotas</span>
-                  <Tag color={planUsage.plan === "pro" ? "gold" : "blue"}>{planUsage.plan.toUpperCase()}</Tag>
-                </Space>
-              }
-              style={{ borderRadius: 12, marginBottom: 20 }}
-            >
-              <Space direction="vertical" style={{ width: "100%" }} size={12}>
-                {planUsage.subscriptionStatus === "pending" && (
-                  <Alert
-                    type="warning"
-                    showIcon
-                    message="PRO Upgrade Under Verification"
-                    description={
-                      <div style={{ fontSize: 12 }}>
-                        Aapka payment UTR <strong>{planUsage.paymentUtr}</strong> admin review me hai. Confirm hote hi PRO plan activate ho jayega!
-                      </div>
-                    }
-                  />
-                )}
-
-                {planUsage.plan === "pro" && planUsage.planExpiresAt && (
-                  <div style={{ background: "#fef3c7", padding: "8px 12px", borderRadius: 8, border: "1px solid #fde68a" }}>
-                    <Text strong style={{ color: "#92400e", fontSize: 13 }}>
-                      👑 PRO Plan Active
-                    </Text>
-                    <div style={{ fontSize: 12, color: "#b45309" }}>
-                      Valid Till: <strong>{new Date(planUsage.planExpiresAt).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</strong>
-                    </div>
-                  </div>
-                )}
-
-                <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
-                    <span>Catalog Items</span>
-                    <span>{planUsage.usage.productsCount} / {planUsage.plan === "pro" ? "Unlimited" : planUsage.limits.maxProducts}</span>
-                  </div>
-                  {planUsage.plan === "free" && (
-                    <Progress percent={Math.min(100, Math.round((planUsage.usage.productsCount / planUsage.limits.maxProducts) * 100))} size="small" />
-                  )}
-                </div>
-                <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
-                    <span>Saved B2B Leads</span>
-                    <span>{planUsage.usage.leadsCount} / {planUsage.plan === "pro" ? "Unlimited" : planUsage.limits.maxLeads}</span>
-                  </div>
-                  {planUsage.plan === "free" && (
-                    <Progress percent={Math.min(100, Math.round((planUsage.usage.leadsCount / planUsage.limits.maxLeads) * 100))} size="small" />
-                  )}
-                </div>
-                <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
-                    <span>Team Staff Accounts</span>
-                    <span>{planUsage.usage.staffCount} / {planUsage.limits.maxStaff}</span>
-                  </div>
-                </div>
-
-                {planUsage.plan === "free" ? (
-                  <div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, width: "100%" }}>
+                  <Space size={8}>
+                    <RobotOutlined style={{ color: "#25D366", fontSize: 22 }} />
+                    <span style={{ fontWeight: 800, fontSize: 16 }}>WhatsApp Auto-Reply &amp; Smart Bot Rule Center</span>
+                    <Badge count={customRules.filter((r) => r.enabled).length} style={{ backgroundColor: "#25D366" }} />
+                  </Space>
+                  <Space size={8}>
                     <Button
                       type="primary"
-                      icon={<CrownOutlined />}
-                      block
-                      size="large"
-                      onClick={() => setUpgradeModalOpen(true)}
+                      icon={<PlusOutlined />}
+                      onClick={handleOpenAddRuleModal}
+                      style={{ background: "#25D366", borderColor: "#25D366", fontWeight: 600 }}
+                    >
+                      Add Custom Rule
+                    </Button>
+                    <Button
+                      icon={<SaveOutlined />}
+                      loading={savingAutoReply}
+                      onClick={() => handleSaveAutoReplyOnly()}
+                    >
+                      Save Bot Rules
+                    </Button>
+                  </Space>
+                </div>
+              }
+              styles={{ body: { padding: 20 } }}
+              style={{ borderRadius: 12, marginBottom: 24, border: "2px solid #bbf7d0", boxShadow: "0 4px 12px rgba(37,211,102,0.06)" }}
+            >
+              <Row gutter={[24, 24]}>
+                {/* RULES BUILDER & SETTINGS (Left 15 cols) */}
+                <Col xs={24} xl={15}>
+                  {/* Subsection 1: Custom Keyword Rules Table */}
+                  <div style={{ marginBottom: 24 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                      <div>
+                        <Text strong style={{ fontSize: 15, color: "#0f172a" }}>
+                          🎯 Custom Keyword Auto-Responder Rules
+                        </Text>
+                        <Text type="secondary" style={{ display: "block", fontSize: 12 }}>
+                          Jab bhi customer in keywords ko bhejega, bot automatically aapka custom message ya photo bhej dega.
+                        </Text>
+                      </div>
+                    </div>
+
+                    <Table
+                      dataSource={customRules}
+                      rowKey="id"
+                      pagination={false}
+                      scroll={{ x: 650 }}
+                      size="small"
+                      columns={[
+                        {
+                          title: "Rule Name",
+                          key: "name",
+                          render: (_: any, r: AutoReplyCustomRule) => (
+                            <div>
+                              <Text strong>{r.name}</Text>
+                              <div>
+                                <Tag color={r.matchType === "exact" ? "purple" : "blue"} style={{ fontSize: 10, margin: 0 }}>
+                                  {r.matchType === "exact" ? "EXACT WORD" : "CONTAINS"}
+                                </Tag>
+                              </div>
+                            </div>
+                          ),
+                        },
+                        {
+                          title: "Trigger Keywords",
+                          key: "keywords",
+                          render: (_: any, r: AutoReplyCustomRule) => (
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                              {r.keywords.map((kw, idx) => (
+                                <Tag key={idx} color="geekblue" style={{ margin: 0, fontSize: 11 }}>
+                                  {kw}
+                                </Tag>
+                              ))}
+                            </div>
+                          ),
+                        },
+                        {
+                          title: "Auto-Reply Preview",
+                          key: "replyText",
+                          render: (_: any, r: AutoReplyCustomRule) => (
+                            <div style={{ maxWidth: 220 }}>
+                              <div style={{ fontSize: 12, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                {r.replyText}
+                              </div>
+                              {r.imageUrl && (
+                                <Tag icon={<PictureOutlined />} color="green" style={{ fontSize: 10, marginTop: 2 }}>
+                                  Photo Attached
+                                </Tag>
+                              )}
+                            </div>
+                          ),
+                        },
+                        {
+                          title: "Status",
+                          key: "status",
+                          align: "center",
+                          render: (_: any, r: AutoReplyCustomRule) => (
+                            <Switch
+                              size="small"
+                              checked={r.enabled !== false}
+                              onChange={(chk) => handleToggleRuleStatus(r.id, chk)}
+                            />
+                          ),
+                        },
+                        {
+                          title: "Actions",
+                          key: "actions",
+                          align: "right",
+                          render: (_: any, r: AutoReplyCustomRule) => (
+                            <Space size={4}>
+                              <Tooltip title="Edit Rule">
+                                <Button
+                                  size="small"
+                                  icon={<EditOutlined />}
+                                  onClick={() => handleOpenEditRuleModal(r)}
+                                />
+                              </Tooltip>
+                              <Popconfirm
+                                title="Delete this auto-reply rule?"
+                                onConfirm={() => handleDeleteRule(r.id)}
+                                okText="Delete"
+                                okButtonProps={{ danger: true }}
+                              >
+                                <Button size="small" danger icon={<DeleteOutlined />} />
+                              </Popconfirm>
+                            </Space>
+                          ),
+                        },
+                      ]}
+                    />
+                  </div>
+
+                  <Divider style={{ margin: "20px 0" }} />
+
+                  {/* Subsection 2: Business Working Hours & Away Responder */}
+                  <div style={{ marginBottom: 24, background: "#f8fafc", padding: 16, borderRadius: 10, border: "1px solid #e2e8f0" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                      <div>
+                        <Text strong style={{ fontSize: 14 }}>
+                          <ClockCircleOutlined style={{ color: "#3b82f6", marginRight: 6 }} />
+                          Business Working Hours &amp; Off-Hours Away Responder
+                        </Text>
+                        <Text type="secondary" style={{ display: "block", fontSize: 12 }}>
+                          Working hours ke baad message karne wale customers ko automatically store closed notice bhejein.
+                        </Text>
+                      </div>
+                      <Switch
+                        checked={workingHours.enabled}
+                        onChange={(chk) => {
+                          const nextWh = { ...workingHours, enabled: chk };
+                          setWorkingHours(nextWh);
+                        }}
+                      />
+                    </div>
+
+                    {workingHours.enabled && (
+                      <div style={{ marginTop: 14 }}>
+                        <Row gutter={12} style={{ marginBottom: 12 }}>
+                          <Col xs={12} sm={6}>
+                            <Text style={{ fontSize: 12, display: "block", marginBottom: 4 }}>Opening Time:</Text>
+                            <Select
+                              value={workingHours.openTime}
+                              onChange={(val) => setWorkingHours({ ...workingHours, openTime: val })}
+                              style={{ width: "100%" }}
+                              options={[
+                                { label: "07:00 AM", value: "07:00" },
+                                { label: "08:00 AM", value: "08:00" },
+                                { label: "09:00 AM", value: "09:00" },
+                                { label: "10:00 AM", value: "10:00" },
+                                { label: "11:00 AM", value: "11:00" },
+                              ]}
+                            />
+                          </Col>
+                          <Col xs={12} sm={6}>
+                            <Text style={{ fontSize: 12, display: "block", marginBottom: 4 }}>Closing Time:</Text>
+                            <Select
+                              value={workingHours.closeTime}
+                              onChange={(val) => setWorkingHours({ ...workingHours, closeTime: val })}
+                              style={{ width: "100%" }}
+                              options={[
+                                { label: "06:00 PM", value: "18:00" },
+                                { label: "07:00 PM", value: "19:00" },
+                                { label: "08:00 PM", value: "20:00" },
+                                { label: "09:00 PM", value: "21:00" },
+                                { label: "10:00 PM", value: "22:00" },
+                                { label: "11:00 PM", value: "23:00" },
+                              ]}
+                            />
+                          </Col>
+                          <Col xs={24} sm={12}>
+                            <Text style={{ fontSize: 12, display: "block", marginBottom: 4 }}>Working Days:</Text>
+                            <Checkbox.Group
+                              value={workingHours.days}
+                              onChange={(val: any) => setWorkingHours({ ...workingHours, days: val })}
+                              options={[
+                                { label: "Mon", value: 1 },
+                                { label: "Tue", value: 2 },
+                                { label: "Wed", value: 3 },
+                                { label: "Thu", value: 4 },
+                                { label: "Fri", value: 5 },
+                                { label: "Sat", value: 6 },
+                                { label: "Sun", value: 0 },
+                              ]}
+                            />
+                          </Col>
+                        </Row>
+
+                        <Text style={{ fontSize: 12, display: "block", marginBottom: 4 }}>Off-Hours Automated Message:</Text>
+                        <Input.TextArea
+                          rows={2}
+                          value={workingHours.awayMessage}
+                          onChange={(e) => setWorkingHours({ ...workingHours, awayMessage: e.target.value })}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Subsection 3: Smart Built-In Bots & Fallback */}
+                  <div style={{ background: "#f8fafc", padding: 16, borderRadius: 10, border: "1px solid #e2e8f0" }}>
+                    <Text strong style={{ fontSize: 14, display: "block", marginBottom: 12 }}>
+                      <BulbOutlined style={{ color: "#faad14", marginRight: 6 }} />
+                      Smart Built-in Bots &amp; Navigation Menu
+                    </Text>
+
+                    <Row gutter={[16, 16]}>
+                      <Col xs={24} md={12}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <div>
+                            <Text strong style={{ fontSize: 13 }}>Smart Catalog &amp; Rate List Bot</Text>
+                            <div style={{ fontSize: 11, color: "#64748b" }}>Replies with products when asked for "price", "catalog", "menu"</div>
+                          </div>
+                          <Form.Item name="smartKeywordBot" valuePropName="checked" noStyle>
+                            <Switch />
+                          </Form.Item>
+                        </div>
+                      </Col>
+
+                      <Col xs={24} md={12}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <div>
+                            <Text strong style={{ fontSize: 13 }}>First-time Welcome Greeting</Text>
+                            <div style={{ fontSize: 11, color: "#64748b" }}>Greeting on first contact (24h cooldown)</div>
+                          </div>
+                          <Form.Item name="autoReply" valuePropName="checked" noStyle>
+                            <Switch />
+                          </Form.Item>
+                        </div>
+                      </Col>
+
+                      <Col xs={24}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                          <div>
+                            <Text strong style={{ fontSize: 13 }}>Fallback Navigation Menu</Text>
+                            <div style={{ fontSize: 11, color: "#64748b" }}>Unknown query par menu option send karein</div>
+                          </div>
+                          <Switch
+                            checked={fallbackReply.enabled}
+                            onChange={(chk) => setFallbackReply({ ...fallbackReply, enabled: chk })}
+                          />
+                        </div>
+                        {fallbackReply.enabled && (
+                          <Input.TextArea
+                            rows={3}
+                            value={fallbackReply.message}
+                            onChange={(e) => setFallbackReply({ ...fallbackReply, message: e.target.value })}
+                            placeholder="Enter navigation menu options..."
+                          />
+                        )}
+                      </Col>
+                    </Row>
+                  </div>
+                </Col>
+
+                {/* SIMULATOR & PHONE PREVIEW (Right 9 cols) */}
+                <Col xs={24} xl={9}>
+                  <Card
+                    styles={{ body: { padding: 14 } }}
+                    style={{
+                      borderRadius: 14,
+                      background: "#efeae2",
+                      border: "1px solid #d1d5db",
+                      boxShadow: "0 4px 14px rgba(0,0,0,0.06)",
+                    }}
+                  >
+                    {/* Simulated Phone Header */}
+                    <div
                       style={{
-                        marginTop: 4,
-                        background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
-                        borderColor: "#f59e0b",
-                        fontWeight: 700,
-                        boxShadow: "0 4px 12px rgba(245, 158, 11, 0.25)",
+                        background: "#075e54",
+                        color: "#fff",
+                        padding: "10px 14px",
+                        borderRadius: "10px 10px 0 0",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
                       }}
                     >
-                      👑 Upgrade to PRO (₹99/month)
-                    </Button>
-                    <div style={{ textAlign: "center", marginTop: 8 }}>
-                      <Text type="secondary" style={{ fontSize: 11 }}>
-                        Unlock unlimited catalog, leads, 5 staff accounts &amp; verified badge!
-                      </Text>
+                      <Space size={8}>
+                        <Avatar style={{ backgroundColor: "#25D366" }} icon={<ShopOutlined />} />
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: 13 }}>
+                            {form.getFieldValue("name") || "My Store"}
+                          </div>
+                          <div style={{ fontSize: 10, color: "#a7f3d0" }}>Online · Automated Bot Active</div>
+                        </div>
+                      </Space>
+                      <Tag color="success" style={{ margin: 0, fontSize: 10 }}>BOT LIVE</Tag>
                     </div>
-                  </div>
-                ) : (
-                  <Button
-                    icon={<CrownOutlined />}
-                    block
-                    onClick={() => setUpgradeModalOpen(true)}
-                    style={{ borderColor: "#f59e0b", color: "#b45309" }}
-                  >
-                    Extend / Renew PRO Plan
-                  </Button>
-                )}
-              </Space>
+
+                    {/* Simulated Message Stream */}
+                    <div
+                      style={{
+                        padding: 12,
+                        minHeight: 340,
+                        maxHeight: 380,
+                        overflowY: "auto",
+                        backgroundImage: "radial-gradient(#e5ddd5 1px, transparent 1px)",
+                        backgroundSize: "16px 16px",
+                      }}
+                    >
+                      {simulatorLogs.map((log, idx) => (
+                        <div
+                          key={idx}
+                          style={{
+                            display: "flex",
+                            justifyContent: log.fromUser ? "flex-end" : "flex-start",
+                            marginBottom: 10,
+                          }}
+                        >
+                          <div
+                            style={{
+                              maxWidth: "85%",
+                              padding: "8px 12px",
+                              borderRadius: 10,
+                              background: log.fromUser ? "#dcf8c6" : "#ffffff",
+                              boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+                              fontSize: 12,
+                              color: "#1f2937",
+                            }}
+                          >
+                            {!log.fromUser && (
+                              <div style={{ fontSize: 10, fontWeight: 700, color: "#059669", marginBottom: 2 }}>
+                                🤖 Auto-Reply
+                              </div>
+                            )}
+
+                            {log.image && (
+                              <div style={{ marginBottom: 4 }}>
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={log.image} alt="Attachment" style={{ maxWidth: 160, maxHeight: 110, borderRadius: 6, display: "block" }} />
+                              </div>
+                            )}
+
+                            <div style={{ whiteSpace: "pre-wrap" }}>{log.text}</div>
+                            <div style={{ fontSize: 9, color: "#9ca3af", textAlign: "right", marginTop: 3 }}>
+                              {log.time} {log.fromUser ? "✓✓" : ""}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Simulator Input Box */}
+                    <div style={{ background: "#f0f2f5", padding: "8px 10px", borderRadius: "0 0 10px 10px", borderTop: "1px solid #e5e7eb" }}>
+                      <Text type="secondary" style={{ fontSize: 11, display: "block", marginBottom: 4 }}>
+                        💡 Try typing: <strong>location</strong>, <strong>upi</strong>, <strong>catalog</strong>, or <strong>hi</strong>:
+                      </Text>
+                      <Space.Compact style={{ width: "100%" }}>
+                        <Input
+                          placeholder="Type customer question to test bot..."
+                          value={simulatorInput}
+                          onChange={(e) => setSimulatorInput(e.target.value)}
+                          onPressEnter={() => handleSimulateMessage(simulatorInput)}
+                        />
+                        <Button
+                          type="primary"
+                          icon={<SendOutlined />}
+                          style={{ background: "#25D366", borderColor: "#25D366" }}
+                          onClick={() => handleSimulateMessage(simulatorInput)}
+                        >
+                          Test
+                        </Button>
+                      </Space.Compact>
+                    </div>
+                  </Card>
+                </Col>
+              </Row>
             </Card>
-          )}
+          </div>
         </Col>
       </Row>
 
-      {user?.role !== "staff" && (
-        <Card
-          title={
-            <Space>
-              <TeamOutlined style={{ color: "#0284c7" }} />
-              <span>Team &amp; Staff Accounts</span>
-            </Space>
-          }
-          style={{ borderRadius: 12, marginTop: 20 }}
-        >
-          <Row gutter={[20, 20]}>
-            <Col xs={24} lg={10}>
-              <Form form={staffForm} layout="vertical" onFinish={handleCreateStaff} initialValues={{ staffPermissions: ["orders", "inbox", "customers"] }}>
-                <Form.Item name="name" label="Staff Name" rules={[{ required: true }]}>
-                  <Input placeholder="e.g. Raju (Billing / Delivery)" />
-                </Form.Item>
-                <Form.Item name="email" label="Staff Login Email" rules={[{ required: true, type: "email" }]}>
-                  <Input placeholder="raju@mystore.com" />
-                </Form.Item>
-                <Form.Item name="password" label="Staff Password" rules={[{ required: true, min: 6 }]}>
-                  <Input.Password placeholder="Min 6 characters" />
-                </Form.Item>
-                <Form.Item name="staffPermissions" label="Allowed Sections">
-                  <Checkbox.Group
-                    options={[
-                      { label: "Orders", value: "orders" },
-                      { label: "Live Inbox", value: "inbox" },
-                      { label: "Customers", value: "customers" },
-                      { label: "Catalog", value: "products" },
-                      { label: "Leads", value: "leads" },
-                    ]}
-                  />
-                </Form.Item>
-                <Button type="primary" htmlType="submit" icon={<UserAddOutlined />} loading={creatingStaff}>
-                  Create Staff Login
-                </Button>
-              </Form>
-            </Col>
-            <Col xs={24} lg={14}>
-              <Table
-                dataSource={staffList}
-                rowKey="id"
-                size="small"
-                pagination={false}
-                locale={{ emptyText: "No staff members added yet." }}
-                columns={[
-                  { title: "Name", dataIndex: "name", key: "name" },
-                  { title: "Email", dataIndex: "email", key: "email" },
-                  {
-                    title: "Permissions",
-                    dataIndex: "staffPermissions",
-                    key: "perms",
-                    render: (p: string) =>
-                      String(p || "")
-                        .split(",")
-                        .filter(Boolean)
-                        .map((x) => <Tag key={x}>{x}</Tag>),
-                  },
-                  {
-                    title: "Action",
-                    key: "act",
-                    render: (_: any, r: any) => (
-                      <Popconfirm title="Remove staff access?" onConfirm={() => handleDeleteStaff(r.id)}>
-                        <Button size="small" danger icon={<DeleteOutlined />} />
-                      </Popconfirm>
-                    ),
-                  },
-                ]}
-              />
-            </Col>
-          </Row>
-        </Card>
-      )}
-
+      {/* Modal: Create or Edit Auto-Reply Rule */}
       <Modal
-        title="Link Your Store WhatsApp"
+        title={
+          <Space>
+            <RobotOutlined style={{ color: "#25D366" }} />
+            <span>{editingRule ? "Edit Auto-Reply Rule" : "Create New WhatsApp Auto-Reply Rule"}</span>
+          </Space>
+        }
+        open={ruleModalOpen}
+        onCancel={() => setRuleModalOpen(false)}
+        onOk={handleSaveRuleModal}
+        okText="Save Rule"
+        centered
+        width={540}
+      >
+        <Form form={ruleForm} layout="vertical">
+          <Form.Item
+            name="name"
+            label="Rule Name / Purpose"
+            rules={[{ required: true, message: "Enter rule name (e.g. Store Location & Map)" }]}
+          >
+            <Input placeholder="e.g. Store Location, UPI Payment Details, Discount Offer" />
+          </Form.Item>
+
+          <Form.Item
+            name="keywords"
+            label="Trigger Keywords"
+            extra="Comma-separated words that trigger this auto-reply (e.g. location, address, map, kahan hai)"
+            rules={[{ required: true, message: "Enter at least one keyword" }]}
+          >
+            <Input
+              placeholder="location, address, map, kahan hai, dukaan"
+              value={ruleKeywordsInput}
+              onChange={(e) => setRuleKeywordsInput(e.target.value)}
+            />
+          </Form.Item>
+
+          <Form.Item name="matchType" label="Keyword Matching Mode" initialValue="contains">
+            <Radio.Group>
+              <Radio value="contains">
+                <strong>Contains Keyword</strong> (Triggers if keyword is anywhere in message)
+              </Radio>
+              <Radio value="exact">
+                <strong>Exact Match</strong> (Customer sends only this exact word)
+              </Radio>
+            </Radio.Group>
+          </Form.Item>
+
+          <Form.Item
+            name="replyText"
+            label="Automated Response Message"
+            rules={[{ required: true, message: "Enter response text" }]}
+            extra="Supports dynamic variables: {store_name}, {catalog_link}, {phone}"
+          >
+            <Input.TextArea
+              rows={4}
+              placeholder="Namaste! Hamari dukaan yahan sthit hai: {store_name}, Main Market. Catalog dekhein: {catalog_link}"
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="imageUrl"
+            label="Optional Photo Attachment URL"
+            extra="Attach a public image (e.g. UPI QR code image, menu photo, or shop picture)"
+          >
+            <Input placeholder="https://example.com/upi-qr.jpg" prefix={<PictureOutlined />} allowClear />
+          </Form.Item>
+
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <Text strong>Enable this rule immediately:</Text>
+            <Form.Item name="enabled" valuePropName="checked" noStyle initialValue={true}>
+              <Switch />
+            </Form.Item>
+          </div>
+        </Form>
+      </Modal>
+
+      {/* QR Code Modal for Merchant WhatsApp */}
+      <Modal
+        title={
+          <Space>
+            <PhoneOutlined style={{ color: "#25D366" }} />
+            <span>Link Your Store WhatsApp</span>
+          </Space>
+        }
         open={qrModalVisible}
         onCancel={() => setQrModalVisible(false)}
         footer={null}
@@ -817,35 +1421,32 @@ export default function SettingsPage() {
       >
         <div style={{ textAlign: "center", padding: "20px 0" }}>
           <p style={{ color: "#595959", marginBottom: 20 }}>
-            Open WhatsApp on your phone $\rightarrow$ Settings $\rightarrow$ <strong>Linked Devices</strong> $\rightarrow$ <strong>Link a Device</strong> and scan this QR code.
+            Open WhatsApp on your phone -&gt; Settings -&gt; <strong>Linked Devices</strong> -&gt; <strong>Link a Device</strong> and scan this QR code.
           </p>
           {qrCode ? (
             <div style={{ display: "inline-block", padding: 12, border: "2px solid #25D366", borderRadius: 12, background: "#fff" }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={qrCode} alt="WhatsApp QR Code" style={{ width: 240, height: 240, display: "block" }} />
+              <img src={qrCode} alt="WhatsApp QR Code" style={{ width: 250, height: 250, display: "block" }} />
             </div>
           ) : (
-            <div style={{ height: 240, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12 }}>
+            <div style={{ height: 250, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12 }}>
               <Spin size="large" />
               <Text type="secondary">Generating secure QR code...</Text>
             </div>
           )}
           <div style={{ marginTop: 20 }}>
-            <Button onClick={handleConnectWhatsApp} icon={<SyncOutlined />} loading={connecting}>
+            <Button onClick={handleConnect} icon={<SyncOutlined />} loading={connecting}>
               Refresh QR Code
             </Button>
           </div>
         </div>
       </Modal>
 
+      {/* Upgrade to Pro Modal */}
       <UpgradeModal
         open={upgradeModalOpen}
         onClose={() => setUpgradeModalOpen(false)}
-        onSuccess={() => {
-          setUpgradeModalOpen(false);
-          fetchPlanUsage();
-        }}
-        currentPlan={planUsage?.plan}
+        currentPlan={planUsage?.plan || "free"}
       />
     </AppLayout>
   );

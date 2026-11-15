@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { AppLayout } from "../../components/AppLayout";
 import {
   Card,
@@ -32,6 +33,7 @@ import {
   DeleteOutlined,
   PictureOutlined,
   CloseCircleOutlined,
+  RobotOutlined,
 } from "@ant-design/icons";
 import { getSocket } from "../../lib/socket";
 import { api } from "../../lib/api";
@@ -87,6 +89,7 @@ function normalizePhoneKey(raw: string): string {
 }
 
 export default function InboxPage() {
+  const router = useRouter();
   const screens = Grid.useBreakpoint();
   const isMobile = screens.md === false;
   const [conversations, setConversations] = useState<Map<string, Conversation>>(new Map());
@@ -514,7 +517,18 @@ export default function InboxPage() {
           styles={{ body: { padding: 0 } }}
         >
           <div style={{ padding: "14px 16px", borderBottom: "1px solid #f0f0f0" }}>
-            <Title level={5} style={{ margin: 0 }}>Conversations</Title>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <Title level={5} style={{ margin: 0 }}>Conversations</Title>
+              <Button
+                type="link"
+                size="small"
+                icon={<RobotOutlined style={{ color: "#25D366" }} />}
+                onClick={() => router.push("/settings#autoreply")}
+                style={{ padding: 0, fontWeight: 600, color: "#047857", fontSize: 12 }}
+              >
+                Auto-Reply Rules
+              </Button>
+            </div>
             <Text type="secondary" style={{ fontSize: 12, display: "block", marginBottom: 10 }}>
               Real-time WhatsApp messages (Cloud Synced)
             </Text>
