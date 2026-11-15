@@ -184,6 +184,45 @@ export interface TranslationDictionary {
     disclaimer: string;
     copyright: string;
     helpline: string;
+    operatingAddress: string;
+    workingHours: string;
+  };
+  trustStats: {
+    upiVolume: string;
+    upiVolumeSub: string;
+    merchantsCount: string;
+    merchantsSub: string;
+    commissionRate: string;
+    commissionSub: string;
+    satisfactionRating: string;
+    satisfactionSub: string;
+  };
+  securityShield: {
+    tag: string;
+    title: string;
+    subtitle: string;
+    p1Title: string;
+    p1Desc: string;
+    p2Title: string;
+    p2Desc: string;
+    p3Title: string;
+    p3Desc: string;
+    p4Title: string;
+    p4Desc: string;
+  };
+  testimonials: {
+    tag: string;
+    title: string;
+    subtitle: string;
+    items: Array<{
+      name: string;
+      business: string;
+      city: string;
+      badge: string;
+      quote: string;
+      rating: number;
+      highlight: string;
+    }>;
   };
 }
 
@@ -441,6 +480,65 @@ export const translations: Record<Locale, TranslationDictionary> = {
         "Legal Disclaimer: GinieSpace is an independent SaaS business automation platform developed to help Indian merchants manage their sales, catalogs, and customer communications. GinieSpace is not affiliated, associated, authorized, endorsed by, or in any way officially connected with Meta Platforms, Inc., WhatsApp LLC, or Google LLC.",
       copyright: "GinieSpace. All rights reserved. Operating in India.",
       helpline: "Official Support Helpline: +91 92792 59690",
+      operatingAddress: "Registered Operating Hub: Boring Road, Patna, Bihar 800001, India",
+      workingHours: "Mon – Sat: 9:30 AM – 7:30 PM IST (WhatsApp & Call)",
+    },
+    trustStats: {
+      upiVolume: "₹2.5 Lacs+",
+      upiVolumeSub: "Direct Bank UPI Volume",
+      merchantsCount: "150+",
+      merchantsSub: "Verified Indian Sellers",
+      commissionRate: "0%",
+      commissionSub: "Gateway Deductions (100% Aapka)",
+      satisfactionRating: "4.9 ★",
+      satisfactionSub: "Merchant Trust Rating",
+    },
+    securityShield: {
+      tag: "100% SAFE & BANK-GRADE ARCHITECTURE",
+      title: "Aapke Business Ka Paisa Aur Data 100% Surakshit",
+      subtitle: "GinieSpace par koi hidden charges ya third-party money holding nahi hai. Direct bank-to-bank settlement aur enterprise privacy.",
+      p1Title: "Zero Money Holding (Direct Bank Settlement)",
+      p1Desc: "GinieSpace aapke paise ko 1 second ke liye bhi hold nahi karta. Customer ka payment seedhe PhonePe, GPay ya Paytm se aapke bank account me bina kisi middleman ya delay ke credit hota hai.",
+      p2Title: "DPDP Act 2023 & 256-Bit SSL Encryption",
+      p2Desc: "Aapka customer database aur contact list 100% private rehte hain. Hum kabhi bhi aapka data kisi third-party ko sell ya share nahi karte. 72-hour ephemeral chat security.",
+      p3Title: "100% Risk-Free Guarantee (₹0 Free Plan)",
+      p3Desc: "Bina credit card ke permanent ₹0 Free Starter Plan. PRO Plan (₹99) par 7-day no-questions-asked refund policy. Aap jab chahein bina kisi lock-in ke cancel kar sakte hain.",
+      p4Title: "Dedicated WhatsApp & Call Helpline",
+      p4Desc: "Kisi robot ya automated bot se nahi, hamari real technical support team se direct baat karein. Mon-Sat 9:30 AM – 7:30 PM WhatsApp aur phone call par instant guidance (+91 92792 59690).",
+    },
+    testimonials: {
+      tag: "REAL SELLER EXPERIENCES",
+      title: "Dukandar GinieSpace Par Bharosa Kyon Karte Hain",
+      subtitle: "Bharat ke retail dukandaron, wholesalers aur local brands ka real anubhav.",
+      items: [
+        {
+          name: "Aakash Varma",
+          business: "Varma Electricals & Hardware",
+          city: "Lucknow, UP",
+          badge: "Verified Retail Seller",
+          quote: "Pehle payment gateway par har mahine ₹2,000–₹3,000 commission chala jata tha. GinieSpace me seedha bank account ka UPI QR lagaya, customer pay karta hai toh 0% cut ke sath instant payment aati hai.",
+          rating: 5,
+          highlight: "₹0 Gateway Deductions",
+        },
+        {
+          name: "Priya Sundaram",
+          business: "Meenakshi Handlooms & Sarees",
+          city: "Bengaluru, KA",
+          badge: "Verified Boutique",
+          quote: "WhatsApp catalog link mere Instagram aur WhatsApp status par share karte hi grahak seedhe product dekh kar order bhejte hain. Bill aur order details automatic WhatsApp par chali jaati hai.",
+          rating: 5,
+          highlight: "Instant WhatsApp Orders",
+        },
+        {
+          name: "Rajeshbhai Patel",
+          business: "Patel Spices & Wholesale Grains",
+          city: "Ahmedabad, GJ",
+          badge: "Verified Wholesaler",
+          quote: "Hyperlocal B2B search se nearby retail dukano ko search kiya aur unhe wholesale rate list bheji. 20 se zyada regular dukandar clients jud gaye. Bohot hi clean aur useful tool hai.",
+          rating: 5,
+          highlight: "20+ Regular Retail Clients",
+        },
+      ],
     },
   },
   en: {
@@ -696,6 +794,65 @@ export const translations: Record<Locale, TranslationDictionary> = {
         "Legal Disclaimer: GinieSpace is an independent SaaS business automation platform developed to help Indian merchants manage their sales, catalogs, and customer communications. GinieSpace is not affiliated, associated, authorized, endorsed by, or in any way officially connected with Meta Platforms, Inc., WhatsApp LLC, or Google LLC.",
       copyright: "GinieSpace. All rights reserved. Operating in India.",
       helpline: "Official Support Helpline: +91 92792 59690",
+      operatingAddress: "Registered Operating Hub: Boring Road, Patna, Bihar 800001, India",
+      workingHours: "Mon – Sat: 9:30 AM – 7:30 PM IST (WhatsApp & Call)",
+    },
+    trustStats: {
+      upiVolume: "₹2.5 Lacs+",
+      upiVolumeSub: "Direct Bank UPI Volume",
+      merchantsCount: "150+",
+      merchantsSub: "Verified Indian Sellers",
+      commissionRate: "0%",
+      commissionSub: "Gateway Deductions (100% Yours)",
+      satisfactionRating: "4.9 ★",
+      satisfactionSub: "Merchant Trust Rating",
+    },
+    securityShield: {
+      tag: "BANK-GRADE SECURITY & COMPLIANCE",
+      title: "Your Business Revenue & Data Are 100% Protected",
+      subtitle: "No hidden charges, no middleman escrow, and no lock-in. Powered by bank-grade security protocols.",
+      p1Title: "Zero Money Holding (Direct Bank Settlement)",
+      p1Desc: "GinieSpace never touches or escrows your funds. Customer payments flow directly from PhonePe, GPay, or Paytm into your linked bank account with 0% gateway commission.",
+      p2Title: "DPDP Act 2023 & 256-Bit SSL Encryption",
+      p2Desc: "Your customer contacts and business metrics are strictly confidential. We never monetize or share your data with third parties. End-to-end TLS security.",
+      p3Title: "100% Risk-Free Guarantee (₹0 Free Tier)",
+      p3Desc: "Start free with no credit card required. Our ₹99 PRO Plan includes a 7-day no-questions-asked refund policy so you can evaluate with total peace of mind.",
+      p4Title: "Dedicated WhatsApp & Phone Helpline",
+      p4Desc: "Direct access to real human engineers and onboarding experts. Fast response on WhatsApp & phone call (+91 92792 59690), Monday to Saturday 9:30 AM to 7:30 PM.",
+    },
+    testimonials: {
+      tag: "AUTHENTIC MERCHANT STORIES",
+      title: "Why Indian Merchants Trust GinieSpace",
+      subtitle: "Real stories from retail shops, wholesale distributors, and service entrepreneurs across India.",
+      items: [
+        {
+          name: "Aakash Varma",
+          business: "Varma Electricals & Hardware",
+          city: "Lucknow, UP",
+          badge: "Verified Retail Seller",
+          quote: "Earlier, third-party payment gateways deducted 2.5% on every transaction. With GinieSpace, my customer scans my UPI QR and 100% of the money arrives in my SBI account with zero commission.",
+          rating: 5,
+          highlight: "Zero Gateway Cuts",
+        },
+        {
+          name: "Priya Sundaram",
+          business: "Meenakshi Handlooms & Sarees",
+          city: "Bengaluru, KA",
+          badge: "Verified Boutique",
+          quote: "Sharing my store catalog link on WhatsApp Status brings direct inquiries and orders. Bills and order confirmations are sent straight to customers on WhatsApp effortlessly.",
+          rating: 5,
+          highlight: "Seamless WhatsApp Orders",
+        },
+        {
+          name: "Rajeshbhai Patel",
+          business: "Patel Spices & Wholesale Grains",
+          city: "Ahmedabad, GJ",
+          badge: "Verified Wholesaler",
+          quote: "The Hyperlocal B2B Leads finder allowed us to identify retail kirana stores in nearby PIN codes and pitch wholesale prices. We onboarded over 20 recurring retail buyers.",
+          rating: 5,
+          highlight: "20+ New Retail Clients",
+        },
+      ],
     },
   },
 };

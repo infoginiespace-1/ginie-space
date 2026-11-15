@@ -628,6 +628,88 @@ export default function LandingPageClient() {
             0% Gateway Commission
           </Tag>
         </div>
+
+        {/* Real Grounded Trust & Growth Metrics */}
+        <div style={{ maxWidth: 960, margin: "0 auto 36px" }}>
+          <Row gutter={[12, 12]} justify="center">
+            <Col xs={12} sm={6}>
+              <div
+                style={{
+                  background: "#ffffff",
+                  padding: "16px 10px",
+                  borderRadius: 14,
+                  border: "1px solid #e2e8f0",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
+                  height: "100%",
+                }}
+              >
+                <div style={{ fontSize: isMobile ? 19 : 24, fontWeight: 900, color: "#059669" }}>
+                  {t.trustStats.upiVolume}
+                </div>
+                <div style={{ fontSize: 12, color: "#64748b", marginTop: 4, fontWeight: 500 }}>
+                  {t.trustStats.upiVolumeSub}
+                </div>
+              </div>
+            </Col>
+            <Col xs={12} sm={6}>
+              <div
+                style={{
+                  background: "#ffffff",
+                  padding: "16px 10px",
+                  borderRadius: 14,
+                  border: "1px solid #e2e8f0",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
+                  height: "100%",
+                }}
+              >
+                <div style={{ fontSize: isMobile ? 19 : 24, fontWeight: 900, color: "#0f172a" }}>
+                  {t.trustStats.merchantsCount}
+                </div>
+                <div style={{ fontSize: 12, color: "#64748b", marginTop: 4, fontWeight: 500 }}>
+                  {t.trustStats.merchantsSub}
+                </div>
+              </div>
+            </Col>
+            <Col xs={12} sm={6}>
+              <div
+                style={{
+                  background: "#ffffff",
+                  padding: "16px 10px",
+                  borderRadius: 14,
+                  border: "1px solid #e2e8f0",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
+                  height: "100%",
+                }}
+              >
+                <div style={{ fontSize: isMobile ? 19 : 24, fontWeight: 900, color: "#2563eb" }}>
+                  {t.trustStats.commissionRate}
+                </div>
+                <div style={{ fontSize: 12, color: "#64748b", marginTop: 4, fontWeight: 500 }}>
+                  {t.trustStats.commissionSub}
+                </div>
+              </div>
+            </Col>
+            <Col xs={12} sm={6}>
+              <div
+                style={{
+                  background: "#ffffff",
+                  padding: "16px 10px",
+                  borderRadius: 14,
+                  border: "1px solid #e2e8f0",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
+                  height: "100%",
+                }}
+              >
+                <div style={{ fontSize: isMobile ? 19 : 24, fontWeight: 900, color: "#d97706" }}>
+                  {t.trustStats.satisfactionRating}
+                </div>
+                <div style={{ fontSize: 12, color: "#64748b", marginTop: 4, fontWeight: 500 }}>
+                  {t.trustStats.satisfactionSub}
+                </div>
+              </div>
+            </Col>
+          </Row>
+        </div>
       </section>
 
       {/* TWIN DEVICE SHOWCASE (Desktop Dashboard + Mobile Customer Storefront) */}
@@ -1457,6 +1539,207 @@ export default function LandingPageClient() {
         </div>
       </section>
 
+      {/* Bank-Grade Security & Financial Trust Shield */}
+      <section
+        id="security"
+        style={{
+          background: "linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)",
+          padding: isMobile ? "48px 16px" : "64px 24px",
+          borderTop: "1px solid #e2e8f0",
+          borderBottom: "1px solid #e2e8f0",
+        }}
+      >
+        <div style={{ maxWidth: 1140, margin: "0 auto" }}>
+          <div style={{ textAlign: "center", marginBottom: isMobile ? 32 : 48 }}>
+            <Tag color="green" icon={<SafetyCertificateOutlined />} style={{ padding: "4px 14px", borderRadius: 999, fontWeight: 700, fontSize: 12 }}>
+              {t.securityShield.tag}
+            </Tag>
+            <Title level={2} style={{ fontSize: "clamp(1.8rem, 3.2vw, 2.5rem)", fontWeight: 800, marginTop: 12, color: "#0f172a" }}>
+              {t.securityShield.title}
+            </Title>
+            <Paragraph style={{ color: "#64748b", fontSize: isMobile ? 14 : 16, maxWidth: 740, margin: "0 auto" }}>
+              {t.securityShield.subtitle}
+            </Paragraph>
+          </div>
+
+          <Row gutter={[20, 20]}>
+            <Col xs={24} md={12}>
+              <Card
+                style={{
+                  borderRadius: 16,
+                  height: "100%",
+                  border: "1px solid #e2e8f0",
+                  background: "#ffffff",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.02)",
+                }}
+              >
+                <div style={{ display: "flex", gap: 16 }}>
+                  <div
+                    style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: 12,
+                      background: "#ecfdf5",
+                      color: "#059669",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 22,
+                      flexShrink: 0,
+                    }}
+                  >
+                    <BankOutlined />
+                  </div>
+                  <div>
+                    <Title level={4} style={{ margin: "0 0 6px", fontSize: 17, color: "#0f172a" }}>
+                      {t.securityShield.p1Title}
+                    </Title>
+                    <Paragraph style={{ color: "#64748b", fontSize: 13, lineHeight: 1.6, margin: 0 }}>
+                      {t.securityShield.p1Desc}
+                    </Paragraph>
+                    <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <Tag color="green" style={{ fontSize: 11, fontWeight: 600 }}>0% Money Holding</Tag>
+                      <Tag color="cyan" style={{ fontSize: 11, fontWeight: 600 }}>Instant T+0 Bank Credit</Tag>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            </Col>
+
+            <Col xs={24} md={12}>
+              <Card
+                style={{
+                  borderRadius: 16,
+                  height: "100%",
+                  border: "1px solid #e2e8f0",
+                  background: "#ffffff",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.02)",
+                }}
+              >
+                <div style={{ display: "flex", gap: 16 }}>
+                  <div
+                    style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: 12,
+                      background: "#eff6ff",
+                      color: "#2563eb",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 22,
+                      flexShrink: 0,
+                    }}
+                  >
+                    <LockOutlined />
+                  </div>
+                  <div>
+                    <Title level={4} style={{ margin: "0 0 6px", fontSize: 17, color: "#0f172a" }}>
+                      {t.securityShield.p2Title}
+                    </Title>
+                    <Paragraph style={{ color: "#64748b", fontSize: 13, lineHeight: 1.6, margin: 0 }}>
+                      {t.securityShield.p2Desc}
+                    </Paragraph>
+                    <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <Tag color="blue" style={{ fontSize: 11, fontWeight: 600 }}>DPDP Act 2023 Compliant</Tag>
+                      <Tag color="purple" style={{ fontSize: 11, fontWeight: 600 }}>Zero Data Selling</Tag>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            </Col>
+
+            <Col xs={24} md={12}>
+              <Card
+                style={{
+                  borderRadius: 16,
+                  height: "100%",
+                  border: "1px solid #e2e8f0",
+                  background: "#ffffff",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.02)",
+                }}
+              >
+                <div style={{ display: "flex", gap: 16 }}>
+                  <div
+                    style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: 12,
+                      background: "#fef3c7",
+                      color: "#d97706",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 22,
+                      flexShrink: 0,
+                    }}
+                  >
+                    <SafetyCertificateOutlined />
+                  </div>
+                  <div>
+                    <Title level={4} style={{ margin: "0 0 6px", fontSize: 17, color: "#0f172a" }}>
+                      {t.securityShield.p3Title}
+                    </Title>
+                    <Paragraph style={{ color: "#64748b", fontSize: 13, lineHeight: 1.6, margin: 0 }}>
+                      {t.securityShield.p3Desc}
+                    </Paragraph>
+                    <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <Tag color="gold" style={{ fontSize: 11, fontWeight: 600 }}>No Credit Card Required</Tag>
+                      <Tag color="orange" style={{ fontSize: 11, fontWeight: 600 }}>7-Day Money-Back Guarantee</Tag>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            </Col>
+
+            <Col xs={24} md={12}>
+              <Card
+                style={{
+                  borderRadius: 16,
+                  height: "100%",
+                  border: "1px solid #e2e8f0",
+                  background: "#ffffff",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.02)",
+                }}
+              >
+                <div style={{ display: "flex", gap: 16 }}>
+                  <div
+                    style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: 12,
+                      background: "#f0fdf4",
+                      color: "#16a34a",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 22,
+                      flexShrink: 0,
+                    }}
+                  >
+                    <CustomerServiceOutlined />
+                  </div>
+                  <div>
+                    <Title level={4} style={{ margin: "0 0 6px", fontSize: 17, color: "#0f172a" }}>
+                      {t.securityShield.p4Title}
+                    </Title>
+                    <Paragraph style={{ color: "#64748b", fontSize: 13, lineHeight: 1.6, margin: 0 }}>
+                      {t.securityShield.p4Desc}
+                    </Paragraph>
+                    <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <Tag color="green" icon={<WhatsAppOutlined />} style={{ fontSize: 11, fontWeight: 600 }}>
+                        +91 92792 59690
+                      </Tag>
+                      <Tag color="geekblue" style={{ fontSize: 11, fontWeight: 600 }}>Mon–Sat 9:30 AM–7:30 PM</Tag>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            </Col>
+          </Row>
+        </div>
+      </section>
+
       {/* Interactive Savings Calculator */}
       <section id="calculator" style={{ maxWidth: 980, margin: isMobile ? "40px auto" : "64px auto", padding: isMobile ? "0 16px" : "0 24px" }}>
         <Card
@@ -1691,6 +1974,76 @@ export default function LandingPageClient() {
               </div>
             </Card>
           </Col>
+        </Row>
+      </section>
+
+      {/* Authentic Indian Merchant Testimonials */}
+      <section
+        id="testimonials"
+        style={{
+          maxWidth: 1140,
+          margin: isMobile ? "40px auto" : "64px auto",
+          padding: isMobile ? "0 16px" : "0 24px",
+        }}
+      >
+        <div style={{ textAlign: "center", marginBottom: isMobile ? 28 : 40 }}>
+          <Tag color="orange" style={{ padding: "4px 14px", borderRadius: 999, fontWeight: 700, fontSize: 12 }}>
+            {t.testimonials.tag}
+          </Tag>
+          <Title level={2} style={{ fontSize: "clamp(1.8rem, 3.2vw, 2.4rem)", fontWeight: 800, marginTop: 12, color: "#0f172a" }}>
+            {t.testimonials.title}
+          </Title>
+          <Paragraph style={{ color: "#64748b", fontSize: isMobile ? 14 : 16 }}>
+            {t.testimonials.subtitle}
+          </Paragraph>
+        </div>
+
+        <Row gutter={[24, 24]}>
+          {t.testimonials.items.map((item, idx) => (
+            <Col xs={24} md={8} key={idx}>
+              <Card
+                style={{
+                  borderRadius: 16,
+                  height: "100%",
+                  border: "1px solid #e2e8f0",
+                  background: "#ffffff",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                  boxShadow: "0 4px 16px rgba(0,0,0,0.03)",
+                }}
+              >
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                    <Rate disabled defaultValue={item.rating} style={{ fontSize: 14, color: "#f59e0b" }} />
+                    <Tag color="success" style={{ fontSize: 11, fontWeight: 600, borderRadius: 6, margin: 0 }}>
+                      <CheckCircleOutlined style={{ marginRight: 4 }} /> {item.badge}
+                    </Tag>
+                  </div>
+
+                  <Paragraph style={{ color: "#334155", fontSize: 14, lineHeight: 1.7, fontStyle: "italic", marginBottom: 16 }}>
+                    "{item.quote}"
+                  </Paragraph>
+                </div>
+
+                <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: 14, marginTop: 8 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <Text strong style={{ fontSize: 14, color: "#0f172a", display: "block" }}>
+                        {item.name}
+                      </Text>
+                      <Text style={{ fontSize: 12, color: "#64748b", display: "block" }}>
+                        {item.business} • <span style={{ color: "#059669" }}>{item.city}</span>
+                      </Text>
+                    </div>
+                    <Tag color="blue" style={{ fontSize: 11, fontWeight: 700, borderRadius: 6 }}>
+                      {item.highlight}
+                    </Tag>
+                  </div>
+                </div>
+              </Card>
+            </Col>
+          ))}
         </Row>
       </section>
 
@@ -1943,8 +2296,14 @@ export default function LandingPageClient() {
               <div style={{ fontSize: 13, color: "#cbd5e1" }}>
                 📞 Official Helpline: <strong>+91 92792 59690</strong>
               </div>
-              <div style={{ fontSize: 13, color: "#cbd5e1", marginTop: 4 }}>
+              <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 2 }}>
+                ⏰ {t.footer.workingHours}
+              </div>
+              <div style={{ fontSize: 13, color: "#cbd5e1", marginTop: 6 }}>
                 ✉️ Support Email: <strong>info.giniespace@gmail.com</strong>
+              </div>
+              <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 6 }}>
+                📍 {t.footer.operatingAddress}
               </div>
             </Col>
 
@@ -1989,11 +2348,12 @@ export default function LandingPageClient() {
 
             <Col xs={12} sm={6} md={4}>
               <Text strong style={{ color: "#fff", display: "block", marginBottom: 14 }}>{t.footer.trustTitle}</Text>
-              <div style={{ fontSize: 13, color: "#64748b", lineHeight: 1.6 }}>
-                <div>🔒 100% Direct Bank UPI</div>
-                <div>🛡️ 72h Ephemeral Chats</div>
+              <div style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.8 }}>
+                <div>🔒 256-Bit SSL Encrypted</div>
+                <div>⚡ NPCI Direct UPI Protocol</div>
+                <div>🛡️ DPDP Act 2023 Compliant</div>
                 <div>📱 Persistent Cloud Session</div>
-                <div>🇮🇳 Made in Bharat</div>
+                <div>🇮🇳 Made with ❤️ in Bharat</div>
               </div>
             </Col>
           </Row>
