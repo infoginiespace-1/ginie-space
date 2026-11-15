@@ -382,8 +382,36 @@ export default function InboxPage() {
         ? `🛠️ *Service Available*${p.duration ? ` (${p.duration})` : ""}`
         : `📊 *Status:* ${p.stock > 0 ? `In Stock (${p.stock} ${p.unit})` : "Limited Stock"}`;
     const msg = `${greeting}${p.itemType === "service" ? "🛠️" : "📦"} *${p.name}*\n💰 *Fee / Price:* ₹${p.price} / ${p.unit}\n${statusLine}${p.description ? `\n📝 ${p.description}` : ""}\n\n${p.itemType === "service" ? "Book karne ke liye reply karein!" : "Order karne ke liye reply karein!"}`;
+    
+    // Pick product image or fallback to store logo / catalog banner
+    const fallbackBanner = typeof window !== "undefined" ? `${window.location.origin}/og-catalog.jpg` : "https://app.ginie.space/og-catalog.jpg";
+    const imageToSend = p.imageUrl || rawSettings.logoUrl || fallbackBanner;
+
     setCatalogModalVisible(false);
-    await sendTextMessage(msg, p.imageUrl || undefined);
+    await sendTextMessage(msg, imageToSend);
+  };
+
+  const handleSendFullCatalog = async () => {
+    if (!activeKey) return;
+    const activeConv = conversations.get(activeKey);
+    const greeting = activeConv ? `Namaste ${activeConv.name}!\n\n` : "Namaste!\n\n";
+    const storeSlug = rawSettings?.slug || "";
+    const storeOrigin = typeof window !== "undefined" ? window.location.origin : "https://app.ginie.space";
+    const storeLink = storeSlug ? `${storeOrigin}/shop/${storeSlug}` : `${storeOrigin}/shop/${activeKey}`;
+
+    const topItems = products.slice(0, 5).map(p => `  • *${p.name}* — ₹${p.price}/${p.unit || "item"}`).join("\n");
+    const catalogMsg =
+      `${greeting}Welcome to *${storeName}*! 🛍️\n\n` +
+      `Aap hamara digital catalog live prices ke sath yahan browse kar sakte hain:\n` +
+      `👉 *Online Catalog:* ${storeLink}\n\n` +
+      (topItems ? `✨ *Top Offerings:*\n${topItems}\n\n` : "") +
+      `Order karne ya kisi item ke bare me poochne ke liye yahan reply karein. Dhanyavaad!`;
+
+    const fallbackBanner = `${storeOrigin}/og-catalog.jpg`;
+    const bannerImg = rawSettings.logoUrl || (products.find(p => p.imageUrl)?.imageUrl) || fallbackBanner;
+
+    setCatalogModalVisible(false);
+    await sendTextMessage(catalogMsg, bannerImg);
   };
 
   const activeConv = activeKey ? conversations.get(activeKey) : null;
@@ -944,8 +972,44 @@ export default function InboxPage() {
         open={catalogModalVisible}
         onCancel={() => setCatalogModalVisible(false)}
         footer={null}
-        width={500}
+        width={520}
       >
+        {/* 1-Click Send Full Catalog Card with Banner */}
+        <Card
+          size="small"
+          style={{
+            marginBottom: 16,
+            background: "linear-gradient(135deg, #064e3b 0%, #047857 100%)",
+            borderRadius: 10,
+            border: "1px solid #10b981",
+            boxShadow: "0 2px 8px rgba(4,120,87,0.15)",
+          }}
+          styles={{ body: { padding: "12px 14px" } }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 13, color: "#ffffff" }}>
+                🛍️ Share Entire Store Catalog Card
+              </div>
+              <div style={{ fontSize: 11, color: "#a7f3d0" }}>
+                Sends store banner + shopping link + top items
+              </div>
+            </div>
+            <Button
+              type="primary"
+              size="small"
+              icon={<WhatsAppOutlined />}
+              onClick={handleSendFullCatalog}
+              style={{ background: "#25D366", borderColor: "#25D366", fontWeight: 700, color: "#064e3b" }}
+            >
+              Send Catalog Card
+            </Button>
+          </div>
+        </Card>
+
+        <div style={{ marginBottom: 8, fontSize: 12, fontWeight: 600, color: "#64748b" }}>
+          OR SHARE AN INDIVIDUAL ITEM QUOTE:
+        </div>
         <List
           loading={loadingProducts}
           dataSource={products}

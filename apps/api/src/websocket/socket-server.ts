@@ -352,7 +352,21 @@ export function setupSocketServer(
                     .join("\n")
                 : "View our latest offerings online!";
               const reply = `📋 *${business?.name || "Store"} Price List & Offerings*\n\n${listStr}\n\n🛒 *Full Catalog & Online Booking:* ${storeLink}`;
-              await sendBotReply(reply);
+
+              // Determine image to attach (Store logo, or first product photo, or fallback catalog banner)
+              let catalogImg: string | undefined = undefined;
+              if (parsed.logoUrl && (parsed.logoUrl.startsWith("http://") || parsed.logoUrl.startsWith("https://") || parsed.logoUrl.startsWith("data:"))) {
+                catalogImg = parsed.logoUrl;
+              } else {
+                const prodWithImg = inStock.find((p) => p.imageUrl && (p.imageUrl.startsWith("http://") || p.imageUrl.startsWith("https://") || p.imageUrl.startsWith("data:")));
+                if (prodWithImg) {
+                  catalogImg = prodWithImg.imageUrl;
+                } else {
+                  catalogImg = "https://app.ginie.space/og-catalog.jpg";
+                }
+              }
+
+              await sendBotReply(reply, catalogImg);
             }
           } else if (isTrackAsk) {
             const kwKey = `kw_trk:${cooldownKey}`;
@@ -396,7 +410,10 @@ export function setupSocketServer(
             merchantAutoReplyCooldown.set(cooldownKey, nowMs);
             handled = true;
             const fullGreeting = `${welcomeText}\n\n🛍️ *Browse Our Catalog & Order Online:* ${storeLink}\n💡 Tip: Reply *"catalog"* for price list or *"status"* to check your order.`;
-            await sendBotReply(fullGreeting);
+            const welcomeImg = (parsed.logoUrl && (parsed.logoUrl.startsWith("http") || parsed.logoUrl.startsWith("data:")))
+              ? parsed.logoUrl
+              : "https://app.ginie.space/og-catalog.jpg";
+            await sendBotReply(fullGreeting, welcomeImg);
           }
         }
 

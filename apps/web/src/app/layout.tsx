@@ -49,6 +49,20 @@ export const metadata: Metadata = {
     siteName: "GinieSpace",
     locale: "en_IN",
     type: "website",
+    images: [
+      {
+        url: "https://app.ginie.space/og-catalog.jpg",
+        width: 1200,
+        height: 630,
+        alt: "GinieSpace Digital Storefront & Catalog",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "GinieSpace | WhatsApp Business Commerce & Direct UPI Billing",
+    description: "Launch your WhatsApp Store in 30 seconds with 0% gateway commission. Automated order receipts and customer discovery.",
+    images: ["https://app.ginie.space/og-catalog.jpg"],
   },
   manifest: "/manifest.json",
   icons: {

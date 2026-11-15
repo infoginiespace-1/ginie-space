@@ -31,6 +31,7 @@ import {
   PictureOutlined,
   ThunderboltOutlined,
   CrownOutlined,
+  WhatsAppOutlined,
 } from "@ant-design/icons";
 import { Radio } from "antd";
 import { api } from "../../lib/api";
@@ -603,6 +604,17 @@ export default function ProductsPage() {
                 }}
               >
                 Copy Link
+              </Button>
+              <Button
+                size="small"
+                icon={<WhatsAppOutlined style={{ color: "#25D366" }} />}
+                onClick={() => {
+                  const url = `${window.location.origin}/shop/${storeSlug || user.id}`;
+                  const text = `Namaste! Aap hamara digital catalog live prices ke sath yahan dekh sakte hain aur direct WhatsApp order kar sakte hain:\n\n👉 ${url}`;
+                  window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, "_blank");
+                }}
+              >
+                Share on WhatsApp
               </Button>
               <Button size="small" type="primary" href={`/shop/${storeSlug || user.id}`} target="_blank">
                 Preview Store
