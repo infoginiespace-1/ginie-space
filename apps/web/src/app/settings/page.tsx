@@ -173,6 +173,9 @@ export default function SettingsPage() {
   const [customRules, setCustomRules] = useState<AutoReplyCustomRule[]>(DEFAULT_SAMPLE_RULES);
   const [workingHours, setWorkingHours] = useState<WorkingHoursConfig>(DEFAULT_WORKING_HOURS);
   const [fallbackReply, setFallbackReply] = useState<FallbackReplyConfig>(DEFAULT_FALLBACK_REPLY);
+  const [smartKeywordBot, setSmartKeywordBot] = useState<boolean>(true);
+  const [autoReply, setAutoReply] = useState<boolean>(true);
+  const [welcomeMessage, setWelcomeMessage] = useState<string>("Hello! Welcome to our store.");
   const [ruleModalOpen, setRuleModalOpen] = useState(false);
   const [editingRule, setEditingRule] = useState<AutoReplyCustomRule | null>(null);
   const [ruleKeywordsInput, setRuleKeywordsInput] = useState("");
@@ -235,6 +238,22 @@ export default function SettingsPage() {
 
         if (parsedSettings.fallbackReply) {
           setFallbackReply({ ...DEFAULT_FALLBACK_REPLY, ...parsedSettings.fallbackReply });
+        }
+
+        if (parsedSettings.smartKeywordBot !== undefined) {
+          setSmartKeywordBot(parsedSettings.smartKeywordBot !== false);
+        } else {
+          setSmartKeywordBot(true);
+        }
+
+        if (parsedSettings.autoReply !== undefined) {
+          setAutoReply(parsedSettings.autoReply !== false);
+        } else {
+          setAutoReply(true);
+        }
+
+        if (parsedSettings.welcomeMessage) {
+          setWelcomeMessage(parsedSettings.welcomeMessage);
         }
 
         if (parsedSettings.quickReplies) {
@@ -388,9 +407,9 @@ export default function SettingsPage() {
       const coupons = cleanCoupon && pct > 0 ? [{ code: cleanCoupon, discountPercent: pct }] : [];
 
       const settingsJson = JSON.stringify({
-        autoReply: values.autoReply !== false,
-        welcomeMessage: values.welcomeMessage,
-        smartKeywordBot: values.smartKeywordBot !== false,
+        autoReply: autoReply !== false,
+        welcomeMessage: (welcomeMessage || "Hello! Welcome to our store.").trim(),
+        smartKeywordBot: smartKeywordBot !== false,
         dailySummaryEnabled: Boolean(values.dailySummaryEnabled),
         dailySummaryHour: 21,
         isOpen: values.isOpen !== false,
@@ -432,7 +451,10 @@ export default function SettingsPage() {
   const handleSaveAutoReplyOnly = async (
     updatedRules?: AutoReplyCustomRule[],
     updatedWh?: WorkingHoursConfig,
-    updatedFb?: FallbackReplyConfig
+    updatedFb?: FallbackReplyConfig,
+    updatedSmartBot?: boolean,
+    updatedAutoReply?: boolean,
+    updatedWelcomeMsg?: string
   ) => {
     try {
       setSavingAutoReply(true);
@@ -448,15 +470,15 @@ export default function SettingsPage() {
       const nextRules = updatedRules !== undefined ? updatedRules : customRules;
       const nextWh = updatedWh !== undefined ? updatedWh : workingHours;
       const nextFb = updatedFb !== undefined ? updatedFb : fallbackReply;
-      const welcomeMsg = form.getFieldValue("welcomeMessage") || existingSettings.welcomeMessage || "Hello! Welcome to our store.";
-      const welcomeEnabled = form.getFieldValue("autoReply") !== false;
-      const smartBot = form.getFieldValue("smartKeywordBot") !== false;
+      const nextSmartBot = updatedSmartBot !== undefined ? updatedSmartBot : smartKeywordBot;
+      const nextAutoReply = updatedAutoReply !== undefined ? updatedAutoReply : autoReply;
+      const nextWelcomeMsg = updatedWelcomeMsg !== undefined ? updatedWelcomeMsg : welcomeMessage;
 
       const mergedSettings = {
         ...existingSettings,
-        autoReply: welcomeEnabled,
-        welcomeMessage: welcomeMsg,
-        smartKeywordBot: smartBot,
+        autoReply: nextAutoReply !== false,
+        welcomeMessage: (nextWelcomeMsg || "Hello! Welcome to our store.").trim(),
+        smartKeywordBot: nextSmartBot !== false,
         customRules: nextRules,
         workingHours: nextWh,
         fallbackReply: nextFb,
@@ -620,7 +642,7 @@ export default function SettingsPage() {
     }
 
     // 3. Smart Catalog check
-    if (!matchedReply && form.getFieldValue("smartKeywordBot") !== false && /\b(catalog|menu|price|rate|items|products|list)\b/.test(q)) {
+    if (!matchedReply && smartKeywordBot && /\b(catalog|menu|price|rate|items|products|list)\b/.test(q)) {
       matchedReply = {
         text: `📋 *${storeName} Price List & Offerings*\n\n• Sample Special Product — ₹199 / pcs\n• Premium Offering — ₹499 / pack\n\n🛒 *Full Catalog & Online Booking:* ${storeLink}`,
       };
@@ -632,8 +654,8 @@ export default function SettingsPage() {
         matchedReply = {
           text: fallbackReply.message.replace(/\{store_name\}/gi, storeName).replace(/\{catalog_link\}/gi, storeLink),
         };
-      } else {
-        const welcomeText = form.getFieldValue("welcomeMessage") || "Hello! Welcome to our store.";
+      } else if (autoReply) {
+        const welcomeText = (welcomeMessage || "Hello! Welcome to our store.").trim();
         matchedReply = {
           text: `${welcomeText}\n\n🛍️ *Browse Catalog & Order Online:* ${storeLink}\n💡 Tip: Reply *"catalog"* for price list.`,
         };
@@ -1168,9 +1190,10 @@ export default function SettingsPage() {
                             <Text strong style={{ fontSize: 13 }}>Smart Catalog &amp; Rate List Bot</Text>
                             <div style={{ fontSize: 11, color: "#64748b" }}>Replies with products when asked for "price", "catalog", "menu"</div>
                           </div>
-                          <Form.Item name="smartKeywordBot" valuePropName="checked" noStyle>
-                            <Switch />
-                          </Form.Item>
+                          <Switch
+                            checked={smartKeywordBot}
+                            onChange={(chk) => setSmartKeywordBot(chk)}
+                          />
                         </div>
                       </Col>
 
@@ -1180,10 +1203,21 @@ export default function SettingsPage() {
                             <Text strong style={{ fontSize: 13 }}>First-time Welcome Greeting</Text>
                             <div style={{ fontSize: 11, color: "#64748b" }}>Greeting on first contact (24h cooldown)</div>
                           </div>
-                          <Form.Item name="autoReply" valuePropName="checked" noStyle>
-                            <Switch />
-                          </Form.Item>
+                          <Switch
+                            checked={autoReply}
+                            onChange={(chk) => setAutoReply(chk)}
+                          />
                         </div>
+                        {autoReply && (
+                          <div style={{ marginTop: 8 }}>
+                            <Input.TextArea
+                              rows={2}
+                              value={welcomeMessage}
+                              onChange={(e) => setWelcomeMessage(e.target.value)}
+                              placeholder="Enter greeting message for new customers..."
+                            />
+                          </div>
+                        )}
                       </Col>
 
                       <Col xs={24}>
