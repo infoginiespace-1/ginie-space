@@ -59,6 +59,10 @@ interface Product {
   itemType?: "product" | "service";
   duration?: string;
   serviceMode?: "at_store" | "home_visit" | "online" | "any";
+  dietary?: "veg" | "non_veg" | "egg";
+  sizes?: string;
+  colors?: string;
+  roomType?: string;
 }
 
 const SERVICE_UNITS = ["session", "visit", "hour", "day", "month", "year", "project"] as const;
@@ -99,7 +103,7 @@ function parseUnitField(rawUnit?: string): {
     };
   }
   const lower = val.toLowerCase();
-  if (["pcs", "gram", "kg", "pack", "carton", "jar", ...SERVICE_UNITS].includes(lower)) {
+  if (["pcs", "gram", "kg", "pack", "carton", "jar", "plate", "portion", "dish", "bowl", "cup", "night", "set", "pair", ...SERVICE_UNITS].includes(lower)) {
     return { unitType: lower, packQty: isContainerUnit(lower) ? 10 : undefined, packSubUnit: "pcs" };
   }
   if (lower === "cartoon") {
@@ -257,6 +261,10 @@ export default function ProductsPage() {
         itemType: values.itemType === "service" ? "service" : "product",
         duration: values.duration ? String(values.duration).trim() : undefined,
         serviceMode: values.itemType === "service" ? values.serviceMode || "any" : undefined,
+        dietary: values.dietary || undefined,
+        sizes: values.sizes ? String(values.sizes).trim() : undefined,
+        colors: values.colors ? String(values.colors).trim() : undefined,
+        roomType: values.roomType ? String(values.roomType).trim() : undefined,
       };
 
       if (editingProduct) {
@@ -369,20 +377,46 @@ export default function ProductsPage() {
   };
 
   const openAddModal = () => {
-    const defaultService = user?.businessType === "services";
+    const bType = user?.businessType || "retail";
+    const defaultService = bType === "services";
+    const defaultUnit =
+      bType === "services"
+        ? "session"
+        : bType === "restaurant"
+        ? "plate"
+        : bType === "hotel"
+        ? "night"
+        : bType === "wholesale"
+        ? "pack"
+        : "pcs";
+    const defaultCategory =
+      bType === "services"
+        ? "Services"
+        : bType === "restaurant"
+        ? "Main Course"
+        : bType === "garments"
+        ? "Clothing"
+        : bType === "hotel"
+        ? "Room Stay"
+        : "General";
+
     setEditingProduct(null);
     setImagePreview("");
     form.resetFields();
     form.setFieldsValue({
       itemType: defaultService ? "service" : "product",
-      unitType: defaultService ? "session" : "pcs",
-      packQty: undefined,
+      unitType: defaultUnit,
+      packQty: bType === "wholesale" ? 10 : undefined,
       packSubUnit: "pcs",
-      stock: defaultService ? 999999 : 10,
-      category: defaultService ? "Services" : "General",
-      minOrderQty: 1,
+      stock: defaultService ? 999999 : bType === "hotel" ? 5 : 10,
+      category: defaultCategory,
+      minOrderQty: bType === "wholesale" ? 5 : 1,
       duration: defaultService ? "60 mins" : undefined,
       serviceMode: defaultService ? "any" : undefined,
+      dietary: bType === "restaurant" ? "veg" : undefined,
+      sizes: bType === "garments" ? "S, M, L, XL" : undefined,
+      colors: bType === "garments" ? "Black, White, Navy Blue" : undefined,
+      roomType: bType === "hotel" ? "Deluxe AC Room" : undefined,
     });
     setModalVisible(true);
   };
@@ -405,6 +439,10 @@ export default function ProductsPage() {
       packSubUnit: parsedUnit.packSubUnit,
       duration: product.duration || "",
       serviceMode: product.serviceMode || "any",
+      dietary: product.dietary,
+      sizes: product.sizes || "",
+      colors: product.colors || "",
+      roomType: product.roomType || "",
     });
     setModalVisible(true);
   };
@@ -464,6 +502,24 @@ export default function ProductsPage() {
               )}
               {Number(record.minOrderQty) > 1 && (
                 <Tag color="purple" style={{ fontSize: 11 }}>MOQ: {record.minOrderQty}</Tag>
+              )}
+              {record.dietary === "veg" && (
+                <Tag color="success" style={{ fontSize: 11, fontWeight: 700 }}>🟢 Pure Veg</Tag>
+              )}
+              {record.dietary === "non_veg" && (
+                <Tag color="error" style={{ fontSize: 11, fontWeight: 700 }}>🔴 Non-Veg</Tag>
+              )}
+              {record.dietary === "egg" && (
+                <Tag color="warning" style={{ fontSize: 11, fontWeight: 700 }}>🟡 Egg</Tag>
+              )}
+              {record.sizes && (
+                <Tag color="magenta" style={{ fontSize: 11 }}>Sizes: {record.sizes}</Tag>
+              )}
+              {record.colors && (
+                <Tag color="volcano" style={{ fontSize: 11 }}>Colors: {record.colors}</Tag>
+              )}
+              {record.roomType && (
+                <Tag color="cyan" style={{ fontSize: 11 }}>Room: {record.roomType}</Tag>
               )}
             </div>
             <Text type="secondary" style={{ fontSize: 12 }}>{record.description || "No description"}</Text>
@@ -803,6 +859,12 @@ export default function ProductsPage() {
                       ]
                     : [
                         { value: "pcs", label: "Pcs (Pieces)" },
+                        { value: "plate", label: "Plate (Food / Restaurant)" },
+                        { value: "portion", label: "Portion / Dish" },
+                        { value: "bowl", label: "Bowl / Cup" },
+                        { value: "night", label: "Per Night (Hotel Stay)" },
+                        { value: "day", label: "Per Day (Stay / Rental)" },
+                        { value: "set", label: "Set / Pair (Fashion)" },
                         { value: "gram", label: "Gram (g)" },
                         { value: "kg", label: "Kg (Kilogram)" },
                         { value: "pack", label: "Pack" },
@@ -813,6 +875,58 @@ export default function ProductsPage() {
               />
             </Form.Item>
           </div>
+
+          {/* Dynamic Category Specific Fields */}
+          {!isServiceForm && user?.businessType === "restaurant" && (
+            <Form.Item name="dietary" label="Dietary Preference (Food Type)">
+              <Radio.Group buttonStyle="solid">
+                <Radio.Button value="veg" style={{ color: "#16a34a", fontWeight: 600 }}>🟢 Pure Veg</Radio.Button>
+                <Radio.Button value="non_veg" style={{ color: "#dc2626", fontWeight: 600 }}>🔴 Non-Veg</Radio.Button>
+                <Radio.Button value="egg" style={{ color: "#d97706", fontWeight: 600 }}>🟡 Contains Egg</Radio.Button>
+              </Radio.Group>
+            </Form.Item>
+          )}
+
+          {!isServiceForm && user?.businessType === "garments" && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <Form.Item name="sizes" label="Available Sizes" extra="e.g. S, M, L, XL, XXL or Free Size">
+                <Input placeholder="e.g. S, M, L, XL, XXL" />
+              </Form.Item>
+              <Form.Item name="colors" label="Color Options" extra="e.g. Black, White, Navy Blue">
+                <Input placeholder="e.g. Black, White, Navy Blue" />
+              </Form.Item>
+            </div>
+          )}
+
+          {!isServiceForm && user?.businessType === "hotel" && (
+            <Form.Item name="roomType" label="Room / Accommodation Category" extra="e.g. Deluxe AC, Suite, Standard Single">
+              <Input placeholder="e.g. Deluxe AC Room (King Bed + Breakfast)" />
+            </Form.Item>
+          )}
+
+          {!isServiceForm && !["restaurant", "garments", "hotel", "services"].includes(user?.businessType || "") && (
+            <div style={{ padding: "10px 14px", background: "#f8fafc", borderRadius: 8, marginBottom: 16, border: "1px dashed #cbd5e1" }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "#475569", marginBottom: 8 }}>
+                Optional Category Details (Food Dietary / Fashion Size / Room Type)
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <Form.Item name="dietary" label="Dietary (Food)" style={{ marginBottom: 0 }}>
+                  <Select
+                    allowClear
+                    placeholder="Select if Food item"
+                    options={[
+                      { value: "veg", label: "🟢 Pure Veg" },
+                      { value: "non_veg", label: "🔴 Non-Veg" },
+                      { value: "egg", label: "🟡 Contains Egg" },
+                    ]}
+                  />
+                </Form.Item>
+                <Form.Item name="sizes" label="Sizes (Fashion)" style={{ marginBottom: 0 }}>
+                  <Input placeholder="e.g. S, M, L, XL" />
+                </Form.Item>
+              </div>
+            </div>
+          )}
 
           {isServiceForm ? (
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>

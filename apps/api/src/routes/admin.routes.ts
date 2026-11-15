@@ -375,6 +375,9 @@ export function createAdminRouter(
         retail: merchants.filter((u) => u.businessType === "retail").length,
         wholesale: merchants.filter((u) => u.businessType === "wholesale").length,
         services: merchants.filter((u) => u.businessType === "services").length,
+        restaurant: merchants.filter((u) => u.businessType === "restaurant").length,
+        garments: merchants.filter((u) => u.businessType === "garments").length,
+        hotel: merchants.filter((u) => u.businessType === "hotel").length,
       };
 
       const planBreakdown = {
@@ -538,7 +541,7 @@ export function createAdminRouter(
       const patch: any = {};
       if (status && (status === "active" || status === "suspended")) patch.status = status;
       if (plan && (plan === "free" || plan === "pro")) patch.plan = plan;
-      if (businessType && ["retail", "wholesale", "services"].includes(businessType)) patch.businessType = businessType;
+      if (businessType && ["retail", "wholesale", "services", "restaurant", "garments", "hotel"].includes(businessType)) patch.businessType = businessType;
       if (name && typeof name === "string" && name.trim()) patch.name = name.trim();
 
       const updated = await db.users.update(target.id, patch);

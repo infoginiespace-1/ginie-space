@@ -1,5 +1,5 @@
 export type UserRole = "admin" | "user" | "staff";
-export type BusinessType = "retail" | "wholesale" | "services";
+export type BusinessType = "retail" | "wholesale" | "services" | "restaurant" | "garments" | "hotel";
 export type OrderStatus = "pending" | "confirmed" | "dispatched" | "delivered" | "cancelled";
 export type PaymentStatus = "unpaid" | "partial" | "paid";
 export type LeadStatus = "new" | "contacted" | "converted" | "archived";
@@ -63,6 +63,10 @@ export interface Product {
   itemType?: "product" | "service";
   duration?: string;
   serviceMode?: "at_store" | "home_visit" | "online" | "any";
+  dietary?: "veg" | "non_veg" | "egg";
+  sizes?: string;
+  colors?: string;
+  roomType?: string;
   createdAt: string;
   updatedAt: string;
 }

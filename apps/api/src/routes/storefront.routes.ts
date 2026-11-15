@@ -253,6 +253,9 @@ export function createStorefrontRouter(
         quantity: number;
         itemType?: string;
         duration?: string;
+        selectedSize?: string;
+        selectedColor?: string;
+        roomType?: string;
       }> = [];
       let totalAmount = 0;
 
@@ -261,14 +264,24 @@ export function createStorefrontRouter(
         if (!prod) continue;
         const minQty = Math.max(1, Number(prod.minOrderQty) || 1);
         const qty = Math.max(minQty, Math.floor(Number(reqItem.quantity) || 0));
+
+        const selSize = reqItem.selectedSize ? String(reqItem.selectedSize).trim() : undefined;
+        const selColor = reqItem.selectedColor ? String(reqItem.selectedColor).trim() : undefined;
+        const selRoom = reqItem.roomType ? String(reqItem.roomType).trim() : (prod.roomType || undefined);
+        const tags = [selSize ? `Size: ${selSize}` : "", selColor ? `Color: ${selColor}` : "", selRoom ? `Room: ${selRoom}` : ""].filter(Boolean);
+        const itemName = tags.length > 0 ? `${prod.name} (${tags.join(", ")})` : prod.name;
+
         verifiedItems.push({
           productId: prod.id,
-          name: prod.name,
+          name: itemName,
           price: Number(prod.price) || 0,
           unit: prod.unit || "pcs",
           quantity: qty,
           itemType: prod.itemType || "product",
           duration: prod.duration || undefined,
+          selectedSize: selSize,
+          selectedColor: selColor,
+          roomType: selRoom,
         });
         totalAmount += (Number(prod.price) || 0) * qty;
       }

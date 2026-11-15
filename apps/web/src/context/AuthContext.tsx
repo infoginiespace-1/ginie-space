@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { api } from "../lib/api";
 import { getSocket, disconnectSocket } from "../lib/socket";
 
-export type BusinessType = "retail" | "wholesale" | "services";
+export type BusinessType = "retail" | "wholesale" | "services" | "restaurant" | "garments" | "hotel";
 
 export interface User {
   id: string;

@@ -327,7 +327,7 @@ export class GoogleSheetsDatabase implements IDatabase {
       this.sheets,
       this.spreadsheetId,
       "Products",
-      ["id", "userId", "name", "description", "price", "unit", "stock", "imageUrl", "createdAt", "updatedAt", "category", "minOrderQty", "costPrice", "itemType", "duration", "serviceMode"],
+      ["id", "userId", "name", "description", "price", "unit", "stock", "imageUrl", "createdAt", "updatedAt", "category", "minOrderQty", "costPrice", "itemType", "duration", "serviceMode", "dietary", "sizes", "colors", "roomType"],
       this.throttler
     );
 

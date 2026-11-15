@@ -49,6 +49,7 @@ export default function DashboardPage() {
   const [leads, setLeads] = useState<any[]>([]);
   const [businessPhone, setBusinessPhone] = useState("");
   const [businessName, setBusinessName] = useState("My Business");
+  const [businessType, setBusinessType] = useState<string>("retail");
   const [summaryModalOpen, setSummaryModalOpen] = useState(false);
   const [summaryPhone, setSummaryPhone] = useState("");
   const [sendingSummary, setSendingSummary] = useState(false);
@@ -80,6 +81,9 @@ export default function DashboardPage() {
         setBusinessName(setRes.data.business.name || "My Business");
         setBusinessPhone(setRes.data.business.phone || "");
         setSummaryPhone(setRes.data.business.phone || "");
+        if (setRes.data.businessType) {
+          setBusinessType(setRes.data.businessType);
+        }
         if (setRes.data.business.settingsJson) {
           try {
             const parsedSettings = JSON.parse(setRes.data.business.settingsJson);
@@ -294,9 +298,28 @@ export default function DashboardPage() {
     <AppLayout>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
         <div>
-          <Title level={3} style={{ margin: 0 }}>
-            {businessName} — Business Dashboard
-          </Title>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <Title level={3} style={{ margin: 0 }}>
+              {businessName}
+            </Title>
+            <Tag
+              color={
+                businessType === "restaurant" ? "orange" :
+                businessType === "garments" ? "magenta" :
+                businessType === "hotel" ? "cyan" :
+                businessType === "services" ? "purple" :
+                businessType === "wholesale" ? "blue" : "green"
+              }
+              style={{ fontWeight: 600, padding: "2px 8px", borderRadius: 6, margin: 0 }}
+            >
+              {businessType === "restaurant" && "🍽️ Restaurant & Food"}
+              {businessType === "garments" && "👗 Garments & Fashion"}
+              {businessType === "hotel" && "🏨 Hotels & Homestays"}
+              {businessType === "services" && "🛠️ Services & Bookings"}
+              {businessType === "wholesale" && "📦 Wholesale & B2B"}
+              {businessType === "retail" && "🛒 Retail & Kirana"}
+            </Tag>
+          </div>
           <Text type="secondary">Real-time overview of sales, pending orders, low stock &amp; leads</Text>
         </div>
 

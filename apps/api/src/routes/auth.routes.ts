@@ -26,8 +26,9 @@ export function createAuthRouter(
         return;
       }
 
-      if (!["retail", "wholesale", "services"].includes(String(businessType))) {
-        res.status(400).json({ error: "Please select Retail, Wholesale, or Service Business as your business type" });
+      const validBusinessTypes = ["retail", "wholesale", "services", "restaurant", "garments", "hotel"];
+      if (!validBusinessTypes.includes(String(businessType))) {
+        res.status(400).json({ error: "Please select a valid business category (Retail, Wholesale, Services, Restaurant, Garments, or Hotel)" });
         return;
       }
 

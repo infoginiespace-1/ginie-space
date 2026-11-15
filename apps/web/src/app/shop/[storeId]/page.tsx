@@ -74,6 +74,10 @@ interface StoreProduct {
   itemType?: "product" | "service";
   duration?: string;
   serviceMode?: "at_store" | "home_visit" | "online" | "any";
+  dietary?: "veg" | "non_veg" | "egg";
+  sizes?: string;
+  colors?: string;
+  roomType?: string;
 }
 
 const STORE_TIME_SLOTS = [
@@ -794,6 +798,24 @@ export default function PublicStorefrontPage() {
                             {Number(p.minOrderQty) > 1 && (
                               <Tag color="purple" style={{ fontSize: 11 }}>Min Qty: {p.minOrderQty}</Tag>
                             )}
+                            {p.dietary === "veg" && (
+                              <Tag color="success" style={{ fontSize: 11, fontWeight: 700 }}>🟢 Pure Veg</Tag>
+                            )}
+                            {p.dietary === "non_veg" && (
+                              <Tag color="error" style={{ fontSize: 11, fontWeight: 700 }}>🔴 Non-Veg</Tag>
+                            )}
+                            {p.dietary === "egg" && (
+                              <Tag color="warning" style={{ fontSize: 11, fontWeight: 700 }}>🟡 Egg</Tag>
+                            )}
+                            {p.sizes && (
+                              <Tag color="magenta" style={{ fontSize: 11 }}>Sizes: {p.sizes}</Tag>
+                            )}
+                            {p.colors && (
+                              <Tag color="volcano" style={{ fontSize: 11 }}>Colors: {p.colors}</Tag>
+                            )}
+                            {p.roomType && (
+                              <Tag color="cyan" style={{ fontSize: 11 }}>🏨 {p.roomType}</Tag>
+                            )}
                           </Space>
                         </div>
                         <Tag color={isService ? "purple" : outOfStock ? "red" : "green"}>
@@ -927,6 +949,12 @@ export default function PublicStorefrontPage() {
                   {quickViewProduct.itemType === "service" && <Tag color="geekblue">Service</Tag>}
                   {quickViewProduct.duration && <Tag color="cyan">{quickViewProduct.duration}</Tag>}
                   {quickViewProduct.category && <Tag color="blue">{quickViewProduct.category}</Tag>}
+                  {quickViewProduct.dietary === "veg" && <Tag color="success" style={{ fontWeight: 700 }}>🟢 Pure Veg</Tag>}
+                  {quickViewProduct.dietary === "non_veg" && <Tag color="error" style={{ fontWeight: 700 }}>🔴 Non-Veg</Tag>}
+                  {quickViewProduct.dietary === "egg" && <Tag color="warning" style={{ fontWeight: 700 }}>🟡 Contains Egg</Tag>}
+                  {quickViewProduct.sizes && <Tag color="magenta">Sizes: {quickViewProduct.sizes}</Tag>}
+                  {quickViewProduct.colors && <Tag color="volcano">Colors: {quickViewProduct.colors}</Tag>}
+                  {quickViewProduct.roomType && <Tag color="cyan">🏨 {quickViewProduct.roomType}</Tag>}
                   <Tag color="green">100% Genuine</Tag>
                 </Space>
               </div>

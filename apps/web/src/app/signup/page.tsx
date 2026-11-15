@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { Form, Input, Button, Card, Typography, Alert, Radio, Space } from "antd";
-import { UserOutlined, LockOutlined, MailOutlined, ShopOutlined, PhoneOutlined } from "@ant-design/icons";
+import { UserOutlined, LockOutlined, MailOutlined, ShopOutlined, PhoneOutlined, SkinOutlined, CoffeeOutlined, HomeOutlined, AppstoreOutlined, ToolOutlined } from "@ant-design/icons";
 import { useAuth } from "../../context/AuthContext";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -42,7 +42,7 @@ export default function SignupPage() {
       <Card
         style={{
           width: "100%",
-          maxWidth: 480,
+          maxWidth: 520,
           boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01)",
           borderRadius: 16,
         }}
@@ -126,37 +126,67 @@ export default function SignupPage() {
             rules={[{ required: true, message: "Please select your business type" }]}
           >
             <Radio.Group style={{ width: "100%" }}>
-              <Space direction="vertical" style={{ width: "100%" }}>
-                <Radio.Button value="retail" style={{ width: "100%", height: "auto", padding: "12px 16px", borderRadius: 8 }}>
-                  <Space direction="horizontal" size="middle">
-                    <ShopOutlined style={{ fontSize: 20, color: "#25D366" }} />
-                    <div style={{ textAlign: "left" }}>
-                      <div style={{ fontWeight: 600 }}>Retail Business</div>
-                      <div style={{ fontSize: 12, color: "#64748b" }}>Direct to customer store, shop, or Kirana</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <Radio.Button value="retail" style={{ width: "100%", height: "auto", padding: "12px 14px", borderRadius: 10 }}>
+                  <Space direction="vertical" size={2} style={{ width: "100%", textAlign: "left" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <ShopOutlined style={{ fontSize: 18, color: "#16a34a" }} />
+                      <span style={{ fontWeight: 600, fontSize: 13 }}>Retail &amp; Kirana</span>
                     </div>
+                    <div style={{ fontSize: 11, color: "#64748b", lineHeight: 1.3 }}>Shops, general stores &amp; daily essentials</div>
                   </Space>
                 </Radio.Button>
 
-                <Radio.Button value="wholesale" style={{ width: "100%", height: "auto", padding: "12px 16px", borderRadius: 8 }}>
-                  <Space direction="horizontal" size="middle">
-                    <ShopOutlined style={{ fontSize: 20, color: "#0284c7" }} />
-                    <div style={{ textAlign: "left" }}>
-                      <div style={{ fontWeight: 600 }}>Wholesale &amp; B2B</div>
-                      <div style={{ fontSize: 12, color: "#64748b" }}>Manufacturer, supplier, or bulk distributor</div>
+                <Radio.Button value="garments" style={{ width: "100%", height: "auto", padding: "12px 14px", borderRadius: 10 }}>
+                  <Space direction="vertical" size={2} style={{ width: "100%", textAlign: "left" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <SkinOutlined style={{ fontSize: 18, color: "#ec4899" }} />
+                      <span style={{ fontWeight: 600, fontSize: 13 }}>Garments &amp; Boutique</span>
                     </div>
+                    <div style={{ fontSize: 11, color: "#64748b", lineHeight: 1.3 }}>Fashion, sizes (S/M/L) &amp; color catalogs</div>
                   </Space>
                 </Radio.Button>
 
-                <Radio.Button value="services" style={{ width: "100%", height: "auto", padding: "12px 16px", borderRadius: 8 }}>
-                  <Space direction="horizontal" size="middle">
-                    <ShopOutlined style={{ fontSize: 20, color: "#7c3aed" }} />
-                    <div style={{ textAlign: "left" }}>
-                      <div style={{ fontWeight: 600 }}>Service Business &amp; Bookings</div>
-                      <div style={{ fontSize: 12, color: "#64748b" }}>AC/Home Repair, Salon, Clinic, Garage, Coaching &amp; Agency</div>
+                <Radio.Button value="restaurant" style={{ width: "100%", height: "auto", padding: "12px 14px", borderRadius: 10 }}>
+                  <Space direction="vertical" size={2} style={{ width: "100%", textAlign: "left" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <CoffeeOutlined style={{ fontSize: 18, color: "#ea580c" }} />
+                      <span style={{ fontWeight: 600, fontSize: 13 }}>Restaurant &amp; Cafe</span>
                     </div>
+                    <div style={{ fontSize: 11, color: "#64748b", lineHeight: 1.3 }}>Food menu, table QR &amp; veg/non-veg tags</div>
                   </Space>
                 </Radio.Button>
-              </Space>
+
+                <Radio.Button value="hotel" style={{ width: "100%", height: "auto", padding: "12px 14px", borderRadius: 10 }}>
+                  <Space direction="vertical" size={2} style={{ width: "100%", textAlign: "left" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <HomeOutlined style={{ fontSize: 18, color: "#0891b2" }} />
+                      <span style={{ fontWeight: 600, fontSize: 13 }}>Hotels &amp; Homestays</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: "#64748b", lineHeight: 1.3 }}>Room tariffs per night &amp; stay bookings</div>
+                  </Space>
+                </Radio.Button>
+
+                <Radio.Button value="wholesale" style={{ width: "100%", height: "auto", padding: "12px 14px", borderRadius: 10 }}>
+                  <Space direction="vertical" size={2} style={{ width: "100%", textAlign: "left" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <AppstoreOutlined style={{ fontSize: 18, color: "#0284c7" }} />
+                      <span style={{ fontWeight: 600, fontSize: 13 }}>Wholesale &amp; B2B</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: "#64748b", lineHeight: 1.3 }}>Suppliers, bulk MOQs &amp; tiered pricing</div>
+                  </Space>
+                </Radio.Button>
+
+                <Radio.Button value="services" style={{ width: "100%", height: "auto", padding: "12px 14px", borderRadius: 10 }}>
+                  <Space direction="vertical" size={2} style={{ width: "100%", textAlign: "left" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <ToolOutlined style={{ fontSize: 18, color: "#7c3aed" }} />
+                      <span style={{ fontWeight: 600, fontSize: 13 }}>Services &amp; Booking</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: "#64748b", lineHeight: 1.3 }}>Salon, AC repair, clinic &amp; home visits</div>
+                  </Space>
+                </Radio.Button>
+              </div>
             </Radio.Group>
           </Form.Item>
 

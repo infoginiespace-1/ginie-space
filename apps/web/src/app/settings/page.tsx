@@ -707,12 +707,15 @@ export default function SettingsPage() {
                 </Col>
 
                 <Col xs={24} md={12}>
-                  <Form.Item name="businessType" label="Business Type / Industry" rules={[{ required: true }]}>
+                  <Form.Item name="businessType" label="Business Category / Industry" rules={[{ required: true }]}>
                     <Select
                       options={[
-                        { label: "Retail Store / Dukaan", value: "retail" },
-                        { label: "Wholesale / B2B Trader", value: "wholesale" },
-                        { label: "Services / Freelancer", value: "services" },
+                        { label: "🛒 Retail Store & Kirana", value: "retail" },
+                        { label: "👗 Garments, Boutique & Fashion", value: "garments" },
+                        { label: "🍽️ Restaurant, Cafe & Kitchen", value: "restaurant" },
+                        { label: "🏨 Hotel, Homestay & Lodge", value: "hotel" },
+                        { label: "📦 Wholesale & Bulk B2B", value: "wholesale" },
+                        { label: "🛠️ Services & Appointments", value: "services" },
                       ]}
                     />
                   </Form.Item>

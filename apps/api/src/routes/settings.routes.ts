@@ -30,13 +30,14 @@ export function createSettingsRouter(
   router.put("/business", requireOwnerOrAdmin, async (req: Request, res: Response): Promise<void> => {
     try {
       const { name, phone, address, settingsJson, slug, businessType } = req.body;
-      let updatedBusinessType: "retail" | "wholesale" | "services" | undefined;
+      let updatedBusinessType: "retail" | "wholesale" | "services" | "restaurant" | "garments" | "hotel" | undefined;
       if (businessType !== undefined) {
-        if (!["retail", "wholesale", "services"].includes(String(businessType))) {
-          res.status(400).json({ error: "Invalid businessType. Must be retail, wholesale, or services." });
+        const allowedTypes = ["retail", "wholesale", "services", "restaurant", "garments", "hotel"];
+        if (!allowedTypes.includes(String(businessType))) {
+          res.status(400).json({ error: "Invalid businessType. Must be retail, wholesale, services, restaurant, garments, or hotel." });
           return;
         }
-        updatedBusinessType = businessType as "retail" | "wholesale" | "services";
+        updatedBusinessType = businessType as "retail" | "wholesale" | "services" | "restaurant" | "garments" | "hotel";
       }
 
       let cleanSlug: string | undefined;

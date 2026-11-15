@@ -313,7 +313,7 @@ export function createProductsRouter(db: IDatabase, io: Server): Router {
 
   router.post("/", async (req: Request, res: Response): Promise<void> => {
     try {
-      const { name, description, price, unit, stock, imageUrl, category, minOrderQty, costPrice, itemType, duration, serviceMode } = req.body;
+      const { name, description, price, unit, stock, imageUrl, category, minOrderQty, costPrice, itemType, duration, serviceMode, dietary, sizes, colors, roomType } = req.body;
       const imageErr = validateProductImageUrl(imageUrl);
       if (imageErr) {
         res.status(400).json({ error: imageErr });
@@ -352,6 +352,10 @@ export function createProductsRouter(db: IDatabase, io: Server): Router {
         itemType: resolvedItemType,
         duration: duration ? String(duration).trim() : undefined,
         serviceMode: resolvedServiceMode,
+        dietary: ["veg", "non_veg", "egg"].includes(dietary) ? dietary : undefined,
+        sizes: sizes ? String(sizes).trim() : undefined,
+        colors: colors ? String(colors).trim() : undefined,
+        roomType: roomType ? String(roomType).trim() : undefined,
       });
 
       io.to(`user:${req.user!.id}`).emit("product:created", product);
@@ -374,7 +378,7 @@ export function createProductsRouter(db: IDatabase, io: Server): Router {
         return;
       }
 
-      const { name, description, price, unit, stock, imageUrl, category, minOrderQty, costPrice, itemType, duration, serviceMode } = req.body;
+      const { name, description, price, unit, stock, imageUrl, category, minOrderQty, costPrice, itemType, duration, serviceMode, dietary, sizes, colors, roomType } = req.body;
       const imageErr = validateProductImageUrl(imageUrl);
       if (imageErr) {
         res.status(400).json({ error: imageErr });
@@ -396,6 +400,10 @@ export function createProductsRouter(db: IDatabase, io: Server): Router {
         itemType: nextItemType,
         duration: duration !== undefined ? String(duration).trim() : existing.duration,
         serviceMode: nextServiceMode,
+        dietary: dietary !== undefined ? (["veg", "non_veg", "egg"].includes(dietary) ? dietary : undefined) : existing.dietary,
+        sizes: sizes !== undefined ? (sizes ? String(sizes).trim() : undefined) : existing.sizes,
+        colors: colors !== undefined ? (colors ? String(colors).trim() : undefined) : existing.colors,
+        roomType: roomType !== undefined ? (roomType ? String(roomType).trim() : undefined) : existing.roomType,
       });
 
       io.to(`user:${existing.userId}`).emit("product:updated", updated);
