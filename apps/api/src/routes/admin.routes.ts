@@ -137,18 +137,29 @@ export function createAdminRouter(
     }
   });
 
-  // 4. Send Test Message from Support WhatsApp
+  // 4. Send Message from Support WhatsApp (+91 92792 59690)
   router.post("/whatsapp/send-test", async (req: Request, res: Response): Promise<void> => {
     try {
-      const { recipientPhone, messageText } = req.body;
-      if (!recipientPhone || !messageText) {
-        res.status(400).json({ error: "Recipient phone number and message text are required" });
+      const { recipientPhone, messageText, imageUrl, mediaUrl, mediaType, fileName } = req.body;
+      if (!recipientPhone || (!messageText && !imageUrl && !mediaUrl)) {
+        res.status(400).json({ error: "Recipient phone number and message text or image are required" });
         return;
       }
 
+      const bannerUrl = (imageUrl || mediaUrl || "").trim() || undefined;
+      const media = bannerUrl
+        ? {
+            mediaType: (mediaType as "image" | "document") || "image",
+            mediaUrl: bannerUrl,
+            fileName: fileName || undefined,
+          }
+        : undefined;
+
       const success = await notificationService.sendSupportNotification(
         recipientPhone.trim(),
-        messageText.trim()
+        messageText?.trim() || (media ? "📷 Media Attachment" : ""),
+        { simulateTyping: true, randomizeHash: true },
+        media
       );
 
       if (!success) {
@@ -159,11 +170,15 @@ export function createAdminRouter(
       const digits = normalizePhoneDigits(recipientPhone);
       if (digits) {
         try {
+          const savedText = bannerUrl
+            ? `${messageText ? messageText.trim() + " " : ""}[Media: ${bannerUrl}]`
+            : (messageText ? messageText.trim() : "📷 Media Attachment");
+
           await db.messages.create({
             userId: SYSTEM_SUPPORT_SESSION_ID,
             contactPhone: digits,
             contactName: `+${digits}`,
-            text: messageText.trim(),
+            text: savedText,
             fromMe: "true",
             messageId: `support_${randomUUID()}`,
             timestamp: new Date().toISOString(),
@@ -173,9 +188,9 @@ export function createAdminRouter(
         }
       }
 
-      res.json({ message: `Test message sent successfully to ${recipientPhone}` });
+      res.json({ message: `Message sent successfully to ${recipientPhone}` });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || "Failed to send test message" });
+      res.status(500).json({ error: err.message || "Failed to send message" });
     }
   });
 
