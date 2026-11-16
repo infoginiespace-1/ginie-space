@@ -13,18 +13,6 @@ export const metadata: Metadata = {
     template: "%s | GinieSpace",
   },
   description: "Automate your sales, orders, and customer discovery directly through WhatsApp with 0% payment gateway commission. Free online dukaan & digital catalog builder.",
-  keywords: [
-    "GinieSpace",
-    "ginie.space",
-    "app.ginie.space",
-    "WhatsApp Store Builder",
-    "Online Dukaan",
-    "Direct UPI Billing",
-    "WhatsApp Commerce",
-    "B2B Leads India",
-    "Zero Commission Store",
-    "Hyperlocal Catalog",
-  ],
   authors: [{ name: "GinieSpace Team", url: "https://app.ginie.space" }],
   creator: "GinieSpace",
   publisher: "GinieSpace",
@@ -84,7 +72,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en-IN">
       <head>
         <style
           dangerouslySetInnerHTML={{

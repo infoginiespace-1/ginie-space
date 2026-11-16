@@ -3,36 +3,35 @@ import type { Metadata } from "next";
 import LandingPageClient from "./LandingPageClient";
 
 export const metadata: Metadata = {
-  title: "GinieSpace | WhatsApp Commerce, Hyperlocal B2B Leads & Direct UPI Billing India",
+  title: "WhatsApp Catalog & UPI Billing Software India | GinieSpace",
   description:
-    "Launch your online WhatsApp catalog, collect direct bank UPI payments with 0% gateway commission, and discover verified local B2B leads. Free plan available; PRO growth tier only ₹199/month.",
-  keywords: [
-    "WhatsApp Commerce India",
-    "WhatsApp Catalog Maker",
-    "Direct Bank UPI Billing",
-    "Zero Commission Online Store",
-    "B2B Leads Finder Google Places India",
-    "Kirana WhatsApp Store",
-    "Wholesale MOQ Storefront",
-    "Services Appointment Booking WhatsApp",
-    "GinieSpace",
-  ],
+    "Apna WhatsApp catalog banayein, 0% commission par direct UPI payment lein aur local B2B leads payein. Free plan, PRO sirf ₹199/month.",
   alternates: {
     canonical: "https://app.ginie.space",
   },
   openGraph: {
-    title: "GinieSpace | Turn WhatsApp Into Your Sales & Billing Engine",
+    title: "WhatsApp Catalog & UPI Billing Software India | GinieSpace",
     description:
-      "Direct bank UPI payments (0% commission), instant digital catalog link, and hyperlocal B2B leads discovery for Indian retail, wholesale, and service businesses.",
+      "Apna WhatsApp catalog banayein, 0% commission par direct UPI payment lein aur local B2B leads payein. Free plan, PRO sirf ₹199/month.",
     url: "https://app.ginie.space",
     siteName: "GinieSpace",
     locale: "en_IN",
     type: "website",
+    images: [
+      {
+        url: "https://app.ginie.space/og-catalog.jpg",
+        width: 1200,
+        height: 630,
+        alt: "GinieSpace - WhatsApp Catalog & UPI Billing Software India",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "GinieSpace - Smart WhatsApp Commerce for Indian Businesses",
-    description: "Accept 100% direct UPI payments, launch your online catalog, and find verified local B2B leads.",
+    title: "WhatsApp Catalog & UPI Billing Software India | GinieSpace",
+    description:
+      "Apna WhatsApp catalog banayein, 0% commission par direct UPI payment lein aur local B2B leads payein. Free plan, PRO sirf ₹199/month.",
+    images: ["https://app.ginie.space/og-catalog.jpg"],
   },
   robots: {
     index: true,
