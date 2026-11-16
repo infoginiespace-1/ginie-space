@@ -135,6 +135,8 @@ export default function LandingPageClient() {
           textAlign: "center",
           fontSize: 13,
           fontWeight: 600,
+          minHeight: 36,
+          boxSizing: "border-box",
         }}
       >
         <span>🇮🇳 Built specifically for Indian Retailers, Wholesalers &amp; Service MSMEs • 100% Direct Bank UPI</span>
@@ -142,6 +144,7 @@ export default function LandingPageClient() {
 
       {/* Navigation Header */}
       <header
+        className="app-header"
         style={{
           position: "sticky",
           top: 0,
@@ -149,13 +152,16 @@ export default function LandingPageClient() {
           background: "rgba(255, 255, 255, 0.95)",
           backdropFilter: "blur(12px)",
           borderBottom: "1px solid #e2e8f0",
+          minHeight: 68,
         }}
       >
         <div
           style={{
             maxWidth: 1200,
             margin: "0 auto",
-            padding: isMobile ? "10px 16px" : "14px 24px",
+            padding: "12px 24px",
+            minHeight: 68,
+            boxSizing: "border-box",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
@@ -452,7 +458,7 @@ export default function LandingPageClient() {
       </Drawer>
 
       {/* Hero Section */}
-      <section style={{ maxWidth: 1200, margin: "0 auto", padding: isMobile ? "36px 16px 24px" : "64px 24px 32px", textAlign: "center" }}>
+      <section className="hero-section">
         <div style={{ display: "inline-block", marginBottom: 16 }}>
           <Tag
             color="success"
@@ -504,82 +510,80 @@ export default function LandingPageClient() {
         </Paragraph>
 
         {/* Hero CTAs */}
-        {isMobile ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 340, margin: "0 auto 28px" }}>
-            <Button
-              type="primary"
-              size="large"
-              block
-              icon={<ArrowRightOutlined />}
-              style={{
-                background: "#25D366",
-                borderColor: "#25D366",
-                height: 48,
-                fontWeight: 700,
-                fontSize: 16,
-                borderRadius: 10,
-                boxShadow: "0 6px 20px rgba(37, 211, 102, 0.4)",
-              }}
-              onClick={() => router.push("/signup")}
-            >
-              {t.hero.ctaPrimary}
-            </Button>
-            <Button
-              size="large"
-              block
-              icon={<PlayCircleOutlined style={{ color: "#059669", fontSize: 18 }} />}
-              style={{
-                height: 48,
-                fontWeight: 600,
-                fontSize: 15,
-                borderRadius: 10,
-                borderColor: "#cbd5e1",
-                background: "#fff",
-              }}
-              onClick={() => setVideoModalOpen(true)}
-            >
-              {t.hero.ctaSecondary}
-            </Button>
-          </div>
-        ) : (
-          <Space size="middle" wrap style={{ justifyContent: "center", marginBottom: 28 }}>
-            <Button
-              type="primary"
-              size="large"
-              icon={<ArrowRightOutlined />}
-              style={{
-                background: "#25D366",
-                borderColor: "#25D366",
-                height: 52,
-                paddingInline: 32,
-                fontWeight: 700,
-                fontSize: 16,
-                borderRadius: 10,
-                boxShadow: "0 8px 24px rgba(37, 211, 102, 0.4)",
-              }}
-              onClick={() => router.push("/signup")}
-            >
-              {t.hero.ctaPrimary}
-            </Button>
+        <div className="show-on-mobile" style={{ flexDirection: "column", gap: 12, maxWidth: 340, margin: "0 auto 28px" }}>
+          <Button
+            type="primary"
+            size="large"
+            block
+            icon={<ArrowRightOutlined />}
+            style={{
+              background: "#25D366",
+              borderColor: "#25D366",
+              height: 48,
+              fontWeight: 700,
+              fontSize: 16,
+              borderRadius: 10,
+              boxShadow: "0 6px 20px rgba(37, 211, 102, 0.4)",
+            }}
+            onClick={() => router.push("/signup")}
+          >
+            {t.hero.ctaPrimary}
+          </Button>
+          <Button
+            size="large"
+            block
+            icon={<PlayCircleOutlined style={{ color: "#059669", fontSize: 18 }} />}
+            style={{
+              height: 48,
+              fontWeight: 600,
+              fontSize: 15,
+              borderRadius: 10,
+              borderColor: "#cbd5e1",
+              background: "#fff",
+            }}
+            onClick={() => setVideoModalOpen(true)}
+          >
+            {t.hero.ctaSecondary}
+          </Button>
+        </div>
 
-            <Button
-              size="large"
-              icon={<PlayCircleOutlined style={{ color: "#059669", fontSize: 18 }} />}
-              style={{
-                height: 52,
-                paddingInline: 24,
-                fontWeight: 600,
-                fontSize: 15,
-                borderRadius: 10,
-                borderColor: "#cbd5e1",
-                background: "#fff",
-              }}
-              onClick={() => setVideoModalOpen(true)}
-            >
-              {t.hero.ctaSecondary}
-            </Button>
-          </Space>
-        )}
+        <div className="hide-on-mobile" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, margin: "0 auto 32px", flexWrap: "wrap" }}>
+          <Button
+            type="primary"
+            size="large"
+            icon={<ArrowRightOutlined />}
+            style={{
+              background: "#25D366",
+              borderColor: "#25D366",
+              height: 52,
+              paddingInline: 32,
+              fontWeight: 700,
+              fontSize: 16,
+              borderRadius: 10,
+              boxShadow: "0 8px 24px rgba(37, 211, 102, 0.4)",
+            }}
+            onClick={() => router.push("/signup")}
+          >
+            {t.hero.ctaPrimary}
+          </Button>
+
+          <Button
+            size="large"
+            icon={<PlayCircleOutlined style={{ color: "#059669", fontSize: 18 }} />}
+            style={{
+              height: 52,
+              paddingInline: 24,
+              fontWeight: 600,
+              fontSize: 15,
+              borderRadius: 10,
+              borderColor: "#cbd5e1",
+              background: "#fff",
+            }}
+            onClick={() => setVideoModalOpen(true)}
+          >
+            {t.hero.ctaSecondary}
+          </Button>
+        </div>
 
         {/* Direct UPI Ecosystem Trust Strip */}
         <div
@@ -630,10 +634,11 @@ export default function LandingPageClient() {
         </div>
 
         {/* Real Grounded Trust & Growth Metrics */}
-        <div style={{ maxWidth: 960, margin: "0 auto 36px" }}>
+        <div style={{ maxWidth: 960, margin: "0 auto 36px", minHeight: 96 }}>
           <Row gutter={[12, 12]} justify="center">
             <Col xs={12} sm={6}>
               <div
+                className="trust-stats-card"
                 style={{
                   background: "#ffffff",
                   padding: "16px 10px",
@@ -641,6 +646,10 @@ export default function LandingPageClient() {
                   border: "1px solid #e2e8f0",
                   boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
                   height: "100%",
+                  minHeight: 88,
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "center",
                 }}
               >
                 <div style={{ fontSize: isMobile ? 19 : 24, fontWeight: 900, color: "#059669" }}>
@@ -653,6 +662,7 @@ export default function LandingPageClient() {
             </Col>
             <Col xs={12} sm={6}>
               <div
+                className="trust-stats-card"
                 style={{
                   background: "#ffffff",
                   padding: "16px 10px",
@@ -660,6 +670,10 @@ export default function LandingPageClient() {
                   border: "1px solid #e2e8f0",
                   boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
                   height: "100%",
+                  minHeight: 88,
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "center",
                 }}
               >
                 <div style={{ fontSize: isMobile ? 19 : 24, fontWeight: 900, color: "#0f172a" }}>
@@ -672,6 +686,7 @@ export default function LandingPageClient() {
             </Col>
             <Col xs={12} sm={6}>
               <div
+                className="trust-stats-card"
                 style={{
                   background: "#ffffff",
                   padding: "16px 10px",
@@ -679,6 +694,10 @@ export default function LandingPageClient() {
                   border: "1px solid #e2e8f0",
                   boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
                   height: "100%",
+                  minHeight: 88,
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "center",
                 }}
               >
                 <div style={{ fontSize: isMobile ? 19 : 24, fontWeight: 900, color: "#2563eb" }}>
@@ -691,6 +710,7 @@ export default function LandingPageClient() {
             </Col>
             <Col xs={12} sm={6}>
               <div
+                className="trust-stats-card"
                 style={{
                   background: "#ffffff",
                   padding: "16px 10px",
@@ -698,6 +718,10 @@ export default function LandingPageClient() {
                   border: "1px solid #e2e8f0",
                   boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
                   height: "100%",
+                  minHeight: 88,
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "center",
                 }}
               >
                 <div style={{ fontSize: isMobile ? 19 : 24, fontWeight: 900, color: "#d97706" }}>

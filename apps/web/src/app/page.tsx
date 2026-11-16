@@ -5,7 +5,7 @@ import LandingPageClient from "./LandingPageClient";
 export const metadata: Metadata = {
   title: "GinieSpace | WhatsApp Commerce, Hyperlocal B2B Leads & Direct UPI Billing India",
   description:
-    "Launch your online WhatsApp catalog, collect direct bank UPI payments with 0% gateway commission, and discover verified local B2B leads. Free plan available; PRO growth tier only ₹99/month.",
+    "Launch your online WhatsApp catalog, collect direct bank UPI payments with 0% gateway commission, and discover verified local B2B leads. Free plan available; PRO growth tier only ₹199/month.",
   keywords: [
     "WhatsApp Commerce India",
     "WhatsApp Catalog Maker",

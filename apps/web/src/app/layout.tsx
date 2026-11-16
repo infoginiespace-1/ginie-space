@@ -85,6 +85,22 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `
+              .show-on-mobile{display:none!important}
+              .app-header{min-height:68px}
+              .hero-section{max-width:1200px;margin:0 auto;padding:64px 24px 32px;text-align:center}
+              @media(max-width:768px){
+                .hide-on-mobile{display:none!important}
+                .show-on-mobile{display:flex!important}
+                .hero-section{padding:36px 16px 24px}
+              }
+            `,
+          }}
+        />
+      </head>
       <body style={{ margin: 0, padding: 0, fontFamily: "system-ui, -apple-system, sans-serif" }}>
         <AntdRegistry>
           <ConfigProvider
