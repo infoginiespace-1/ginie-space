@@ -1697,6 +1697,20 @@ export default function AdminPage() {
                                       }}
                                     />
                                   </Tooltip>
+                                  {r.role !== "admin" && (
+                                    <Popconfirm
+                                      title={`Delete ${r.name || r.business?.name || "account"} permanently?`}
+                                      description="User account, business profile, catalog and data will be permanently wiped."
+                                      onConfirm={() => handleDeleteUser(r)}
+                                      okText="Yes, Delete"
+                                      cancelText="Cancel"
+                                      okButtonProps={{ danger: true }}
+                                    >
+                                      <Tooltip title="Delete Account Permanently">
+                                        <Button size="small" danger icon={<DeleteOutlined />} />
+                                      </Tooltip>
+                                    </Popconfirm>
+                                  )}
                                 </Space>
                               ),
                             },
@@ -2964,6 +2978,21 @@ export default function AdminPage() {
                 >
                   {selectedMerchant.status === "suspended" ? "Reactivate Workspace" : "Suspend Workspace"}
                 </Button>
+
+                {selectedMerchant.role !== "admin" && (
+                  <Popconfirm
+                    title={`Permanently delete ${selectedMerchant.name || selectedMerchant.business?.name || "merchant"}?`}
+                    description="This action cannot be undone. User account, business profile, catalog and data will be permanently wiped."
+                    onConfirm={() => handleDeleteUser(selectedMerchant)}
+                    okText="Yes, Delete Forever"
+                    cancelText="Cancel"
+                    okButtonProps={{ danger: true }}
+                  >
+                    <Button block danger icon={<DeleteOutlined />} style={{ fontWeight: 600 }}>
+                      Delete Account Permanently
+                    </Button>
+                  </Popconfirm>
+                )}
               </Space>
             </Card>
           </div>

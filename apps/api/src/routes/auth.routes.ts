@@ -21,8 +21,14 @@ export function createAuthRouter(
     try {
       const { email, password, name, businessType, phone } = req.body;
 
-      if (!email || !password || !name || !businessType) {
-        res.status(400).json({ error: "Please fill in all required fields (Name, Email, Password, Business Type)" });
+      if (!email || !password || !name || !businessType || !phone) {
+        res.status(400).json({ error: "Please fill in all required fields (Name, Email, WhatsApp Number, Password, Business Category)" });
+        return;
+      }
+
+      const phoneDigits = normalizePhoneDigits(phone);
+      if (!phoneDigits || phoneDigits.length < 10) {
+        res.status(400).json({ error: "Please enter a valid 10-digit WhatsApp mobile number" });
         return;
       }
 
@@ -33,9 +39,23 @@ export function createAuthRouter(
       }
 
       const cleanEmail = email.toLowerCase().trim();
-      const existing = await db.users.findOne({ email: cleanEmail }).catch(() => null);
-      if (existing) {
+      const [existingUser, allBusinesses] = await Promise.all([
+        db.users.findOne({ email: cleanEmail }).catch(() => null),
+        db.businesses.findMany().catch(() => []),
+      ]);
+
+      if (existingUser) {
         res.status(400).json({ error: "An account with this email address already exists" });
+        return;
+      }
+
+      const existingPhoneBiz = allBusinesses.find(
+        (b) => normalizePhoneDigits(b.phone || "") === phoneDigits
+      );
+      if (existingPhoneBiz) {
+        res.status(400).json({
+          error: "An account with this WhatsApp mobile number already exists. Please Sign In or use another mobile number.",
+        });
         return;
       }
 

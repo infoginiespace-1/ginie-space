@@ -668,6 +668,25 @@ export function createAdminRouter(
         await waManager.disconnectSession(target.id);
       } catch {}
 
+      // 1. Delete associated business profile (frees up phone number & store slug)
+      const biz = await db.businesses.findOne({ userId: target.id }).catch(() => null);
+      if (biz) {
+        await db.businesses.delete(biz.id).catch(() => {});
+      }
+
+      // 2. Delete staff accounts created by this merchant
+      const staffAccounts = await db.users.findMany({ ownerId: target.id }).catch(() => []);
+      for (const s of staffAccounts) {
+        await db.users.delete(s.id).catch(() => {});
+      }
+
+      // 3. Delete products belonging to this merchant
+      const prods = await db.products.findMany({ userId: target.id }).catch(() => []);
+      for (const p of prods) {
+        await db.products.delete(p.id).catch(() => {});
+      }
+
+      // 4. Delete the user account
       await db.users.delete(target.id);
 
       const adminEmail = req.user?.email || "admin";
@@ -675,10 +694,10 @@ export function createAdminRouter(
         db,
         adminEmail,
         "DELETE_USER",
-        `Admin deleted user account ${target.email} (${target.name})`
+        `Admin deleted user account ${target.email} (${target.name}) and released registered phone`
       );
 
-      res.json({ message: `User account ${target.email} deleted successfully` });
+      res.json({ message: `User account ${target.email} and all workspace data deleted successfully` });
     } catch (err: any) {
       res.status(500).json({ error: err.message || "Failed to delete user account" });
     }

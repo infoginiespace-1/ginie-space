@@ -41,6 +41,11 @@ import {
   ThunderboltFilled,
   ClockCircleOutlined,
   EyeOutlined,
+  CoffeeOutlined,
+  SkinOutlined,
+  HomeOutlined,
+  AppstoreOutlined,
+  ToolOutlined,
 } from "@ant-design/icons";
 import { api } from "../../../lib/api";
 
@@ -442,7 +447,19 @@ export default function PublicStorefrontPage() {
                   fontSize: 26,
                 }}
               >
-                <ShopOutlined />
+                {store.businessType === "restaurant" ? (
+                  <CoffeeOutlined />
+                ) : store.businessType === "garments" ? (
+                  <SkinOutlined />
+                ) : store.businessType === "hotel" ? (
+                  <HomeOutlined />
+                ) : store.businessType === "wholesale" ? (
+                  <AppstoreOutlined />
+                ) : store.businessType === "services" ? (
+                  <ToolOutlined />
+                ) : (
+                  <ShopOutlined />
+                )}
               </div>
             )}
 
@@ -488,7 +505,13 @@ export default function PublicStorefrontPage() {
                 )}
                 <span>
                   🏷️{" "}
-                  {store.businessType === "wholesale"
+                  {store.businessType === "restaurant"
+                    ? "Restaurant & Food Hub"
+                    : store.businessType === "garments"
+                    ? "Garments & Fashion Hub"
+                    : store.businessType === "hotel"
+                    ? "Hotel & Homestay"
+                    : store.businessType === "wholesale"
                     ? "Wholesale Hub"
                     : store.businessType === "services"
                     ? "Services & Booking Hub"
