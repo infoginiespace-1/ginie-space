@@ -40,7 +40,7 @@ export function UpgradeModal({ open, onClose, onSuccess, currentPlan = "free" }:
   const [copied, setCopied] = useState(false);
   const [submittedUtr, setSubmittedUtr] = useState<string | null>(null);
 
-  const amount = billingCycle === "monthly" ? 99 : 999;
+  const amount = billingCycle === "monthly" ? 199 : 1799;
   const officialUpi = "paytmqr9tziqdamfo@paytm";
   const upiLink = `upi://pay?pa=${officialUpi}&pn=GinieSpace&am=${amount}&cu=INR&tn=GinieSpace%20PRO%20Upgrade`;
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(upiLink)}`;
@@ -96,7 +96,7 @@ export function UpgradeModal({ open, onClose, onSuccess, currentPlan = "free" }:
           <span style={{ fontSize: 18, fontWeight: 700 }}>
             Upgrade to GinieSpace PRO Workspace
           </span>
-          <Tag color="gold" style={{ fontWeight: 600 }}>₹99/mo</Tag>
+          <Tag color="gold" style={{ fontWeight: 600 }}>₹199/mo</Tag>
         </Space>
       }
     >
@@ -132,10 +132,10 @@ export function UpgradeModal({ open, onClose, onSuccess, currentPlan = "free" }:
                 size="middle"
               >
                 <Radio.Button value="monthly">
-                  Monthly Plan — <strong>₹99 / mo</strong>
+                  Monthly Plan — <strong>₹199 / mo</strong>
                 </Radio.Button>
                 <Radio.Button value="yearly">
-                  Yearly Plan — <strong>₹999 / yr</strong> <Tag color="green" style={{ marginLeft: 4 }}>Save 2 Months!</Tag>
+                  Yearly Plan — <strong>₹1,799 / yr</strong> <Tag color="green" style={{ marginLeft: 4 }}>Save ₹589 (25% OFF)</Tag>
                 </Radio.Button>
               </Radio.Group>
             </div>
@@ -153,11 +153,15 @@ export function UpgradeModal({ open, onClose, onSuccess, currentPlan = "free" }:
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 16px", fontSize: 13 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <CheckCircleOutlined style={{ color: "#16a34a" }} />
-                  <span><strong>Unlimited Items</strong> (vs 15 Free)</span>
+                  <span><strong>50 Lead Searches / mo</strong> (1,000 Verified Leads vs 3/day Free)</span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <CheckCircleOutlined style={{ color: "#16a34a" }} />
-                  <span><strong>Unlimited Leads</strong> (vs 10 Free)</span>
+                  <span><strong>10,000 Saved Leads</strong> (vs 10 Free)</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <CheckCircleOutlined style={{ color: "#16a34a" }} />
+                  <span><strong>Unlimited Catalog</strong> (vs 15 Free)</span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <CheckCircleOutlined style={{ color: "#16a34a" }} />

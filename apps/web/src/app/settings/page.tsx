@@ -923,7 +923,7 @@ export default function SettingsPage() {
                   onClick={() => setUpgradeModalOpen(true)}
                   style={{ background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", borderColor: "#d97706", fontWeight: 700 }}
                 >
-                  Upgrade to PRO (₹99 / Mo)
+                  Upgrade to PRO (₹199 / Mo)
                 </Button>
               )}
             </Card>

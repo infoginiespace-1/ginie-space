@@ -126,11 +126,11 @@ export function createSettingsRouter(
     }
   });
 
-  // Submit ₹99 PRO Upgrade Request with UPI UTR
+  // Submit PRO Upgrade Request with UPI UTR
   router.post("/upgrade-request", async (req: Request, res: Response): Promise<void> => {
     try {
       const userId = req.user!.id;
-      const { utrNumber, billingCycle = "monthly", amount = 99 } = req.body;
+      const { utrNumber, billingCycle = "monthly", amount = PRO_PRICING.monthly } = req.body;
 
       if (!utrNumber || String(utrNumber).trim().length < 6) {
         res.status(400).json({ error: "Please enter a valid 12-digit UPI UTR / Transaction Reference Number." });
@@ -168,7 +168,7 @@ export function createSettingsRouter(
 
       res.json({
         success: true,
-        message: "Your ₹99 PRO Upgrade request has been submitted! It will be verified and activated shortly.",
+        message: "Your PRO Upgrade request has been submitted! It will be verified and activated shortly.",
         subscriptionStatus: "pending",
         utr: cleanUtr,
       });

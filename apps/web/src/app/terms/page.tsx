@@ -170,7 +170,7 @@ export default function TermsAndConditionsPage() {
               </Paragraph>
               <ul style={{ lineHeight: 1.8, color: "#334155", paddingLeft: 20 }}>
                 <li><strong>Free Starter Tier:</strong> Available at ₹0 with core catalog creation and basic inbox management.</li>
-                <li><strong>PRO Business Growth Tier:</strong> Billed at ₹99/month (or ₹999/year for 365 days). Activations require dynamic UPI transfer and manual/system verification of the 12-digit transaction UTR reference number.</li>
+                <li><strong>PRO Business Growth Tier:</strong> Billed at ₹199/month (or ₹1,799/year for 365 days). Activations require dynamic UPI transfer and manual/system verification of the 12-digit transaction UTR reference number.</li>
                 <li>All prices are in Indian Rupees (INR) and are inclusive/exclusive of applicable Goods and Services Tax (GST) as mandated by Indian tax law.</li>
               </ul>
 
@@ -272,7 +272,7 @@ export default function TermsAndConditionsPage() {
               </Paragraph>
               <ul style={{ lineHeight: 1.8, color: "#334155", paddingLeft: 20 }}>
                 <li><strong>Free Starter Tier:</strong> ₹0 me basic catalog aur limited features ke sath lifetime free.</li>
-                <li><strong>PRO Business Tier:</strong> ₹99/mahina ya ₹999/saal. Dynamic UPI payment transfer aur 12-digit UTR verification ke baad turant activate hota hai.</li>
+                <li><strong>PRO Business Tier:</strong> ₹199/mahina ya ₹1,799/saal. Dynamic UPI payment transfer aur 12-digit UTR verification ke baad turant activate hota hai.</li>
                 <li>Sabhi fees Indian Rupees (INR) me hain aur GST niyamon ke antargat aati hain.</li>
               </ul>
 

@@ -4,6 +4,7 @@ import { AuthenticatedUser } from "../middleware/auth";
 export const FREE_PLAN_LIMITS = {
   maxProducts: 15,
   maxLeads: 10,
+  maxDailyLeadSearches: 3,
   maxStaff: 1,
   allowBulkBroadcast: false,
   allowDailySummary: false,
@@ -12,14 +13,15 @@ export const FREE_PLAN_LIMITS = {
 export const PRO_PLAN_LIMITS = {
   maxProducts: 10000,
   maxLeads: 10000,
+  maxMonthlyLeadSearches: 50,
   maxStaff: 5,
   allowBulkBroadcast: true,
   allowDailySummary: true,
 };
 
 export const PRO_PRICING = {
-  monthly: 99,
-  yearly: 999,
+  monthly: 199,
+  yearly: 1799,
   currency: "INR",
   upiId: "paytmqr9tziqdamfo@paytm", // Official GinieSpace Paytm Merchant UPI ID
   supportPhone: "919279259690",

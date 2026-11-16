@@ -956,7 +956,7 @@ export default function AdminPage() {
     },
     {
       title: "PRO Plan Upgrade Details",
-      text: "GinieSpace PRO plan me aapko Unlimited Catalog, Unlimited Leads Finder, 10 Staff Accounts aur Bulk WhatsApp alerts milte hain. Upgrade ke liye UPI ID: paytmqr9tziqdamfo@paytm par ₹99 pay karke UTR submit karein.",
+      text: "GinieSpace PRO plan me aapko Unlimited Catalog, 50 B2B Lead Searches/month (1,000 verified leads), 10,000 Saved Leads, 5 Staff Accounts aur Bulk WhatsApp alerts milte hain. Upgrade ke liye UPI ID: paytmqr9tziqdamfo@paytm par ₹199 (monthly) ya ₹1,799 (yearly) pay karke UTR submit karein.",
     },
     {
       title: "Payment UTR Verified",
@@ -1807,7 +1807,7 @@ export default function AdminPage() {
                         >
                           <Statistic
                             title={<span style={{ color: "rgba(255,255,255,0.85)", fontSize: isMobile ? 11 : 14 }}>MRR Run Rate</span>}
-                            value={subscriptions.filter((s) => s.plan === "pro").length * 99}
+                            value={subscriptions.filter((s) => s.plan === "pro").length * 199}
                             precision={0}
                             prefix={<DollarOutlined style={{ color: "#fff", fontSize: isMobile ? 14 : 18 }} />}
                             formatter={(val) => `₹${Number(val).toLocaleString("en-IN")}`}
@@ -1926,7 +1926,7 @@ export default function AdminPage() {
                                       onClick={() => handleApproveSubscription(r.userId, "monthly")}
                                       style={{ background: "#10b981", borderColor: "#10b981", fontWeight: 600 }}
                                     >
-                                      Approve (₹99 / 1 Mo)
+                                      Approve (₹199 / 1 Mo)
                                     </Button>
                                     <Popconfirm
                                       title="Reject upgrade request?"

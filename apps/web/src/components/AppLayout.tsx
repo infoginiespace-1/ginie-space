@@ -370,7 +370,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                         padding: "0 6px",
                       }}
                     >
-                      PRO ₹99
+                      PRO ₹199
                     </Button>
                   )
                 )}
@@ -492,7 +492,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                         boxShadow: "0 2px 8px rgba(245, 158, 11, 0.18)",
                       }}
                     >
-                      👑 Upgrade to PRO (₹99)
+                      👑 Upgrade to PRO (₹199)
                     </Button>
                   )
                 )}

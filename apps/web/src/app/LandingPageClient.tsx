@@ -113,7 +113,7 @@ export default function LandingPageClient() {
 
   // Calculations for zero-fee gateway savings
   const traditionalGatewayFee = Math.round(monthlySales * 0.025); // ~2.5% avg gateway charge
-  const ginieSpaceFee = billingCycle === "monthly" ? 99 : 83; // ₹83/mo on yearly
+  const ginieSpaceFee = billingCycle === "monthly" ? 199 : 150; // ₹150/mo on yearly (₹1,799 / 12)
   const monthlySavings = Math.max(0, traditionalGatewayFee - ginieSpaceFee);
   const [copiedLink, setCopiedLink] = useState(false);
 
@@ -1933,7 +1933,7 @@ export default function LandingPageClient() {
 
                 <Title level={3} style={{ margin: "0 0 6px", color: "#92400e" }}>{t.pricing.proTitle}</Title>
                 <div style={{ fontSize: 32, fontWeight: 800, color: "#92400e", marginBottom: 16 }}>
-                  ₹{billingCycle === "monthly" ? "99" : "999"}{" "}
+                  ₹{billingCycle === "monthly" ? "199" : "1,799"}{" "}
                   <span style={{ fontSize: 14, fontWeight: 500, color: "#b45309" }}>
                     {billingCycle === "monthly" ? t.pricing.proPeriodMonthly : t.pricing.proPeriodYearly}
                   </span>
@@ -1969,7 +1969,7 @@ export default function LandingPageClient() {
                   }}
                   onClick={() => router.push("/signup")}
                 >
-                  {t.pricing.proCta} (₹{billingCycle === "monthly" ? "99" : "999"})
+                  {t.pricing.proCta} (₹{billingCycle === "monthly" ? "199" : "1,799"})
                 </Button>
               </div>
             </Card>
@@ -2323,7 +2323,7 @@ export default function LandingPageClient() {
               <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13 }}>
                 <a href="/login" style={{ color: "#94a3b8", textDecoration: "none" }}>Merchant Sign In</a>
                 <a href="/signup" style={{ color: "#94a3b8", textDecoration: "none" }}>Create Free Account</a>
-                <a href="#pricing" style={{ color: "#94a3b8", textDecoration: "none" }}>PRO Plan (₹99)</a>
+                <a href="#pricing" style={{ color: "#94a3b8", textDecoration: "none" }}>PRO Plan (₹199)</a>
                 <a href="#faqs" style={{ color: "#94a3b8", textDecoration: "none" }}>Merchant FAQs</a>
               </div>
             </Col>

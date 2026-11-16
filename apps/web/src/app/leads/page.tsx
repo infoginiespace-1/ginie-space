@@ -100,6 +100,28 @@ export default function LeadsPage() {
   const [campaignTemplate, setCampaignTemplate] = useState(() => getDefaultPitchTemplate(user?.businessType));
   const [sendingCampaign, setSendingCampaign] = useState(false);
   const [campaignProgress, setCampaignProgress] = useState({ sent: 0, failed: 0, total: 0 });
+  const [quotaInfo, setQuotaInfo] = useState<{
+    plan: "free" | "pro";
+    usedToday: number;
+    maxDaily: number;
+    remainingToday: number;
+    usedThisMonth: number;
+    maxMonthly: number;
+    remainingThisMonth: number;
+    savedLeadsCount: number;
+    maxSavedLeads: number;
+  } | null>(null);
+
+  const loadQuota = async () => {
+    try {
+      const res = await api.get("/api/leads/quota");
+      setQuotaInfo(res.data);
+    } catch {}
+  };
+
+  useEffect(() => {
+    loadQuota();
+  }, [user]);
 
   useEffect(() => {
     if (user?.businessType) {
@@ -150,13 +172,18 @@ export default function LeadsPage() {
       const res = await api.post("/api/leads/discover", values);
       setDiscoveredLeads(res.data.leads || []);
       setNextPageToken(res.data.nextPageToken || null);
+      loadQuota();
       if (res.data.leads.length === 0) {
         message.info("No matching businesses found. Try broadening your location or category.");
       } else {
         message.success(`Found ${res.data.leads.length} verified businesses!`);
       }
     } catch (err: any) {
-      message.error(err.message || "Failed to search for leads");
+      const errMsg = err.response?.data?.error || err.message || "Failed to search for leads";
+      if (err.response?.data?.requiresUpgrade || err.response?.status === 403) {
+        setUpgradeModalOpen(true);
+      }
+      message.error(errMsg);
     } finally {
       setSearching(false);
     }
@@ -176,11 +203,16 @@ export default function LeadsPage() {
         return [...prev, ...more.filter((m: DiscoveredLead) => !existingIds.has(m.id))];
       });
       setNextPageToken(res.data.nextPageToken || null);
+      loadQuota();
       if (more.length > 0) {
         message.success(`Loaded ${more.length} more businesses!`);
       }
     } catch (err: any) {
-      message.error(err.message || "Could not load more leads");
+      const errMsg = err.response?.data?.error || err.message || "Could not load more leads";
+      if (err.response?.data?.requiresUpgrade || err.response?.status === 403) {
+        setUpgradeModalOpen(true);
+      }
+      message.error(errMsg);
     } finally {
       setLoadingMore(false);
     }
@@ -421,9 +453,35 @@ export default function LeadsPage() {
 
   return (
     <AppLayout>
-      <div style={{ marginBottom: 20 }}>
-        <Title level={4} style={{ margin: 0 }}>Find New Leads</Title>
-        <Text type="secondary">Discover real local businesses via official Google Places data and reach out via WhatsApp</Text>
+      <div style={{ marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <Title level={4} style={{ margin: 0 }}>Find New Leads</Title>
+          <Text type="secondary">Discover real local businesses via official Google Places data and reach out via WhatsApp</Text>
+        </div>
+        {quotaInfo && (
+          <Space wrap>
+            {quotaInfo.plan === "free" ? (
+              <Tag color="orange" style={{ fontSize: 13, padding: "4px 10px", borderRadius: 6 }}>
+                Daily Searches: <strong>{quotaInfo.usedToday}/{quotaInfo.maxDaily}</strong> ({quotaInfo.remainingToday} left today)
+              </Tag>
+            ) : (
+              <Tag color="gold" style={{ fontSize: 13, padding: "4px 10px", borderRadius: 6 }}>
+                👑 PRO Searches: <strong>{quotaInfo.usedThisMonth}/{quotaInfo.maxMonthly}</strong> ({quotaInfo.remainingThisMonth} left this month)
+              </Tag>
+            )}
+            {quotaInfo.plan === "free" && (
+              <Button
+                type="primary"
+                size="small"
+                icon={<CrownOutlined />}
+                onClick={() => setUpgradeModalOpen(true)}
+                style={{ background: "#f59e0b", borderColor: "#f59e0b", fontWeight: 600 }}
+              >
+                Upgrade to PRO (₹199)
+              </Button>
+            )}
+          </Space>
+        )}
       </div>
 
       <Tabs
@@ -731,6 +789,10 @@ export default function LeadsPage() {
       <UpgradeModal
         open={upgradeModalOpen}
         onClose={() => setUpgradeModalOpen(false)}
+        onSuccess={() => {
+          setUpgradeModalOpen(false);
+          loadQuota();
+        }}
         currentPlan={user?.plan}
       />
     </AppLayout>

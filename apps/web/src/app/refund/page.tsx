@@ -160,7 +160,7 @@ export default function RefundPolicyPage() {
               >
                 <strong>💰 100% RISK-FREE 7-DAY REFUND PROMISE:</strong>
                 <p style={{ margin: "6px 0 0", color: "#1e293b" }}>
-                  When you upgrade your business to the <strong>GinieSpace PRO Plan</strong> (₹99/month or ₹999/year), you are protected by our 7-Day Money-Back Guarantee. If for any reason the platform does not meet your operational expectations, you may request a <strong>100% full refund within seven (7) calendar days of activation</strong>.
+                  When you upgrade your business to the <strong>GinieSpace PRO Plan</strong> (₹199/month or ₹1,799/year), you are protected by our 7-Day Money-Back Guarantee. If for any reason the platform does not meet your operational expectations, you may request a <strong>100% full refund within seven (7) calendar days of activation</strong>.
                 </p>
                 <p style={{ margin: "6px 0 0", color: "#475569", fontSize: 13 }}>
                   No complex forms or tedious questions asked. Simply message our WhatsApp support desk with your registered phone number and payment UTR.
@@ -236,7 +236,7 @@ export default function RefundPolicyPage() {
 
               <Divider />
 
-              <Title level={3} style={{ fontWeight: 700 }}>2. PRO Plan (₹99) Par 7-Din Ki Money-Back Guarantee</Title>
+              <Title level={3} style={{ fontWeight: 700 }}>2. PRO Plan (₹199) Par 7-Din Ki Money-Back Guarantee</Title>
               <div
                 style={{
                   background: "#f0fdf4",
@@ -251,7 +251,7 @@ export default function RefundPolicyPage() {
               >
                 <strong>💰 100% SURAKSHIT 7 DINO KI REFUND GUARANTEE:</strong>
                 <p style={{ margin: "6px 0 0", color: "#1e293b" }}>
-                  Jab aap apna business <strong>GinieSpace PRO Plan (₹99/mahina ya ₹999/saal)</strong> par upgrade karte hain, to aapko poore 7 dino ki money-back guarantee milti hai. Agar kisi bhi kaaran se aap software se santusht nahi hain, to <strong>activation ke 7 dino ke andar 100% full refund</strong> claim kar sakte hain.
+                  Jab aap apna business <strong>GinieSpace PRO Plan (₹199/mahina ya ₹1,799/saal)</strong> par upgrade karte hain, to aapko poore 7 dino ki money-back guarantee milti hai. Agar kisi bhi kaaran se aap software se santusht nahi hain, to <strong>activation ke 7 dino ke andar 100% full refund</strong> claim kar sakte hain.
                 </p>
                 <p style={{ margin: "6px 0 0", color: "#475569", fontSize: 13 }}>
                   Kewal hamare official WhatsApp helpline par apna phone number aur UTR message karein, aapka refund turant process kiya jayega.

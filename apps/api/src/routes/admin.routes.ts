@@ -939,7 +939,8 @@ export function createAdminRouter(
   router.post("/subscriptions/:userId/approve", async (req: Request, res: Response): Promise<void> => {
     try {
       const targetUserId = req.params.userId;
-      const { cycle = "monthly", amount = 99 } = req.body;
+      const { cycle = "monthly" } = req.body;
+      const amount = req.body.amount || (cycle === "yearly" ? 1799 : 199);
       const targetUser = await db.users.findById(targetUserId);
 
       if (!targetUser) {
