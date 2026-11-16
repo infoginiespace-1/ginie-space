@@ -239,7 +239,19 @@ export function createAdminRouter(
       const sorted = [...messages].sort(
         (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
       );
-      res.json({ messages: sorted });
+      const normalizedMessages = sorted.map((m: any) => {
+        const raw = m.fromMe;
+        const isFromAdmin =
+          raw === true ||
+          raw === 1 ||
+          (typeof raw === "string" &&
+            (raw.trim().toLowerCase() === "true" || raw.trim() === "1" || raw.trim().toLowerCase() === "yes"));
+        return {
+          ...m,
+          fromMe: isFromAdmin ? "true" : "false",
+        };
+      });
+      res.json({ messages: normalizedMessages });
     } catch {
       res.status(500).json({ error: "Failed to load support messages" });
     }

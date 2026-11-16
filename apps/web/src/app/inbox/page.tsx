@@ -201,7 +201,11 @@ export default function InboxPage() {
           senderName: m.contactName,
           text: m.text,
           timestamp: m.timestamp,
-          fromMe: m.fromMe === "true" || m.fromMe === true,
+          fromMe:
+            m.fromMe === true ||
+            m.fromMe === 1 ||
+            String(m.fromMe).trim().toLowerCase() === "true" ||
+            String(m.fromMe).trim() === "1",
         };
 
         conv.messages.push(chatMsg);

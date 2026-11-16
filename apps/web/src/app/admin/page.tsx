@@ -129,6 +129,24 @@ export interface AuditLog {
   timestamp: string;
 }
 
+const isTruthyBool = (val: any): boolean => {
+  if (val === true || val === 1) return true;
+  if (typeof val === "string") {
+    const s = val.trim().toLowerCase();
+    return s === "true" || s === "1" || s === "yes";
+  }
+  return false;
+};
+
+const getPhoneDigits = (raw: string): string => {
+  return (raw || "").replace(/\D/g, "");
+};
+
+const getPhone10 = (raw: string): string => {
+  const d = getPhoneDigits(raw);
+  return d.length >= 10 ? d.slice(-10) : d;
+};
+
 export default function AdminPage() {
   const { user } = useAuth();
   const router = useRouter();
@@ -754,19 +772,20 @@ export default function AdminPage() {
     return targets.length;
   }, [merchants, broadcastSegment]);
 
-  // In-App Chat: Grouped Support Conversations (1 thread per phone number)
+  // In-App Chat: Grouped Support Conversations (1 thread per phone number, normalized by 10 digits)
   const conversationThreads = useMemo(() => {
     const threadMap: Record<string, { phone: string; name: string; messages: SupportMessage[] }> = {};
     for (const msg of supportMessages) {
-      const phone = msg.contactPhone || "unknown";
-      if (!threadMap[phone]) {
-        threadMap[phone] = {
-          phone,
-          name: msg.contactName || `+${phone}`,
+      const rawPhone = msg.contactPhone || "unknown";
+      const key10 = getPhone10(rawPhone) || "unknown";
+      if (!threadMap[key10]) {
+        threadMap[key10] = {
+          phone: rawPhone,
+          name: msg.contactName || `+${rawPhone}`,
           messages: [],
         };
       }
-      threadMap[phone].messages.push(msg);
+      threadMap[key10].messages.push(msg);
     }
 
     const threads = Object.values(threadMap).map((t) => {
@@ -774,12 +793,13 @@ export default function AdminPage() {
         (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
       );
       const latest = sorted[0];
-      const isOut = latest?.fromMe === "true" || latest?.fromMe === true;
+      const isOut = isTruthyBool(latest?.fromMe);
 
-      // Match merchant
+      // Match merchant by last 10 digits
+      const t10 = getPhone10(t.phone);
       const merchant = merchants.find((m) => {
-        const mPhone = m.business?.phone?.replace(/D/g, "");
-        return mPhone && (mPhone === t.phone || mPhone.endsWith(t.phone.slice(-10)));
+        const m10 = getPhone10(m.business?.phone || "");
+        return m10 && t10 && m10 === t10;
       });
 
       return {
@@ -800,14 +820,14 @@ export default function AdminPage() {
 
   // Combined Directory & Chat Contacts (existing active threads + all merchants)
   const allChatContacts = useMemo(() => {
-    const threadPhoneSet = new Set(conversationThreads.map((t) => t.phone));
+    const threadPhoneSet = new Set(conversationThreads.map((t) => getPhone10(t.phone)));
     const merchantContacts = merchants
       .filter((m) => {
-        const p = m.business?.phone?.replace(/D/g, "");
-        return p && p.length >= 10 && !threadPhoneSet.has(p);
+        const p10 = getPhone10(m.business?.phone || "");
+        return p10 && p10.length === 10 && !threadPhoneSet.has(p10);
       })
       .map((m) => {
-        const cleanPhone = m.business.phone.replace(/D/g, "");
+        const cleanPhone = getPhoneDigits(m.business?.phone || "");
         return {
           phone: cleanPhone,
           name: m.business?.name ? `${m.business.name} (${m.name})` : m.name,
@@ -839,12 +859,16 @@ export default function AdminPage() {
 
   const activeThread = useMemo(() => {
     if (!activeChatPhone) return null;
-    const existing = conversationThreads.find((t) => t.phone === activeChatPhone);
+    const a10 = getPhone10(activeChatPhone);
+    const existing = conversationThreads.find((t) => {
+      const t10 = getPhone10(t.phone);
+      return (t10 && a10 && t10 === a10) || t.phone === activeChatPhone;
+    });
     if (existing) return existing;
 
     const merchant = merchants.find((m) => {
-      const mPhone = m.business?.phone?.replace(/D/g, "");
-      return mPhone && (mPhone === activeChatPhone || mPhone.endsWith(activeChatPhone.slice(-10)));
+      const m10 = getPhone10(m.business?.phone || "");
+      return m10 && a10 && m10 === a10;
     });
 
     const displayName = activeChatName || (merchant?.business?.name ? `${merchant.business.name} (${merchant.name})` : merchant?.name) || `+${activeChatPhone}`;
@@ -872,7 +896,7 @@ export default function AdminPage() {
       message.warning("No phone number available for this contact");
       return;
     }
-    const clean = phone.replace(/D/g, "");
+    const clean = getPhoneDigits(phone);
     setActiveChatPhone(clean);
     setActiveChatName(name || "");
     setReplyText("");
@@ -884,17 +908,35 @@ export default function AdminPage() {
   const handleSendSupportMessage = async () => {
     if (!activeChatPhone || (!replyText.trim() && !chatImageUrl.trim())) return;
     setSendingReply(true);
+    const sentText = replyText.trim();
+    const sentImg = chatImageUrl.trim();
     try {
       await api.post("/api/admin/whatsapp/send-test", {
         recipientPhone: activeChatPhone,
-        messageText: replyText.trim(),
-        imageUrl: chatImageUrl.trim() || undefined,
+        messageText: sentText,
+        imageUrl: sentImg || undefined,
       });
       message.success(`Message sent to +${activeChatPhone} via +91 92792 59690`);
       setReplyText("");
       setChatImageUrl("");
       setShowMediaInput(false);
-      loadSupportMessages();
+
+      // Optimistic update: immediately show reply in green on right and mark thread as REPLIED
+      const optimisticMsg: SupportMessage = {
+        id: `opt_${Date.now()}`,
+        messageId: `opt_${Date.now()}`,
+        contactPhone: activeChatPhone,
+        contactName: activeChatName || `+${activeChatPhone}`,
+        text: sentImg ? (sentText ? `${sentText} [Media: ${sentImg}]` : `[Media: ${sentImg}]`) : sentText,
+        fromMe: "true",
+        timestamp: new Date().toISOString(),
+      };
+      setSupportMessages((prev) => [optimisticMsg, ...prev]);
+
+      // Re-fetch in background to sync with server state
+      setTimeout(() => {
+        loadSupportMessages();
+      }, 500);
     } catch (err: any) {
       message.error(err.response?.data?.error || err.message || "Failed to send WhatsApp message");
     } finally {
@@ -2033,7 +2075,12 @@ export default function AdminPage() {
                               <List
                                 dataSource={allChatContacts}
                                 renderItem={(t: any) => {
-                                  const isSelected = activeChatPhone === t.phone;
+                                  const isSelected = (() => {
+                                    if (!activeChatPhone) return false;
+                                    const a10 = getPhone10(activeChatPhone);
+                                    const t10 = getPhone10(t.phone);
+                                    return (a10 && t10 && a10 === t10) || activeChatPhone === t.phone;
+                                  })();
                                   const isUnread = !t.lastFromMe;
                                   return (
                                     <div
@@ -2182,7 +2229,7 @@ export default function AdminPage() {
                                   <List
                                     dataSource={[...activeThread.messages].reverse()}
                                     renderItem={(m) => {
-                                      const isOut = m.fromMe === "true" || m.fromMe === true;
+                                      const isOut = isTruthyBool(m.fromMe);
                                       const hasMedia = m.text?.includes("[Media: ") || m.text?.startsWith("http");
                                       const mediaUrlMatch = m.text?.match(/\[Media:\s*(https?:\/\/[^\]]+)\]/);
                                       const cleanMediaUrl = mediaUrlMatch ? mediaUrlMatch[1] : null;
@@ -2207,7 +2254,7 @@ export default function AdminPage() {
                                             }}
                                           >
                                             <div style={{ fontSize: 11, fontWeight: 700, color: isOut ? "#059669" : "#3b82f6", marginBottom: 3 }}>
-                                              {isOut ? "Official Support (+91 92792 59690)" : activeThread?.name}
+                                              {isOut ? "Official Support (+91 92792 59690)" : (activeThread?.name || "Merchant")}
                                             </div>
 
                                             {cleanMediaUrl && (
