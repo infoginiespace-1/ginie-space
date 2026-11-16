@@ -75,7 +75,7 @@ export class GoogleSheetsRepository<T extends { id: string; createdAt?: string; 
         const headerStr = (header as string).toLowerCase();
         if (headerStr === "fromme") {
           const vStr = String(val).trim().toUpperCase();
-          entity[header] = (vStr === "TRUE" || vStr === "1" || val === true || val === 1) ? "true" : "false";
+          entity[header] = (vStr === "TRUE" || vStr === "1") ? "true" : "false";
         } else {
           const num = Number(val);
           const isNumeric = headerStr.includes("count") || headerStr.includes("price") || headerStr.includes("rating") || headerStr.includes("stock") || headerStr.includes("amount") || headerStr.includes("qty") || headerStr.includes("charge");
