@@ -58,7 +58,7 @@ export default function HomePage() {
           },
           {
             "@type": "Offer",
-            "price": "99",
+            "price": "199",
             "priceCurrency": "INR",
             "name": "PRO Growth Tier",
             "billingDuration": "P1M"
@@ -119,10 +119,10 @@ export default function HomePage() {
           },
           {
             "@type": "Question",
-            "name": "₹99 PRO Plan kaise activate hota hai?",
+            "name": "₹199 PRO Plan kaise activate hota hai?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "GinieSpace app me jakar Upgrade to PRO par click karein, UPI QR scan karke ₹99 pay karein aur 12-digit UTR submit karein. Admin verification ke turant baad plan unlock ho jata hai."
+              "text": "GinieSpace app me jakar Upgrade to PRO par click karein, UPI QR scan karke ₹199 pay karein aur 12-digit UTR submit karein. Admin verification ke turant baad plan unlock ho jata hai."
             }
           }
         ]
