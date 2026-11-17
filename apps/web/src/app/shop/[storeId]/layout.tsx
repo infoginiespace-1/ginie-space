@@ -8,23 +8,24 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const storeId = params?.storeId || "";
-  let storeName = "Digital Store & Catalog";
+  let storeName = "Digital Store";
   let description = "Browse our full product catalog, view live prices, and order directly on WhatsApp with 0% commission.";
   let imageUrl = "https://app.ginie.space/og-catalog.jpg";
 
   if (storeId) {
     try {
-      const res = await fetch(`https://api.ginie.space/api/storefront/${encodeURIComponent(storeId)}`, {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.ginie.space";
+      const res = await fetch(`${apiUrl}/api/storefront/${encodeURIComponent(storeId)}`, {
         next: { revalidate: 60 },
       });
       if (res.ok) {
         const data = await res.json();
-        const b = data.business;
+        const b = data.business || data.store;
         if (b?.name) {
           storeName = b.name;
         }
         if (b?.address) {
-          description = `${b.name} (${b.address}). Browse full product catalog, live rates, and order directly on WhatsApp.`;
+          description = `Order online from ${b.name} (${b.address}). Browse full product catalog, live rates, and order directly on WhatsApp with 0% commission.`;
         }
 
         let parsedSettings: any = {};
@@ -47,15 +48,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   const storeUrl = `https://app.ginie.space/shop/${storeId}`;
+  const title = `${storeName} - Online Catalog | GinieSpace`;
 
   return {
-    title: `${storeName} | Digital Catalog & Store`,
+    title,
     description,
     alternates: {
       canonical: storeUrl,
     },
     openGraph: {
-      title: `${storeName} | Online Catalog & Store`,
+      title,
       description,
       url: storeUrl,
       siteName: `${storeName} - GinieSpace`,
@@ -66,19 +68,69 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
           url: imageUrl,
           width: 1200,
           height: 630,
-          alt: `${storeName} Digital Catalog`,
+          alt: `${storeName} Online Catalog`,
         },
       ],
     },
     twitter: {
       card: "summary_large_image",
-      title: `${storeName} | Online Catalog & Store`,
+      title,
       description,
       images: [imageUrl],
     },
   };
 }
 
-export default function ShopLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
+export default async function ShopLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode;
+  params: { storeId: string };
+}) {
+  const storeId = params?.storeId || "";
+  let jsonLd: any = null;
+
+  if (storeId) {
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.ginie.space";
+      const res = await fetch(`${apiUrl}/api/storefront/${encodeURIComponent(storeId)}`, {
+        next: { revalidate: 60 },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const b = data.business || data.store;
+        if (b?.name) {
+          jsonLd = {
+            "@context": "https://schema.org",
+            "@type": "LocalBusiness",
+            name: b.name,
+            telephone: b.phone || undefined,
+            address: b.address
+              ? {
+                  "@type": "PostalAddress",
+                  streetAddress: b.address,
+                  addressCountry: "IN",
+                }
+              : undefined,
+            url: `https://app.ginie.space/shop/${storeId}`,
+            currenciesAccepted: "INR",
+            paymentAccepted: "Direct UPI, Cash",
+          };
+        }
+      }
+    } catch {}
+  }
+
+  return (
+    <>
+      {jsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      )}
+      {children}
+    </>
+  );
 }
