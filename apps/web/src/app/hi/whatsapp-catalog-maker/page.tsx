@@ -6,7 +6,7 @@ import MarketingFooter from "@/components/MarketingFooter";
 import { CheckCircleFilled } from "@ant-design/icons";
 
 export const metadata: Metadata = {
-  title: "फ्री व्हाट्सएप कैटलॉग मेकर इंडिया - डिजिटल दुकान | GinieSpace",
+  title: "व्हाट्सएप कैटलॉग मेकर इंडिया - डिजिटल दुकान | GinieSpace",
   description:
     "60 सेकंड में अपनी दुकान का डिजिटल व्हाट्सएप कैटलॉग बनाएं। प्रोडक्ट लिंक शेयर करें, सीधे व्हाट्सएप पर आर्डर लें और 0% कमीशन पर UPI पेमेंट पाएं।",
   alternates: {
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: "फ्री व्हाट्सएप कैटलॉग मेकर इंडिया - डिजिटल दुकान | GinieSpace",
+    title: "व्हाट्सएप कैटलॉग मेकर इंडिया - डिजिटल दुकान | GinieSpace",
     description: "अपनी दुकान का ऑनलाइन व्हाट्सएप कैटलॉग बनाएं। बिना किसी ऐप डाउनलोड के ग्राहक को आसान शॉपिंग अनुभव दें।",
     url: "https://app.ginie.space/hi/whatsapp-catalog-maker",
     siteName: "GinieSpace",

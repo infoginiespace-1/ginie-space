@@ -6,7 +6,7 @@ import MarketingFooter from "@/components/MarketingFooter";
 import { CheckCircleFilled, ArrowRightOutlined, ShopOutlined, QrcodeOutlined, ThunderboltOutlined, MobileOutlined } from "@ant-design/icons";
 
 export const metadata: Metadata = {
-  title: "Free WhatsApp Catalog Maker India - Digital Store | GinieSpace",
+  title: "WhatsApp Catalog Maker India - Digital Store | GinieSpace",
   description:
     "Create your free digital WhatsApp store catalog in 60 seconds. Share product links, take direct orders and receive payments via UPI with 0% commission.",
   alternates: {
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: "Free WhatsApp Catalog Maker India - Digital Store | GinieSpace",
+    title: "WhatsApp Catalog Maker India - Digital Store | GinieSpace",
     description: "Launch your branded digital WhatsApp store in 60 seconds. Share links on WhatsApp Bio & Instagram, accept direct UPI payments with 0% fee.",
     url: "https://app.ginie.space/whatsapp-catalog-maker",
     siteName: "GinieSpace",

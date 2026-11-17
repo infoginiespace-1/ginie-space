@@ -6,7 +6,7 @@ import MarketingFooter from "@/components/MarketingFooter";
 import { SearchOutlined, WhatsAppOutlined, StarFilled } from "@ant-design/icons";
 
 export const metadata: Metadata = {
-  title: "लोकल B2B लीड्स फाइंडर - भारतीय थोक व्यापारियों के लिए | GinieSpace",
+  title: "लोकल B2B लीड्स फाइंडर - थोक व्यापारियों के लिए | GinieSpace",
   description:
     "अपने शहर या पिनकोड में किराना, मेडिकल और खुदरा दुकानों की वेरिफाइड B2B लीड्स खोजें। गूगल रेटिंग, फोन नंबर देखें और सीधे व्हाट्सएप पर माल का प्रस्ताव भेजें।",
   alternates: {
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: "लोकल B2B लीड्स फाइंडर - भारतीय थोक व्यापारियों के लिए | GinieSpace",
+    title: "लोकल B2B लीड्स फाइंडर - थोक व्यापारियों के लिए | GinieSpace",
     description: "गूगल मैप्स से वेरिफाइड खुदरा खरीदार खोजें। 1-क्लिक में व्हाट्सएप पर थोक कैटलॉग भेजें और नए डीलर बनाएं।",
     url: "https://app.ginie.space/hi/b2b-leads-finder",
     siteName: "GinieSpace",

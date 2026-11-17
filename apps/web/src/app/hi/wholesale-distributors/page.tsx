@@ -5,7 +5,7 @@ import MarketingNav from "@/components/MarketingNav";
 import MarketingFooter from "@/components/MarketingFooter";
 
 export const metadata: Metadata = {
-  title: "थोक व डिस्ट्रीब्यूटर्स के लिए व्हाट्सएप सॉफ्टवेयर | GinieSpace",
+  title: "थोक व डिस्ट्रीब्यूटर व्हाट्सएप सॉफ्टवेयर | GinieSpace",
   description:
     "थोक ऑर्डर, कार्टन दरें और न्यूनतम ऑर्डर मात्रा (MOQ) स्वचालित करें। नए खुदरा डीलर खोजें और 0% कमीशन पर सीधे बैंक खाते में भुगतान पाएं।",
   alternates: {
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: "थोक व डिस्ट्रीब्यूटर्स के लिए व्हाट्सएप सॉफ्टवेयर | GinieSpace",
+    title: "थोक व डिस्ट्रीब्यूटर व्हाट्सएप सॉफ्टवेयर | GinieSpace",
     description: "MOQ नियम, कार्टन/पेटी रेट लिस्ट और डायरेक्ट बैंक सेटलमेंट के साथ थोक ऑर्डर मैनेज करें। नए किराना व खुदरा डीलर बनाएं।",
     url: "https://app.ginie.space/hi/wholesale-distributors",
     siteName: "GinieSpace",

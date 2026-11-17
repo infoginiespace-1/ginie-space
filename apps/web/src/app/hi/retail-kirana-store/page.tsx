@@ -5,7 +5,7 @@ import MarketingNav from "@/components/MarketingNav";
 import MarketingFooter from "@/components/MarketingFooter";
 
 export const metadata: Metadata = {
-  title: "किराना व रिटेल दुकान के लिए व्हाट्सएप स्टोर सॉफ्टवेयर | GinieSpace",
+  title: "किराना व रिटेल दुकान व्हाट्सएप स्टोर सॉफ्टवेयर | GinieSpace",
   description:
     "अपनी स्थानीय किराना व जनरल स्टोर को 24/7 ऑनलाइन व्हाट्सएप कैटलॉग, डायरेक्ट UPI पेमेंट, वजन के अनुसार वेरिएंट और तुरंत होम डिलीवरी रसीद से सुसज्जित करें।",
   alternates: {
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: "किराना व रिटेल दुकान के लिए व्हाट्सएप स्टोर सॉफ्टवेयर | GinieSpace",
+    title: "किराना व रिटेल दुकान व्हाट्सएप स्टोर सॉफ्टवेयर | GinieSpace",
     description: "क्विक-कॉमर्स कंपनियों से मुकाबला करें। अपने नियमित ग्राहकों को व्हाट्सएप पर 24 घंटे ऑनलाइन ऑर्डर और 0% UPI पेमेंट की सुविधा दें।",
     url: "https://app.ginie.space/hi/retail-kirana-store",
     siteName: "GinieSpace",

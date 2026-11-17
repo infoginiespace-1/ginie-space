@@ -9,8 +9,8 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: new URL("https://app.ginie.space"),
   title: {
-    default: "GinieSpace | WhatsApp Business Commerce, Hyperlocal Leads & Direct UPI Billing",
-    template: "%s | GinieSpace",
+    default: "WhatsApp Catalog & UPI Billing Software India | GinieSpace",
+    template: "%s",
   },
   description: "Automate your sales, orders, and customer discovery directly through WhatsApp with 0% payment gateway commission. Free online dukaan & digital catalog builder.",
   authors: [{ name: "GinieSpace Team", url: "https://app.ginie.space" }],
