@@ -372,7 +372,7 @@ export const translations: Record<Locale, TranslationDictionary> = {
       title: "Kyun GinieSpace Har Indian Merchant Ka Pehla Choice Hai?",
       p1Title: "0% UPI Commission",
       p1Desc:
-        "GinieSpace kisi payment gateway ki tarah 2-3% nahi kat-ta. Customer se 100% payment seedhe aapke apne bank UPI account me transfer hoti hai.",
+        "GinieSpace kisi payment gateway ki tarah 2-3% nahi kaatta. Customer se 100% payment seedhe aapke apne bank UPI account me transfer hoti hai.",
       p2Title: "Multi-Device Cloud Sync",
       p2Desc:
         "Aapka WhatsApp persistently cloud se linked rehta hai. Browser refresh ya PC switch karne par session disconnect nahi hota.",
@@ -444,7 +444,7 @@ export const translations: Record<Locale, TranslationDictionary> = {
       items: [
         {
           q: "GinieSpace par customer ki payment mere bank me kaise aati hai?",
-          a: "Seedhe 100% aapke bank me! GinieSpace koi payment gateway middleman nahi hai jo 2% se 3% commission kate. Har invoice aur bill par aapka apna UPI QR code (aapka apna UPI ID) hota hai. Grahak PhonePe, Google Pay ya Paytm se scan karke seedhe aapke account me paise bhejta hai.",
+          a: "Seedhe 100% aapke bank me! GinieSpace koi payment gateway middleman nahi hai jo 2% se 3% commission kaate. Har invoice aur bill par aapka apna UPI QR code (aapka apna UPI ID) hota hai. Grahak PhonePe, Google Pay ya Paytm se scan karke seedhe aapke account me paise bhejta hai.",
         },
         {
           q: "WhatsApp connect karne ke liye kisi technical knowledge ki zaroorat hai?",

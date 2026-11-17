@@ -206,7 +206,7 @@ export default function LandingPageClient() {
               {t.nav.howItWorks}
             </a>
             <a href="#demo-tour" style={{ color: "#475569", textDecoration: "none", fontWeight: 500, fontSize: 14 }}>
-              {t.twinDevice.title.slice(0, 15)}
+              {locale === "hi" ? "Control Panel" : "Control Hub"}
             </a>
             <a href="#solutions" style={{ color: "#475569", textDecoration: "none", fontWeight: 500, fontSize: 14 }}>
               {t.nav.solutions}
@@ -343,7 +343,7 @@ export default function LandingPageClient() {
             onClick={() => setMobileMenuOpen(false)}
             style={{ color: "#1e293b", fontWeight: 600, fontSize: 15, textDecoration: "none", padding: "8px 0", borderBottom: "1px solid #f1f5f9" }}
           >
-            🎮 {t.twinDevice.title.slice(0, 22)}
+            🎮 {locale === "hi" ? "Control Panel" : "Control Hub"}
           </a>
           <a
             href="#solutions"
@@ -487,15 +487,28 @@ export default function LandingPageClient() {
             lineHeight: 1.2,
             letterSpacing: "-0.03em",
             maxWidth: 960,
-            margin: "0 auto 18px",
+            margin: "0 auto 16px",
           }}
         >
-          {t.hero.titleStart}{" "}
+          WhatsApp Catalog aur Direct{" "}
           <span style={{ color: "#059669", background: "linear-gradient(135deg, #059669 0%, #25D366 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-            {t.hero.titleHighlight}
+            UPI Billing Software
           </span>{" "}
-          {t.hero.titleEnd}
+          for Indian Shops
         </Title>
+
+        <Paragraph
+          style={{
+            fontSize: isMobile ? "1.05rem" : "clamp(1.1rem, 2.2vw, 1.35rem)",
+            fontWeight: 600,
+            color: "#1e293b",
+            maxWidth: 820,
+            margin: "0 auto 14px",
+            lineHeight: 1.45,
+          }}
+        >
+          {t.hero.titleStart} {t.hero.titleHighlight} {t.hero.titleEnd}
+        </Paragraph>
 
         <Paragraph
           style={{
@@ -742,7 +755,7 @@ export default function LandingPageClient() {
           <Tag color="purple" style={{ padding: "4px 12px", borderRadius: 999, fontWeight: 600 }}>
             {t.twinDevice.tag}
           </Tag>
-          <Title level={3} style={{ marginTop: 8, color: "#0f172a", fontSize: isMobile ? "1.3rem" : undefined }}>
+          <Title level={2} style={{ marginTop: 8, color: "#0f172a", fontSize: isMobile ? "1.3rem" : undefined }}>
             {t.twinDevice.title}
           </Title>
         </div>
@@ -1036,7 +1049,7 @@ export default function LandingPageClient() {
                   <QrcodeOutlined />
                 </div>
                 <Tag color="green" style={{ fontWeight: 700, marginBottom: 8 }}>{t.howItWorks.step1Tag}</Tag>
-                <Title level={4} style={{ color: "#0f172a", margin: "4px 0 10px" }}>
+                <Title level={3} style={{ color: "#0f172a", margin: "4px 0 10px" }}>
                   {t.howItWorks.step1Title}
                 </Title>
                 <Paragraph style={{ color: "#64748b", fontSize: 14, lineHeight: 1.6 }}>
@@ -1088,7 +1101,7 @@ export default function LandingPageClient() {
                   <ShopOutlined />
                 </div>
                 <Tag color="blue" style={{ fontWeight: 700, marginBottom: 8 }}>{t.howItWorks.step2Tag}</Tag>
-                <Title level={4} style={{ color: "#0f172a", margin: "4px 0 10px" }}>
+                <Title level={3} style={{ color: "#0f172a", margin: "4px 0 10px" }}>
                   {t.howItWorks.step2Title}
                 </Title>
                 <Paragraph style={{ color: "#64748b", fontSize: 14, lineHeight: 1.6 }}>
@@ -1140,7 +1153,7 @@ export default function LandingPageClient() {
                   <BankOutlined />
                 </div>
                 <Tag color="gold" style={{ fontWeight: 700, marginBottom: 8 }}>{t.howItWorks.step3Tag}</Tag>
-                <Title level={4} style={{ color: "#0f172a", margin: "4px 0 10px" }}>
+                <Title level={3} style={{ color: "#0f172a", margin: "4px 0 10px" }}>
                   {t.howItWorks.step3Title}
                 </Title>
                 <Paragraph style={{ color: "#64748b", fontSize: 14, lineHeight: 1.6 }}>
@@ -1417,7 +1430,7 @@ export default function LandingPageClient() {
               >
                 <ShopOutlined />
               </div>
-              <Title level={4} style={{ color: "#0f172a" }}>{t.solutions.retailTitle}</Title>
+              <Title level={3} style={{ color: "#0f172a" }}>{t.solutions.retailTitle}</Title>
               <Paragraph style={{ color: "#64748b", fontSize: 14 }}>
                 {t.solutions.retailDesc}
               </Paragraph>
@@ -1455,7 +1468,7 @@ export default function LandingPageClient() {
               >
                 <ThunderboltOutlined />
               </div>
-              <Title level={4} style={{ color: "#0f172a" }}>{t.solutions.wholesaleTitle}</Title>
+              <Title level={3} style={{ color: "#0f172a" }}>{t.solutions.wholesaleTitle}</Title>
               <Paragraph style={{ color: "#64748b", fontSize: 14 }}>
                 {t.solutions.wholesaleDesc}
               </Paragraph>
@@ -1493,7 +1506,7 @@ export default function LandingPageClient() {
               >
                 <CustomerServiceOutlined />
               </div>
-              <Title level={4} style={{ color: "#0f172a" }}>{t.solutions.servicesTitle}</Title>
+              <Title level={3} style={{ color: "#0f172a" }}>{t.solutions.servicesTitle}</Title>
               <Paragraph style={{ color: "#64748b", fontSize: 14 }}>
                 {t.solutions.servicesDesc}
               </Paragraph>
@@ -1523,7 +1536,7 @@ export default function LandingPageClient() {
             <Col xs={24} sm={12} lg={6}>
               <Card style={{ borderRadius: 14, height: "100%", background: "#f8fafc", borderColor: "#e2e8f0" }}>
                 <BankOutlined style={{ fontSize: 32, color: "#059669", marginBottom: 16 }} />
-                <Title level={4}>{t.pillars.p1Title}</Title>
+                <Title level={3}>{t.pillars.p1Title}</Title>
                 <Text type="secondary" style={{ fontSize: 13, lineHeight: 1.6 }}>
                   {t.pillars.p1Desc}
                 </Text>
@@ -1533,7 +1546,7 @@ export default function LandingPageClient() {
             <Col xs={24} sm={12} lg={6}>
               <Card style={{ borderRadius: 14, height: "100%", background: "#f8fafc", borderColor: "#e2e8f0" }}>
                 <WhatsAppOutlined style={{ fontSize: 32, color: "#25D366", marginBottom: 16 }} />
-                <Title level={4}>{t.pillars.p2Title}</Title>
+                <Title level={3}>{t.pillars.p2Title}</Title>
                 <Text type="secondary" style={{ fontSize: 13, lineHeight: 1.6 }}>
                   {t.pillars.p2Desc}
                 </Text>
@@ -1543,7 +1556,7 @@ export default function LandingPageClient() {
             <Col xs={24} sm={12} lg={6}>
               <Card style={{ borderRadius: 14, height: "100%", background: "#f8fafc", borderColor: "#e2e8f0" }}>
                 <SearchOutlined style={{ fontSize: 32, color: "#2563eb", marginBottom: 16 }} />
-                <Title level={4}>{t.pillars.p3Title}</Title>
+                <Title level={3}>{t.pillars.p3Title}</Title>
                 <Text type="secondary" style={{ fontSize: 13, lineHeight: 1.6 }}>
                   {t.pillars.p3Desc}
                 </Text>
@@ -1553,7 +1566,7 @@ export default function LandingPageClient() {
             <Col xs={24} sm={12} lg={6}>
               <Card style={{ borderRadius: 14, height: "100%", background: "#f8fafc", borderColor: "#e2e8f0" }}>
                 <TeamOutlined style={{ fontSize: 32, color: "#7c3aed", marginBottom: 16 }} />
-                <Title level={4}>{t.pillars.p4Title}</Title>
+                <Title level={3}>{t.pillars.p4Title}</Title>
                 <Text type="secondary" style={{ fontSize: 13, lineHeight: 1.6 }}>
                   {t.pillars.p4Desc}
                 </Text>
@@ -1615,7 +1628,7 @@ export default function LandingPageClient() {
                     <BankOutlined />
                   </div>
                   <div>
-                    <Title level={4} style={{ margin: "0 0 6px", fontSize: 17, color: "#0f172a" }}>
+                    <Title level={3} style={{ margin: "0 0 6px", fontSize: 17, color: "#0f172a" }}>
                       {t.securityShield.p1Title}
                     </Title>
                     <Paragraph style={{ color: "#64748b", fontSize: 13, lineHeight: 1.6, margin: 0 }}>
@@ -1658,7 +1671,7 @@ export default function LandingPageClient() {
                     <LockOutlined />
                   </div>
                   <div>
-                    <Title level={4} style={{ margin: "0 0 6px", fontSize: 17, color: "#0f172a" }}>
+                    <Title level={3} style={{ margin: "0 0 6px", fontSize: 17, color: "#0f172a" }}>
                       {t.securityShield.p2Title}
                     </Title>
                     <Paragraph style={{ color: "#64748b", fontSize: 13, lineHeight: 1.6, margin: 0 }}>
@@ -1701,7 +1714,7 @@ export default function LandingPageClient() {
                     <SafetyCertificateOutlined />
                   </div>
                   <div>
-                    <Title level={4} style={{ margin: "0 0 6px", fontSize: 17, color: "#0f172a" }}>
+                    <Title level={3} style={{ margin: "0 0 6px", fontSize: 17, color: "#0f172a" }}>
                       {t.securityShield.p3Title}
                     </Title>
                     <Paragraph style={{ color: "#64748b", fontSize: 13, lineHeight: 1.6, margin: 0 }}>
@@ -1744,7 +1757,7 @@ export default function LandingPageClient() {
                     <CustomerServiceOutlined />
                   </div>
                   <div>
-                    <Title level={4} style={{ margin: "0 0 6px", fontSize: 17, color: "#0f172a" }}>
+                    <Title level={3} style={{ margin: "0 0 6px", fontSize: 17, color: "#0f172a" }}>
                       {t.securityShield.p4Title}
                     </Title>
                     <Paragraph style={{ color: "#64748b", fontSize: 13, lineHeight: 1.6, margin: 0 }}>
@@ -1780,7 +1793,7 @@ export default function LandingPageClient() {
             <Tag color="warning" style={{ fontWeight: 700, padding: "4px 12px" }}>
               {t.calculator.tag}
             </Tag>
-            <Title level={3} style={{ color: "#fff", marginTop: 10, fontSize: isMobile ? "1.25rem" : undefined }}>
+            <Title level={2} style={{ color: "#fff", marginTop: 10, fontSize: isMobile ? "1.25rem" : undefined }}>
               {t.calculator.title}
             </Title>
             <Text style={{ color: "#94a3b8", fontSize: isMobile ? 13 : 14 }}>
@@ -2087,6 +2100,7 @@ export default function LandingPageClient() {
           style={{ background: "#ffffff", borderRadius: 14, border: "1px solid #e2e8f0" }}
           items={t.faqs.items.map((faqItem, idx) => ({
             key: String(idx + 1),
+            forceRender: true,
             label: <Text strong style={{ fontSize: 15 }}>{faqItem.q}</Text>,
             children: (
               <Paragraph style={{ color: "#475569", lineHeight: 1.7 }}>
@@ -2227,7 +2241,7 @@ export default function LandingPageClient() {
             {simStep === 1 && (
               <div style={{ textAlign: "center", padding: "20px 0" }}>
                 <QrcodeOutlined style={{ fontSize: 64, color: "#25D366", marginBottom: 12 }} />
-                <Title level={4} style={{ color: "#fff", margin: 0 }}>
+                <Title level={3} style={{ color: "#fff", margin: 0 }}>
                   1. Scan WhatsApp QR from Linked Devices
                 </Title>
                 <Text style={{ color: "#94a3b8", display: "block", marginTop: 8 }}>
@@ -2246,7 +2260,7 @@ export default function LandingPageClient() {
             {simStep === 2 && (
               <div style={{ textAlign: "center", padding: "20px 0" }}>
                 <ShopOutlined style={{ fontSize: 64, color: "#38bdf8", marginBottom: 12 }} />
-                <Title level={4} style={{ color: "#fff", margin: 0 }}>
+                <Title level={3} style={{ color: "#fff", margin: 0 }}>
                   2. Share Your Storefront: /shop/your-store
                 </Title>
                 <Text style={{ color: "#94a3b8", display: "block", marginTop: 8 }}>
@@ -2265,7 +2279,7 @@ export default function LandingPageClient() {
             {simStep === 3 && (
               <div style={{ textAlign: "center", padding: "20px 0" }}>
                 <BankOutlined style={{ fontSize: 64, color: "#34d399", marginBottom: 12 }} />
-                <Title level={4} style={{ color: "#fff", margin: 0 }}>
+                <Title level={3} style={{ color: "#fff", margin: 0 }}>
                   3. Customer Pays 100% Direct via UPI (0% Fee)
                 </Title>
                 <Text style={{ color: "#94a3b8", display: "block", marginTop: 8 }}>
