@@ -61,29 +61,38 @@ import {
 
 const { Title, Text, Paragraph } = Typography;
 
-export default function LandingPageClient() {
+export default function LandingPageClient({ initialLocale }: { initialLocale?: Locale }) {
   const { user, loading } = useAuth();
   const router = useRouter();
   const screens = Grid.useBreakpoint();
   const isMobile = screens.md === false;
 
   // Global Language state (en: Pure English, hi: Friendly Hinglish)
-  const [locale, setLocale] = useState<Locale>("hi");
+  const [locale, setLocale] = useState<Locale>(initialLocale || "hi");
 
   useEffect(() => {
+    if (initialLocale) {
+      setLocale(initialLocale);
+      return;
+    }
     try {
       const saved = localStorage.getItem("ginie_locale") as Locale;
       if (saved === "en" || saved === "hi") {
         setLocale(saved);
       }
     } catch {}
-  }, []);
+  }, [initialLocale]);
 
   const handleLocaleChange = (newLoc: Locale) => {
     setLocale(newLoc);
     try {
       localStorage.setItem("ginie_locale", newLoc);
     } catch {}
+    if (newLoc === "hi") {
+      router.push("/hi");
+    } else {
+      router.push("/");
+    }
   };
 
   const t = translations[locale];
@@ -202,18 +211,18 @@ export default function LandingPageClient() {
 
           {/* Desktop Nav Links */}
           <div style={{ display: "flex", alignItems: "center", gap: 24 }} className="hide-on-mobile">
-            <a href="#how-it-works" style={{ color: "#475569", textDecoration: "none", fontWeight: 500, fontSize: 14 }}>
-              {t.nav.howItWorks}
-            </a>
-            <a href="#demo-tour" style={{ color: "#475569", textDecoration: "none", fontWeight: 500, fontSize: 14 }}>
-              {locale === "hi" ? "Control Panel" : "Control Hub"}
-            </a>
-            <a href="#solutions" style={{ color: "#475569", textDecoration: "none", fontWeight: 500, fontSize: 14 }}>
-              {t.nav.solutions}
-            </a>
-            <a href="#pricing" style={{ color: "#475569", textDecoration: "none", fontWeight: 500, fontSize: 14 }}>
+            <Link href="/whatsapp-catalog-maker" style={{ color: "#475569", textDecoration: "none", fontWeight: 500, fontSize: 14 }}>
+              WhatsApp Catalog
+            </Link>
+            <Link href="/upi-billing-software" style={{ color: "#475569", textDecoration: "none", fontWeight: 500, fontSize: 14 }}>
+              UPI Billing (0%)
+            </Link>
+            <Link href="/b2b-leads-finder" style={{ color: "#475569", textDecoration: "none", fontWeight: 500, fontSize: 14 }}>
+              B2B Leads
+            </Link>
+            <Link href="/pricing" style={{ color: "#475569", textDecoration: "none", fontWeight: 500, fontSize: 14 }}>
               {t.nav.pricing}
-            </a>
+            </Link>
             <a href="#faqs" style={{ color: "#475569", textDecoration: "none", fontWeight: 500, fontSize: 14 }}>
               {t.nav.faq}
             </a>
@@ -331,34 +340,41 @@ export default function LandingPageClient() {
             />
           </div>
 
-          <a
-            href="#how-it-works"
+          <Link
+            href="/whatsapp-catalog-maker"
             onClick={() => setMobileMenuOpen(false)}
             style={{ color: "#1e293b", fontWeight: 600, fontSize: 15, textDecoration: "none", padding: "8px 0", borderBottom: "1px solid #f1f5f9" }}
           >
-            ⚡ {t.nav.howItWorks}
-          </a>
-          <a
-            href="#demo-tour"
+            📱 WhatsApp Catalog Maker
+          </Link>
+          <Link
+            href="/upi-billing-software"
             onClick={() => setMobileMenuOpen(false)}
             style={{ color: "#1e293b", fontWeight: 600, fontSize: 15, textDecoration: "none", padding: "8px 0", borderBottom: "1px solid #f1f5f9" }}
           >
-            🎮 {locale === "hi" ? "Control Panel" : "Control Hub"}
-          </a>
-          <a
-            href="#solutions"
+            ⚡ 0% Commission UPI Billing
+          </Link>
+          <Link
+            href="/b2b-leads-finder"
             onClick={() => setMobileMenuOpen(false)}
             style={{ color: "#1e293b", fontWeight: 600, fontSize: 15, textDecoration: "none", padding: "8px 0", borderBottom: "1px solid #f1f5f9" }}
           >
-            📦 {t.nav.solutions}
-          </a>
-          <a
-            href="#pricing"
+            🔍 B2B Leads Discovery
+          </Link>
+          <Link
+            href="/retail-kirana-store"
+            onClick={() => setMobileMenuOpen(false)}
+            style={{ color: "#1e293b", fontWeight: 600, fontSize: 15, textDecoration: "none", padding: "8px 0", borderBottom: "1px solid #f1f5f9" }}
+          >
+            🏪 Retail &amp; Kirana
+          </Link>
+          <Link
+            href="/pricing"
             onClick={() => setMobileMenuOpen(false)}
             style={{ color: "#1e293b", fontWeight: 600, fontSize: 15, textDecoration: "none", padding: "8px 0", borderBottom: "1px solid #f1f5f9" }}
           >
             👑 {t.nav.pricing}
-          </a>
+          </Link>
           <a
             href="#calculator"
             onClick={() => setMobileMenuOpen(false)}
@@ -2348,20 +2364,21 @@ export default function LandingPageClient() {
             <Col xs={12} sm={6} md={4}>
               <Text strong style={{ color: "#fff", display: "block", marginBottom: 14 }}>{t.footer.solutionsTitle}</Text>
               <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13 }}>
-                <a href="#solutions" style={{ color: "#94a3b8", textDecoration: "none" }}>Retail &amp; Kirana</a>
-                <a href="#solutions" style={{ color: "#94a3b8", textDecoration: "none" }}>Wholesale &amp; Bulk</a>
-                <a href="#solutions" style={{ color: "#94a3b8", textDecoration: "none" }}>Services &amp; Booking</a>
-                <a href="#demo-tour" style={{ color: "#94a3b8", textDecoration: "none" }}>B2B Local Leads</a>
-                <a href="#calculator" style={{ color: "#94a3b8", textDecoration: "none" }}>0% Commission UPI</a>
+                <Link href="/retail-kirana-store" style={{ color: "#94a3b8", textDecoration: "none" }}>Retail &amp; Kirana</Link>
+                <Link href="/wholesale-distributors" style={{ color: "#94a3b8", textDecoration: "none" }}>Wholesale &amp; Bulk</Link>
+                <Link href="/services-appointments" style={{ color: "#94a3b8", textDecoration: "none" }}>Services &amp; Booking</Link>
+                <Link href="/b2b-leads-finder" style={{ color: "#94a3b8", textDecoration: "none" }}>B2B Local Leads</Link>
+                <Link href="/upi-billing-software" style={{ color: "#94a3b8", textDecoration: "none" }}>0% Commission UPI</Link>
+                <Link href="/whatsapp-catalog-maker" style={{ color: "#94a3b8", textDecoration: "none" }}>WhatsApp Catalog</Link>
               </div>
             </Col>
 
             <Col xs={12} sm={6} md={4}>
               <Text strong style={{ color: "#fff", display: "block", marginBottom: 14 }}>{t.footer.merchantPortalTitle}</Text>
               <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13 }}>
-                <a href="/login" style={{ color: "#94a3b8", textDecoration: "none" }}>Merchant Sign In</a>
-                <a href="/signup" style={{ color: "#94a3b8", textDecoration: "none" }}>Create Free Account</a>
-                <a href="#pricing" style={{ color: "#94a3b8", textDecoration: "none" }}>PRO Plan (₹199)</a>
+                <Link href="/login" style={{ color: "#94a3b8", textDecoration: "none" }}>Merchant Sign In</Link>
+                <Link href="/signup" style={{ color: "#94a3b8", textDecoration: "none" }}>Create Free Account</Link>
+                <Link href="/pricing" style={{ color: "#94a3b8", textDecoration: "none" }}>PRO Plan (₹199)</Link>
                 <a href="#faqs" style={{ color: "#94a3b8", textDecoration: "none" }}>Merchant FAQs</a>
               </div>
             </Col>

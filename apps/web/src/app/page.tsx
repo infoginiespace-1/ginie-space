@@ -8,6 +8,11 @@ export const metadata: Metadata = {
     "Apna WhatsApp catalog banayein, 0% commission par direct UPI payment lein aur local B2B leads payein. Free plan, PRO sirf ₹199/month.",
   alternates: {
     canonical: "https://app.ginie.space",
+    languages: {
+      "en-IN": "https://app.ginie.space",
+      "hi-IN": "https://app.ginie.space/hi",
+      "x-default": "https://app.ginie.space",
+    },
   },
   openGraph: {
     title: "WhatsApp Catalog & UPI Billing Software India | GinieSpace",
