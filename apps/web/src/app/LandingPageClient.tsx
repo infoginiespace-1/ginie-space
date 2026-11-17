@@ -2405,7 +2405,7 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
               <Text strong style={{ color: "#fff", display: "block", marginBottom: 14 }}>{t.footer.trustTitle}</Text>
               <div style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.8 }}>
                 <div>🔒 256-Bit SSL Encrypted</div>
-                <div>⚡ NPCI Direct UPI Protocol</div>
+                <div>⚡ Bharat UPI Standard Settlement</div>
                 <div>🛡️ DPDP Act 2023 Compliant</div>
                 <div>📱 Persistent Cloud Session</div>
                 <div>🇮🇳 Made with ❤️ in Bharat</div>

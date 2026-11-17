@@ -129,8 +129,8 @@ export default function MarketingFooter({ lang = "en" }: MarketingFooterProps) {
               {lang === "hi" ? "सुरक्षा व भरोसा" : "Security & Trust"}
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 13, color: "#94a3b8" }}>
-              <div>🔒 256-Bit SSL Bank-Grade Encryption</div>
-              <div>⚡ Direct Peer UPI (0% Gateway Cut)</div>
+              <div>🔒 256-Bit SSL Encrypted</div>
+              <div>⚡ Bharat UPI Direct Settlement (0% Cut)</div>
               <div>🛡️ DPDP Act 2023 Compliant Storage</div>
               <div>📱 Multi-Device Persistent Cloud Sync</div>
               <div>🇮🇳 100% Made with ❤️ in Bharat</div>

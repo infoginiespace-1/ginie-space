@@ -115,7 +115,7 @@ export function createStorefrontRouter(
           name: business?.name || owner?.name || "GinieSpace Store",
           phone: business?.phone || "",
           address: business?.address || "",
-          businessType: owner?.businessType || "retail",
+          businessType: (parsedSettings as any).businessType || owner?.businessType || "retail",
           upiId: parsedSettings.upiId || "",
           gstin: parsedSettings.gstin || "",
           deliveryFee: Number(parsedSettings.deliveryFee) || 0,

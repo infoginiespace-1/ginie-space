@@ -483,7 +483,7 @@ export default function PublicStorefrontPage() {
                   <SafetyCertificateFilled style={{ marginRight: 4 }} /> Verified Merchant
                 </Tag>
                 <Tag color="gold" style={{ margin: 0, fontWeight: 700, borderRadius: 6, fontSize: 11 }}>
-                  ★ 4.9 (180+ Orders)
+                  ⚡ Instant WhatsApp Order
                 </Tag>
                 {store.isOpen === false ? (
                   <Tag color="error">CLOSED</Tag>

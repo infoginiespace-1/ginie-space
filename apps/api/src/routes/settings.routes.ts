@@ -62,13 +62,22 @@ export function createSettingsRouter(
 
       let business = await db.businesses.findOne({ userId: req.user!.id });
 
+      let mergedSettingsJson = settingsJson !== undefined ? (typeof settingsJson === "string" ? settingsJson : JSON.stringify(settingsJson)) : business?.settingsJson || "{}";
+      if (updatedBusinessType) {
+        try {
+          const parsed = JSON.parse(mergedSettingsJson || "{}");
+          parsed.businessType = updatedBusinessType;
+          mergedSettingsJson = JSON.stringify(parsed);
+        } catch {}
+      }
+
       if (business) {
         business = await db.businesses.update(business.id, {
           name: name !== undefined ? name.trim() : business.name,
           phone: phone !== undefined ? phone.trim() : business.phone,
           address: address !== undefined ? address.trim() : business.address,
           slug: cleanSlug !== undefined ? cleanSlug : business.slug,
-          settingsJson: settingsJson !== undefined ? (typeof settingsJson === "string" ? settingsJson : JSON.stringify(settingsJson)) : business.settingsJson,
+          settingsJson: mergedSettingsJson,
         });
       } else {
         business = await db.businesses.create({
@@ -77,7 +86,7 @@ export function createSettingsRouter(
           phone: phone ? phone.trim() : "",
           address: address ? address.trim() : "",
           slug: cleanSlug,
-          settingsJson: settingsJson ? (typeof settingsJson === "string" ? settingsJson : JSON.stringify(settingsJson)) : "{}",
+          settingsJson: mergedSettingsJson,
         });
       }
 
