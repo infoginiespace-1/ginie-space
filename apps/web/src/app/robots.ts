@@ -1,16 +1,55 @@
 import { MetadataRoute } from "next";
 
 export default function robots(): MetadataRoute.Robots {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.ginie.space";
-
   return {
     rules: [
       {
         userAgent: "*",
-        allow: "/",
-        disallow: ["/admin", "/api/", "/settings", "/dashboard"],
+        allow: [
+          "/",
+          "/hi",
+          "/pricing",
+          "/hi/pricing",
+          "/whatsapp-catalog-maker",
+          "/hi/whatsapp-catalog-maker",
+          "/upi-billing-software",
+          "/hi/upi-billing-software",
+          "/b2b-leads-finder",
+          "/hi/b2b-leads-finder",
+          "/retail-kirana-store",
+          "/hi/retail-kirana-store",
+          "/wholesale-distributors",
+          "/hi/wholesale-distributors",
+          "/services-appointments",
+          "/hi/services-appointments",
+          "/terms",
+          "/privacy",
+          "/refund",
+          "/shop/",
+        ],
+        disallow: [
+          "/dashboard",
+          "/dashboard/",
+          "/orders",
+          "/orders/",
+          "/inbox",
+          "/inbox/",
+          "/customers",
+          "/customers/",
+          "/products",
+          "/products/",
+          "/leads",
+          "/leads/",
+          "/settings",
+          "/settings/",
+          "/admin",
+          "/admin/",
+          "/login",
+          "/signup",
+          "/api/",
+        ],
       },
     ],
-    sitemap: `${baseUrl}/sitemap.xml`,
+    sitemap: "https://app.ginie.space/sitemap.xml",
   };
 }

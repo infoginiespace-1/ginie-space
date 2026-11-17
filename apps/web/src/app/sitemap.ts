@@ -1,45 +1,44 @@
 import { MetadataRoute } from "next";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.ginie.space";
-  const currentDate = new Date().toISOString();
+  const baseUrl = "https://app.ginie.space";
+  const now = new Date();
 
-  return [
-    {
-      url: `${baseUrl}`,
-      lastModified: currentDate,
-      changeFrequency: "daily",
-      priority: 1.0,
-    },
-    {
-      url: `${baseUrl}/signup`,
-      lastModified: currentDate,
-      changeFrequency: "weekly",
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/login`,
-      lastModified: currentDate,
-      changeFrequency: "monthly",
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/terms`,
-      lastModified: currentDate,
-      changeFrequency: "monthly",
-      priority: 0.6,
-    },
-    {
-      url: `${baseUrl}/privacy`,
-      lastModified: currentDate,
-      changeFrequency: "monthly",
-      priority: 0.6,
-    },
-    {
-      url: `${baseUrl}/refund`,
-      lastModified: currentDate,
-      changeFrequency: "monthly",
-      priority: 0.6,
-    },
+  const publicRoutes = [
+    // Home (English & Hindi)
+    { path: "", changeFrequency: "daily" as const, priority: 1.0 },
+    { path: "/hi", changeFrequency: "daily" as const, priority: 1.0 },
+
+    // Pricing
+    { path: "/pricing", changeFrequency: "weekly" as const, priority: 0.9 },
+    { path: "/hi/pricing", changeFrequency: "weekly" as const, priority: 0.9 },
+
+    // Core Pillars (English)
+    { path: "/whatsapp-catalog-maker", changeFrequency: "weekly" as const, priority: 0.9 },
+    { path: "/upi-billing-software", changeFrequency: "weekly" as const, priority: 0.9 },
+    { path: "/b2b-leads-finder", changeFrequency: "weekly" as const, priority: 0.9 },
+    { path: "/retail-kirana-store", changeFrequency: "weekly" as const, priority: 0.8 },
+    { path: "/wholesale-distributors", changeFrequency: "weekly" as const, priority: 0.8 },
+    { path: "/services-appointments", changeFrequency: "weekly" as const, priority: 0.8 },
+
+    // Core Pillars (Hindi)
+    { path: "/hi/whatsapp-catalog-maker", changeFrequency: "weekly" as const, priority: 0.9 },
+    { path: "/hi/upi-billing-software", changeFrequency: "weekly" as const, priority: 0.9 },
+    { path: "/hi/b2b-leads-finder", changeFrequency: "weekly" as const, priority: 0.9 },
+    { path: "/hi/retail-kirana-store", changeFrequency: "weekly" as const, priority: 0.8 },
+    { path: "/hi/wholesale-distributors", changeFrequency: "weekly" as const, priority: 0.8 },
+    { path: "/hi/services-appointments", changeFrequency: "weekly" as const, priority: 0.8 },
+
+    // Legal / Compliance
+    { path: "/terms", changeFrequency: "monthly" as const, priority: 0.3 },
+    { path: "/privacy", changeFrequency: "monthly" as const, priority: 0.3 },
+    { path: "/refund", changeFrequency: "monthly" as const, priority: 0.3 },
   ];
+
+  return publicRoutes.map((route) => ({
+    url: `${baseUrl}${route.path}`,
+    lastModified: now,
+    changeFrequency: route.changeFrequency,
+    priority: route.priority,
+  }));
 }
