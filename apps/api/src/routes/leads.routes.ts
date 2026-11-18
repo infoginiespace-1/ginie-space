@@ -7,6 +7,14 @@ import { toE164 } from "../utils/phone";
 import { requireOwnerOrAdmin } from "../middleware/auth";
 import { FREE_PLAN_LIMITS, PRO_PLAN_LIMITS, getEffectivePlan } from "../utils/plan";
 
+interface CacheEntry {
+  timestamp: number;
+  results: any;
+}
+
+const leadsSearchCache = new Map<string, CacheEntry>();
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24-hour cache to eliminate duplicate Google Places API costs
+
 export function createLeadsRouter(
   db: IDatabase,
   placesClient: GooglePlacesClient,
@@ -83,16 +91,35 @@ export function createLeadsRouter(
         return;
       }
 
-      const results = await placesClient.searchLeads({
-        query: query || "business",
-        area,
-        pincode,
-        city,
-        state,
-        country,
-        pageSize: pageSize ? Number(pageSize) : 20,
-        pageToken: pageToken ? String(pageToken) : undefined,
-      });
+      const cacheKey = [
+        (query || "").trim().toLowerCase(),
+        (area || "").trim().toLowerCase(),
+        (city || "").trim().toLowerCase(),
+        (pincode || "").trim().toLowerCase(),
+        pageToken ? String(pageToken) : "",
+      ].join("::");
+
+      let results: any = null;
+      const cached = leadsSearchCache.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+        results = cached.results;
+      } else {
+        results = await placesClient.searchLeads({
+          query: query || "business",
+          area,
+          pincode,
+          city,
+          state,
+          country,
+          pageSize: pageSize ? Number(pageSize) : 20,
+          pageToken: pageToken ? String(pageToken) : undefined,
+        });
+        leadsSearchCache.set(cacheKey, { timestamp: Date.now(), results });
+        if (leadsSearchCache.size > 2000) {
+          const oldest = leadsSearchCache.keys().next().value;
+          if (oldest) leadsSearchCache.delete(oldest);
+        }
+      }
 
       // Increment quota usage after successful search
       if (plan === "free") {

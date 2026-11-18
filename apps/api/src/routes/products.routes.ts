@@ -366,6 +366,87 @@ export function createProductsRouter(db: IDatabase, io: Server): Router {
     }
   });
 
+  router.post("/bulk", async (req: Request, res: Response): Promise<void> => {
+    try {
+      const items = Array.isArray(req.body?.items) ? req.body.items : [];
+      if (items.length === 0) {
+        res.status(400).json({ error: "No items provided for bulk upload" });
+        return;
+      }
+      if (items.length > 200) {
+        res.status(400).json({ error: "Maximum 200 items can be uploaded at a time" });
+        return;
+      }
+
+      const [plan, existingProducts] = await Promise.all([
+        getEffectivePlan(db, req.user),
+        db.products.findMany({ userId: req.user!.id }),
+      ]);
+
+      if (plan === "free" && existingProducts.length + items.length > FREE_PLAN_LIMITS.maxProducts) {
+        res.status(403).json({
+          error: `Free plan allows up to ${FREE_PLAN_LIMITS.maxProducts} products. You currently have ${existingProducts.length}. Adding ${items.length} items exceeds the limit. Upgrade to PRO for unlimited bulk upload!`,
+        });
+        return;
+      }
+
+      const createdList = [];
+      const failedList: Array<{ row: number; name?: string; error: string }> = [];
+
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        const name = typeof item.name === "string" ? item.name.trim() : "";
+        const price = Number(item.price);
+
+        if (!name) {
+          failedList.push({ row: i + 1, error: "Missing product name" });
+          continue;
+        }
+        if (isNaN(price) || price < 0) {
+          failedList.push({ row: i + 1, name, error: "Invalid price" });
+          continue;
+        }
+
+        const isService = String(item.itemType || "").toLowerCase() === "service";
+        const unit = item.unit ? String(item.unit).trim() : (isService ? "session" : "pcs");
+        const category = item.category ? String(item.category).trim() : (isService ? "Services" : "General");
+        const description = item.description ? String(item.description).trim() : "";
+        const stock = isService ? 999999 : (item.stock !== undefined && !isNaN(Number(item.stock)) ? Math.max(0, Number(item.stock)) : 100);
+        const minOrderQty = item.minOrderQty !== undefined && !isNaN(Number(item.minOrderQty)) ? Math.max(1, Number(item.minOrderQty)) : 1;
+        const costPrice = item.costPrice !== undefined && !isNaN(Number(item.costPrice)) ? Math.max(0, Number(item.costPrice)) : undefined;
+
+        try {
+          const prod = await db.products.create({
+            userId: req.user!.id,
+            name,
+            description,
+            price,
+            unit,
+            stock,
+            category,
+            minOrderQty,
+            costPrice,
+            itemType: isService ? "service" : "product",
+          });
+          createdList.push(prod);
+          io.to(`user:${req.user!.id}`).emit("product:created", prod);
+        } catch (err: any) {
+          failedList.push({ row: i + 1, name, error: err?.message || "Failed to save item" });
+        }
+      }
+
+      res.status(201).json({
+        success: true,
+        createdCount: createdList.length,
+        failedCount: failedList.length,
+        errors: failedList,
+        message: `Successfully imported ${createdList.length} items${failedList.length > 0 ? ` (${failedList.length} skipped)` : ""}`,
+      });
+    } catch {
+      res.status(500).json({ error: "Bulk upload failed" });
+    }
+  });
+
   router.put("/:id", async (req: Request, res: Response): Promise<void> => {
     try {
       const existing = await db.products.findById((req.params.id as string));

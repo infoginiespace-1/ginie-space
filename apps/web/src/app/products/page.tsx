@@ -326,13 +326,13 @@ export default function ProductsPage() {
         return Upload.LIST_IGNORE;
       }
 
-      let imported = 0;
+      const itemsToUpload = [];
       for (const cols of rows.slice(1)) {
         const name = (cols[nameIdx] || "").trim();
         const price = Number(cols[priceIdx]);
         if (!name || Number.isNaN(price)) continue;
         const itemTypeVal = typeIdx >= 0 && cols[typeIdx]?.trim().toLowerCase() === "service" ? "service" : "product";
-        await api.post("/api/products", {
+        itemsToUpload.push({
           name,
           description: descIdx >= 0 ? (cols[descIdx] || "").trim() : "",
           price,
@@ -344,10 +344,15 @@ export default function ProductsPage() {
           duration: durIdx >= 0 ? (cols[durIdx] || "").trim() || undefined : undefined,
           serviceMode: modeIdx >= 0 ? (cols[modeIdx] || "").trim() || undefined : undefined,
         });
-        imported++;
       }
 
-      message.success(`Imported ${imported} products into catalog!`);
+      if (itemsToUpload.length === 0) {
+        message.warning("No valid product rows found in CSV");
+        return Upload.LIST_IGNORE;
+      }
+
+      const res = await api.post("/api/products/bulk", { items: itemsToUpload });
+      message.success(res.data?.message || `Successfully imported ${res.data?.createdCount} products!`);
       setCsvModalOpen(false);
       loadProducts();
     } catch (err: any) {

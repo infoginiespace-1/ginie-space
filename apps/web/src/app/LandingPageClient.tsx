@@ -261,7 +261,7 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
           </Space>
 
           {/* Mobile Right Controls (Lang Toggle + Sign In + Hamburger) */}
-          <div className="show-on-mobile" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div className="show-on-mobile mobile-header-controls">
             <Segmented
               size="small"
               value={locale}
@@ -539,7 +539,7 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
         </Paragraph>
 
         {/* Hero CTAs */}
-        <div className="show-on-mobile" style={{ flexDirection: "column", gap: 12, maxWidth: 340, margin: "0 auto 28px" }}>
+        <div className="show-on-mobile hero-cta-mobile">
           <Button
             type="primary"
             size="large"

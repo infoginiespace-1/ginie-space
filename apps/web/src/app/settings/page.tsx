@@ -59,6 +59,7 @@ import {
 import { api } from "../../lib/api";
 import { getSocket } from "../../lib/socket";
 import { UpgradeModal } from "../../components/UpgradeModal";
+import { CounterStandeeModal } from "../../components/CounterStandeeModal";
 import { useAuth } from "../../context/AuthContext";
 
 const { Title, Text, Paragraph } = Typography;
@@ -166,6 +167,7 @@ export default function SettingsPage() {
   const savedQuickRepliesRef = useRef<Array<{ label: string; text: string }> | undefined>(undefined);
   const [logoPreview, setLogoPreview] = useState<string>("");
   const [currentSlug, setCurrentSlug] = useState<string>("");
+  const [standeeModalOpen, setStandeeModalOpen] = useState(false);
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [planUsage, setPlanUsage] = useState<any>(null);
 
@@ -772,6 +774,14 @@ export default function SettingsPage() {
                       <a href={`/shop/${currentSlug || user.id}`} target="_blank" rel="noopener noreferrer">
                         <Button size="small" type="link">Open Store</Button>
                       </a>
+                      <Button
+                        size="small"
+                        icon={<QrcodeOutlined />}
+                        onClick={() => setStandeeModalOpen(true)}
+                        style={{ borderColor: "#059669", color: "#065f46", fontWeight: 600 }}
+                      >
+                        Print Counter Standee
+                      </Button>
                     </div>
                   </Space>
                 </Card>
@@ -1484,6 +1494,17 @@ export default function SettingsPage() {
         open={upgradeModalOpen}
         onClose={() => setUpgradeModalOpen(false)}
         currentPlan={planUsage?.plan || "free"}
+      />
+
+      <CounterStandeeModal
+        open={standeeModalOpen}
+        onClose={() => setStandeeModalOpen(false)}
+        storeName={form.getFieldValue("name") || user?.name || "My Store"}
+        storeSlug={currentSlug || user?.id || ""}
+        upiId={form.getFieldValue("upiId") || ""}
+        phone={form.getFieldValue("phone") || ""}
+        address={form.getFieldValue("address") || ""}
+        businessType={user?.businessType || "retail"}
       />
     </AppLayout>
   );

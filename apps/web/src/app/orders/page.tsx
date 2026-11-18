@@ -34,6 +34,7 @@ import {
 import { api } from "../../lib/api";
 import { getSocket } from "../../lib/socket";
 import { downloadCsv } from "../../lib/csv";
+import { InvoiceModal } from "../../components/InvoiceModal";
 import { useAuth } from "../../context/AuthContext";
 
 const { Title, Text } = Typography;
@@ -1087,148 +1088,20 @@ export default function OrdersPage() {
       </Modal>
 
       {/* Printable Invoice & UPI QR Modal */}
-      <Modal
-        title={`Invoice #${invoiceOrder ? invoiceOrder.id.slice(-6).toUpperCase() : ""}`}
+      <InvoiceModal
         open={Boolean(invoiceOrder)}
-        onCancel={() => setInvoiceOrder(null)}
-        width={620}
-        footer={[
-          <Button key="close" onClick={() => setInvoiceOrder(null)}>Close</Button>,
-          <Button
-            key="download"
-            icon={<DownloadOutlined />}
-            onClick={() => invoiceOrder && handleDownloadPdf(invoiceOrder)}
-          >
-            Download PDF
-          </Button>,
-          <Button
-            key="send-wa"
-            icon={<WhatsAppOutlined />}
-            style={{ color: "#25D366", borderColor: "#25D366" }}
-            loading={sendingBillId === invoiceOrder?.id}
-            onClick={() => invoiceOrder && handleSendWhatsAppBill(invoiceOrder)}
-          >
-            Send on WhatsApp
-          </Button>,
-          <Button
-            key="print"
-            type="primary"
-            icon={<PrinterOutlined />}
-            style={{ background: "#25D366", borderColor: "#25D366" }}
-            onClick={() => invoiceOrder && handlePrintInvoiceWindow(invoiceOrder)}
-          >
-            Print
-          </Button>,
-        ]}
-      >
-        {invoiceOrder && (
-          <div>
-            <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
-              <div>
-                <Title level={5} style={{ margin: 0 }}>{businessProfile.name}</Title>
-                {businessProfile.address && <Text type="secondary" style={{ display: "block" }}>{businessProfile.address}</Text>}
-                {businessProfile.gstin && <Text strong style={{ fontSize: 12 }}>GSTIN: {businessProfile.gstin}</Text>}
-              </div>
-              <div style={{ textAlign: "right" }}>
-                <Text strong>Date:</Text> {new Date(invoiceOrder.createdAt).toLocaleDateString()}
-                <div><Tag color={statusColors[invoiceOrder.status]}>{invoiceOrder.status.toUpperCase()}</Tag></div>
-              </div>
-            </div>
-            <Divider />
-            <div style={{ marginBottom: 12 }}>
-              <div><Text strong>Customer:</Text> {invoiceOrder.customerName} (+{invoiceOrder.customerPhone.replace(/^\+/, "")})</div>
-              {invoiceOrder.deliveryAddress && (
-                <div><Text strong>Address:</Text> {invoiceOrder.deliveryAddress}</div>
-              )}
-              {invoiceOrder.bookingDate && (
-                <div>
-                  <Text strong>Schedule:</Text> {invoiceOrder.bookingDate}
-                  {invoiceOrder.timeSlot ? ` • ${invoiceOrder.timeSlot}` : ""}
-                  {invoiceOrder.serviceMode ? ` (${SERVICE_MODE_NAMES[invoiceOrder.serviceMode] || invoiceOrder.serviceMode})` : ""}
-                </div>
-              )}
-              {invoiceOrder.assignedStaff && (
-                <div><Text strong>Assigned Staff:</Text> {invoiceOrder.assignedStaff}</div>
-              )}
-              {invoiceOrder.nextRenewalDate && (
-                <div><Text strong>Next Renewal:</Text> {invoiceOrder.nextRenewalDate}</div>
-              )}
-            </div>
-            {(() => {
-              let parsedItems: any[] = [];
-              try {
-                parsedItems = JSON.parse(invoiceOrder.itemsJson || "[]");
-              } catch {}
-              const gstRate = Number(businessProfile.gstRate) || 0;
-              const grand = Number(invoiceOrder.totalAmount) || 0;
-              const base = gstRate > 0 ? grand / (1 + gstRate / 100) : grand;
-              const tax = gstRate > 0 ? grand - base : 0;
-
-              return (
-                <>
-                  {Array.isArray(parsedItems) && parsedItems.length > 0 && (
-                    <Table
-                      size="small"
-                      pagination={false}
-                      dataSource={parsedItems}
-                      rowKey={(r, i) => `${r.name}_${i}`}
-                      columns={[
-                        { title: "Item", dataIndex: "name" },
-                        { title: "Qty", dataIndex: "quantity", align: "right" as const },
-                        { title: "Rate", dataIndex: "price", render: (p: number) => `₹${p}`, align: "right" as const },
-                        { title: "Amount", render: (_: any, r: any) => `₹${(Number(r.price) * Number(r.quantity)).toFixed(2)}`, align: "right" as const },
-                      ]}
-                      style={{ marginBottom: 14 }}
-                    />
-                  )}
-                  <div style={{ textAlign: "right" }}>
-                    {Number(invoiceOrder.discountAmount) > 0 && (
-                      <div style={{ color: "#16a34a" }}>
-                        Discount{invoiceOrder.couponCode ? ` (${invoiceOrder.couponCode})` : ""}: -₹{Number(invoiceOrder.discountAmount).toFixed(2)}
-                      </div>
-                    )}
-                    {Number(invoiceOrder.deliveryCharge) > 0 && (
-                      <div>Delivery Charge: +₹{Number(invoiceOrder.deliveryCharge).toFixed(2)}</div>
-                    )}
-                    {gstRate > 0 && (
-                      <>
-                        <div>Subtotal: ₹{base.toFixed(2)}</div>
-                        <div>GST ({gstRate}%): ₹{tax.toFixed(2)}</div>
-                      </>
-                    )}
-                      <Title level={4} style={{ margin: "6px 0", color: "#16a34a" }}>
-                        Grand Total: ₹{grand.toLocaleString("en-IN")}
-                      </Title>
-                      <div>
-                        <Text type="secondary">
-                          Payment: <strong>{(invoiceOrder.paymentStatus || "unpaid").toUpperCase()}</strong> (Paid: ₹{(invoiceOrder.paymentStatus === "paid" ? grand : Number(invoiceOrder.paidAmount) || 0).toLocaleString("en-IN")})
-                        </Text>
-                      </div>
-                      {invoiceOrder.paymentStatus !== "paid" && (
-                        <div>
-                          <Text type="danger" strong>
-                            Balance Due: ₹{Math.max(0, grand - (Number(invoiceOrder.paidAmount) || 0)).toLocaleString("en-IN")}
-                          </Text>
-                        </div>
-                      )}
-                  </div>
-                </>
-              );
-            })()}
-            {upiId && (
-              <Card size="small" style={{ marginTop: 12, background: "#f0fdf4", textAlign: "center" }}>
-                <Text strong>Pay via UPI:</Text> <Text code>{upiId}</Text>
-                {invoiceQrUrl && (
-                  <div style={{ marginTop: 10 }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={invoiceQrUrl} alt="Invoice UPI QR" style={{ width: 150, height: 150, background: "#fff", padding: 6, borderRadius: 8 }} />
-                  </div>
-                )}
-              </Card>
-            )}
-          </div>
-        )}
-      </Modal>
+        onClose={() => setInvoiceOrder(null)}
+        order={invoiceOrder}
+        store={{
+          name: businessProfile.name,
+          phone: businessProfile.phone,
+          address: businessProfile.address,
+          gstin: businessProfile.gstin,
+          gstRate: Number(businessProfile.gstRate) || 0,
+          upiId: upiId,
+          businessType: user?.businessType || "retail",
+        }}
+      />
       {/* Schedule / Technician Assignment Modal */}
       <Modal
         title={`Booking Schedule & Technician — #${bookingModalOrder ? bookingModalOrder.id.slice(-6).toUpperCase() : ""}`}

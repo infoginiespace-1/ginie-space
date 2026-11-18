@@ -777,7 +777,21 @@ export default function AdminPage() {
     const threadMap: Record<string, { phone: string; name: string; messages: SupportMessage[] }> = {};
     for (const msg of supportMessages) {
       const rawPhone = msg.contactPhone || "unknown";
-      const key10 = getPhone10(rawPhone) || "unknown";
+      let key10 = getPhone10(rawPhone) || "unknown";
+
+      // Match merchant by phone or store/user name to merge WhatsApp LIDs into merchant threads
+      const matchedMerchant = merchants.find((m) => {
+        const m10 = getPhone10(m.business?.phone || "");
+        if (m10 && key10 === m10) return true;
+        if (msg.contactName && m.business?.name && msg.contactName.trim().toLowerCase() === m.business.name.trim().toLowerCase()) return true;
+        if (msg.contactName && m.name && msg.contactName.trim().toLowerCase() === m.name.trim().toLowerCase()) return true;
+        return false;
+      });
+      if (matchedMerchant && matchedMerchant.business?.phone) {
+        const m10 = getPhone10(matchedMerchant.business.phone);
+        if (m10) key10 = m10;
+      }
+
       if (!threadMap[key10]) {
         threadMap[key10] = {
           phone: rawPhone,
@@ -922,16 +936,29 @@ export default function AdminPage() {
       setShowMediaInput(false);
 
       // Optimistic update: immediately show reply in green on right and mark thread as REPLIED
-      const optimisticMsg: SupportMessage = {
-        id: `opt_${Date.now()}`,
-        messageId: `opt_${Date.now()}`,
-        contactPhone: activeChatPhone,
-        contactName: activeChatName || `+${activeChatPhone}`,
-        text: sentImg ? (sentText ? `${sentText} [Media: ${sentImg}]` : `[Media: ${sentImg}]`) : sentText,
-        fromMe: "true",
-        timestamp: new Date().toISOString(),
-      };
-      setSupportMessages((prev) => [optimisticMsg, ...prev]);
+      const optimisticMsgs: SupportMessage[] = [
+        {
+          id: `opt_${Date.now()}`,
+          messageId: `opt_${Date.now()}`,
+          contactPhone: activeChatPhone,
+          contactName: activeChatName || `+${activeChatPhone}`,
+          text: sentImg ? (sentText ? `${sentText} [Media: ${sentImg}]` : `[Media: ${sentImg}]`) : sentText,
+          fromMe: "true",
+          timestamp: new Date().toISOString(),
+        },
+      ];
+      if (activeThread && activeThread.phone && activeThread.phone !== activeChatPhone) {
+        optimisticMsgs.push({
+          id: `opt_lid_${Date.now()}`,
+          messageId: `opt_lid_${Date.now()}`,
+          contactPhone: activeThread.phone,
+          contactName: activeChatName || `+${activeThread.phone}`,
+          text: sentImg ? (sentText ? `${sentText} [Media: ${sentImg}]` : `[Media: ${sentImg}]`) : sentText,
+          fromMe: "true",
+          timestamp: new Date().toISOString(),
+        });
+      }
+      setSupportMessages((prev) => [...optimisticMsgs, ...prev]);
 
       // Re-fetch in background to sync with server state
       setTimeout(() => {

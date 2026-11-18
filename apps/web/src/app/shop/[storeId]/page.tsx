@@ -46,8 +46,10 @@ import {
   HomeOutlined,
   AppstoreOutlined,
   ToolOutlined,
+  PrinterOutlined,
 } from "@ant-design/icons";
 import { api } from "../../../lib/api";
+import { InvoiceModal } from "../../../components/InvoiceModal";
 
 const { Title, Text } = Typography;
 
@@ -59,6 +61,8 @@ interface StoreInfo {
   address?: string;
   businessType?: string;
   upiId?: string;
+  gstin?: string;
+  gstRate?: number;
   deliveryFee?: number;
   coupons?: Array<{ code: string; discountPercent: number }>;
   logoUrl?: string;
@@ -129,12 +133,23 @@ export default function PublicStorefrontPage() {
   const [fulfillmentType, setFulfillmentType] = useState<"delivery" | "pickup">("delivery");
   const [paymentMethod, setPaymentMethod] = useState<"upi" | "cod" | "whatsapp">("upi");
 
+  const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
   const [orderResult, setOrderResult] = useState<{
     orderId: string;
     totalAmount: number;
     upiUri?: string;
     qrDataUrl?: string;
     paymentMethod?: string;
+    customerName?: string;
+    customerPhone?: string;
+    deliveryAddress?: string;
+    items?: any[];
+    bookingDate?: string;
+    timeSlot?: string;
+    couponCode?: string;
+    discountAmount?: number;
+    deliveryCharge?: number;
+    createdAt?: string;
   } | null>(null);
 
   const [form] = Form.useForm();
@@ -303,6 +318,16 @@ export default function PublicStorefrontPage() {
         upiUri: res.data.upiUri,
         qrDataUrl: res.data.qrDataUrl,
         paymentMethod,
+        customerName: values.customerName,
+        customerPhone: values.customerPhone,
+        deliveryAddress: fulfillmentType === "pickup" ? "Self Store Pickup" : values.deliveryAddress,
+        items: cartItems,
+        bookingDate: values.bookingDate,
+        timeSlot: values.timeSlot,
+        couponCode: appliedCoupon?.code,
+        discountAmount: discountAmount,
+        deliveryCharge: effectiveDeliveryFee,
+        createdAt: new Date().toISOString(),
       });
       setCart({});
       setAppliedCoupon(null);
@@ -1215,6 +1240,15 @@ export default function PublicStorefrontPage() {
                 Message Store on WhatsApp
               </Button>
             )}
+
+            <Button
+              icon={<PrinterOutlined />}
+              block
+              style={{ marginTop: 10, borderColor: "#059669", color: "#065f46", fontWeight: 600 }}
+              onClick={() => setInvoiceModalOpen(true)}
+            >
+              Download Bill / Invoice (PDF)
+            </Button>
           </div>
         ) : cartItems.length === 0 ? (
           <Empty description="Your cart is empty. Add products from the catalog." />
@@ -1525,6 +1559,36 @@ export default function PublicStorefrontPage() {
           )}
         </Space>
       </Modal>
+
+      <InvoiceModal
+        open={invoiceModalOpen}
+        onClose={() => setInvoiceModalOpen(false)}
+        order={orderResult ? {
+          id: orderResult.orderId,
+          customerName: orderResult.customerName || "Customer",
+          customerPhone: orderResult.customerPhone || "",
+          deliveryAddress: orderResult.deliveryAddress,
+          items: orderResult.items || [],
+          totalAmount: orderResult.totalAmount,
+          status: "confirmed",
+          paymentStatus: orderResult.paymentMethod === "upi" ? "paid" : "unpaid",
+          discountAmount: orderResult.discountAmount,
+          deliveryCharge: orderResult.deliveryCharge,
+          couponCode: orderResult.couponCode,
+          bookingDate: orderResult.bookingDate,
+          timeSlot: orderResult.timeSlot,
+          createdAt: orderResult.createdAt || new Date().toISOString(),
+        } : null}
+        store={{
+          name: store?.name || "Store",
+          phone: store?.phone,
+          address: store?.address,
+          gstin: store?.gstin,
+          gstRate: store?.gstRate,
+          upiId: store?.upiId,
+          businessType: store?.businessType,
+        }}
+      />
     </div>
   );
 }

@@ -35,8 +35,10 @@ import {
   TrophyOutlined,
   DownloadOutlined,
   RiseOutlined,
+  PrinterOutlined,
 } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
+import { CounterStandeeModal } from "../../components/CounterStandeeModal";
 
 const { Title, Text } = Typography;
 
@@ -50,6 +52,10 @@ export default function DashboardPage() {
   const [businessPhone, setBusinessPhone] = useState("");
   const [businessName, setBusinessName] = useState("My Business");
   const [businessType, setBusinessType] = useState<string>("retail");
+  const [businessSlug, setBusinessSlug] = useState("");
+  const [businessUpiId, setBusinessUpiId] = useState("");
+  const [businessAddress, setBusinessAddress] = useState("");
+  const [standeeModalOpen, setStandeeModalOpen] = useState(false);
   const [summaryModalOpen, setSummaryModalOpen] = useState(false);
   const [summaryPhone, setSummaryPhone] = useState("");
   const [sendingSummary, setSendingSummary] = useState(false);
@@ -81,6 +87,8 @@ export default function DashboardPage() {
         setBusinessName(setRes.data.business.name || "My Business");
         setBusinessPhone(setRes.data.business.phone || "");
         setSummaryPhone(setRes.data.business.phone || "");
+        setBusinessSlug(setRes.data.business.slug || "");
+        setBusinessAddress(setRes.data.business.address || "");
         if (setRes.data.businessType) {
           setBusinessType(setRes.data.businessType);
         }
@@ -88,6 +96,7 @@ export default function DashboardPage() {
           try {
             const parsedSettings = JSON.parse(setRes.data.business.settingsJson);
             setGstRate(Number(parsedSettings.gstRate) || 0);
+            setBusinessUpiId(parsedSettings.upiId || "");
           } catch {}
         }
       }
@@ -344,6 +353,13 @@ export default function DashboardPage() {
           )}
           <Button icon={<DownloadOutlined />} onClick={handleExportSalesReport}>
             Sales &amp; GST CSV
+          </Button>
+          <Button
+            icon={<PrinterOutlined />}
+            onClick={() => setStandeeModalOpen(true)}
+            style={{ borderColor: "#059669", color: "#065f46", fontWeight: 600 }}
+          >
+            Counter Standee
           </Button>
           <Button icon={<ReloadOutlined />} onClick={loadDashboardData} loading={loading}>
             Refresh
@@ -723,6 +739,17 @@ export default function DashboardPage() {
           onChange={(e) => setSummaryPhone(e.target.value)}
         />
       </Modal>
+
+      <CounterStandeeModal
+        open={standeeModalOpen}
+        onClose={() => setStandeeModalOpen(false)}
+        storeName={businessName}
+        storeSlug={businessSlug}
+        upiId={businessUpiId}
+        phone={businessPhone}
+        address={businessAddress}
+        businessType={businessType}
+      />
     </AppLayout>
   );
 }

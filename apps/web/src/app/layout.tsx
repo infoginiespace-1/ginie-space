@@ -74,15 +74,22 @@ export default function RootLayout({
   return (
     <html lang="en-IN">
       <head>
+        <link rel="preconnect" href="https://app.ginie.space" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://api.ginie.space" />
         <style
           dangerouslySetInnerHTML={{
             __html: `
-              .show-on-mobile{display:none!important}
-              .app-header{min-height:68px}
-              .hero-section{max-width:1200px;margin:0 auto;padding:64px 24px 32px;text-align:center}
+              html, body { margin: 0; padding: 0; box-sizing: border-box; }
+              *, *::before, *::after { box-sizing: inherit; }
+              .show-on-mobile, .mobile-header-controls, .hero-cta-mobile { display: none !important; }
+              .app-header { min-height: 68px; height: 68px; contain: layout; }
+              .hero-section { max-width: 1200px; margin: 0 auto; padding: 64px 24px 32px; text-align: center; }
+              .trust-stats-card { background: #ffffff; padding: 16px 10px; border-radius: 14px; border: 1px solid #e2e8f0; height: 100%; min-height: 88px; display: flex; flex-direction: column; justify-content: center; }
               @media(max-width:768px){
                 .hide-on-mobile{display:none!important}
                 .show-on-mobile{display:flex!important}
+                .mobile-header-controls{display:flex!important;align-items:center;gap:8px}
+                .hero-cta-mobile{display:flex!important;flex-direction:column;gap:12px;max-width:340px;margin:0 auto 28px}
                 .hero-section{padding:36px 16px 24px}
               }
             `,

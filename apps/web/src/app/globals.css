@@ -16,12 +16,16 @@ body {
 }
 
 /* Zero Layout Shift Responsive Display Utilities */
-.show-on-mobile {
+.show-on-mobile,
+.mobile-header-controls,
+.hero-cta-mobile {
   display: none !important;
 }
 
 .app-header {
   min-height: 68px;
+  height: 68px;
+  contain: layout;
 }
 
 .hero-section {
@@ -50,6 +54,18 @@ body {
   }
   .show-on-mobile {
     display: flex !important;
+  }
+  .mobile-header-controls {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+  }
+  .hero-cta-mobile {
+    display: flex !important;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 340px;
+    margin: 0 auto 28px;
   }
   .hero-section {
     padding: 36px 16px 24px;
