@@ -14,6 +14,8 @@ export interface User {
   role: "admin" | "user" | "staff";
   businessType: BusinessType;
   plan?: "free" | "pro";
+  subscriptionStatus?: "active" | "pending" | "expired" | "none";
+  planExpiresAt?: string | null;
   staffPermissions?: string[];
 }
 
@@ -24,6 +26,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   signup: (name: string, email: string, password: string, businessType: BusinessType, phone?: string) => Promise<void>;
   updateUserLocal: (patch: Partial<User>) => void;
+  refreshUser: () => Promise<void>;
   logout: () => void;
 }
 
@@ -34,6 +37,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const refreshUser = async () => {
+    try {
+      const res = await api.get("/api/auth/me");
+      if (res.data?.user) {
+        setUser(res.data.user);
+        try {
+          localStorage.setItem("giniespace_user", JSON.stringify(res.data.user));
+        } catch {}
+      }
+    } catch {}
+  };
+
   useEffect(() => {
     const savedToken = localStorage.getItem("giniespace_token");
     const savedUser = localStorage.getItem("giniespace_user");
@@ -41,8 +56,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (savedToken && savedUser) {
       try {
         setToken(savedToken);
-        setUser(JSON.parse(savedUser));
-        getSocket();
+        const parsed = JSON.parse(savedUser);
+        setUser(parsed);
+        const socket = getSocket();
+
+        // Realtime listener for admin plan/status updates
+        if (socket) {
+          socket.on("user:updated", (updatedData: Partial<User>) => {
+            setUser((prev) => {
+              if (!prev) return prev;
+              if (updatedData.id && updatedData.id !== prev.id) return prev;
+              const next = { ...prev, ...updatedData };
+              try {
+                localStorage.setItem("giniespace_user", JSON.stringify(next));
+              } catch {}
+              return next;
+            });
+          });
+        }
+
+        // Live server revalidation on app mount
+        api.get("/api/auth/me")
+          .then((res) => {
+            if (res.data?.user) {
+              setUser(res.data.user);
+              try {
+                localStorage.setItem("giniespace_user", JSON.stringify(res.data.user));
+              } catch {}
+            }
+          })
+          .catch(() => {});
       } catch {
         localStorage.removeItem("giniespace_token");
         localStorage.removeItem("giniespace_user");
@@ -108,7 +151,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, signup, updateUserLocal, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, login, signup, updateUserLocal, refreshUser, logout }}>
       {children}
     </AuthContext.Provider>
   );

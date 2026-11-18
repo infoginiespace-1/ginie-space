@@ -1,4 +1,5 @@
 import { Router, Request, Response } from "express";
+import { Server } from "socket.io";
 import { randomUUID } from "crypto";
 import bcrypt from "bcryptjs";
 import { IDatabase } from "@giniespace/sheets-db";
@@ -47,7 +48,8 @@ export function createAdminRouter(
   db: IDatabase,
   waManager: WhatsAppSessionManager,
   notificationService: NotificationService,
-  analyticsService?: AnalyticsService
+  analyticsService?: AnalyticsService,
+  io?: Server
 ): Router {
   const router = Router();
 
@@ -552,11 +554,38 @@ export function createAdminRouter(
 
       const patch: any = {};
       if (status && (status === "active" || status === "suspended")) patch.status = status;
-      if (plan && (plan === "free" || plan === "pro")) patch.plan = plan;
+      if (plan && (plan === "free" || plan === "pro")) {
+        patch.plan = plan;
+        if (plan === "free") {
+          patch.subscriptionStatus = "none";
+          patch.planExpiresAt = "";
+          patch.paymentUtr = "";
+        } else if (plan === "pro") {
+          patch.subscriptionStatus = "active";
+          if (!target.planExpiresAt || new Date(target.planExpiresAt).getTime() < Date.now()) {
+            patch.planExpiresAt = new Date(Date.now() + 30 * 86400000).toISOString();
+            patch.planPurchasedAt = new Date().toISOString();
+          }
+        }
+      }
       if (businessType && ["retail", "wholesale", "services", "restaurant", "garments", "hotel"].includes(businessType)) patch.businessType = businessType;
       if (name && typeof name === "string" && name.trim()) patch.name = name.trim();
 
       const updated = await db.users.update(target.id, patch);
+
+      if (io) {
+        io.to(`user:${target.id}`).emit("user:updated", {
+          id: updated.id,
+          name: updated.name,
+          email: updated.email,
+          role: updated.role,
+          businessType: updated.businessType,
+          status: updated.status || "active",
+          plan: updated.plan || "free",
+          subscriptionStatus: updated.subscriptionStatus || "none",
+          planExpiresAt: updated.planExpiresAt || null,
+        });
+      }
 
       const adminEmail = req.user?.email || "admin";
       await recordAuditLog(
@@ -575,6 +604,8 @@ export function createAdminRouter(
           businessType: updated.businessType,
           status: updated.status || "active",
           plan: updated.plan || "free",
+          subscriptionStatus: updated.subscriptionStatus || "none",
+          planExpiresAt: updated.planExpiresAt || null,
           createdAt: updated.createdAt,
         },
         message: "User account updated successfully",
@@ -960,6 +991,15 @@ export function createAdminRouter(
         updatedAt: now.toISOString(),
       });
 
+      if (io) {
+        io.to(`user:${targetUserId}`).emit("user:updated", {
+          id: targetUserId,
+          plan: "pro",
+          subscriptionStatus: "active",
+          planExpiresAt: expiresAt,
+        });
+      }
+
       const adminEmail = req.user?.email || "admin";
       await recordAuditLog(
         db,
@@ -1013,10 +1053,21 @@ export function createAdminRouter(
       }
 
       await db.users.update(targetUserId, {
+        plan: "free",
         subscriptionStatus: "none",
+        planExpiresAt: "",
         paymentUtr: "",
         updatedAt: new Date().toISOString(),
       });
+
+      if (io) {
+        io.to(`user:${targetUserId}`).emit("user:updated", {
+          id: targetUserId,
+          plan: "free",
+          subscriptionStatus: "none",
+          planExpiresAt: null,
+        });
+      }
 
       const adminEmail = req.user?.email || "admin";
       await recordAuditLog(

@@ -6,6 +6,7 @@ import { IDatabase, BusinessType, UserRole } from "@giniespace/sheets-db";
 import { AuthenticatedUser } from "../middleware/auth";
 import { NotificationService } from "../services/notification.service";
 import { normalizePhoneDigits, toE164 } from "../utils/phone";
+import { getEffectivePlan } from "../utils/plan";
 
 const MASTER_ADMIN_EMAIL = "info.giniespace@gmail.com";
 const MASTER_ADMIN_PASS = "Dawood@3210";
@@ -248,15 +249,20 @@ export function createAuthRouter(
         console.warn("[Auth /me] DB fetch error, using token payload fallback:", dbErr.message);
       }
 
+      // Check effective plan from live DB
+      const effectivePlan = await getEffectivePlan(db, user || userPayload);
+
       res.json({
         user: {
           id: userPayload.id,
           actorId: userPayload.actorId,
           name: userPayload.role === "staff" ? userPayload.name : (user?.name || userPayload.name),
           email: userPayload.role === "staff" ? userPayload.email : (user?.email || userPayload.email),
-          role: userPayload.role || "admin",
+          role: user?.role || userPayload.role || "user",
           businessType: user?.businessType || userPayload.businessType || "retail",
-          plan: (user?.role === "admin" || userPayload.role === "admin" || user?.plan === "pro") ? "pro" : "free",
+          plan: effectivePlan,
+          subscriptionStatus: user?.subscriptionStatus || (effectivePlan === "pro" ? "active" : "none"),
+          planExpiresAt: user?.planExpiresAt || null,
           staffPermissions: userPayload.staffPermissions,
           createdAt: user?.createdAt || new Date().toISOString(),
         },

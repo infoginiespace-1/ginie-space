@@ -164,7 +164,7 @@ async function bootstrap() {
   app.use("/api/leads", auth, createLeadsRouter(db, placesClient, io, notificationService));
   app.use("/api/whatsapp", auth, createWhatsAppRouter(waManager, db));
   app.use("/api/settings", auth, createSettingsRouter(db, notificationService));
-  app.use("/api/admin", auth, requireAdmin, createAdminRouter(db, waManager, notificationService, analyticsService));
+  app.use("/api/admin", auth, requireAdmin, createAdminRouter(db, waManager, notificationService, analyticsService, io));
 
   // Automated Schedulers
   startDailyReportScheduler(db, waManager, notificationService);
