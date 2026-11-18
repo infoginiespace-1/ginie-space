@@ -27,6 +27,8 @@ export interface InvoiceModalProps {
     totalAmount: number;
     status: string;
     paymentStatus?: string;
+    paymentUtr?: string;
+    notes?: string;
     paidAmount?: number;
     discountAmount?: number;
     deliveryCharge?: number;
@@ -76,6 +78,7 @@ export function InvoiceModal({ open, onClose, order, store }: InvoiceModalProps)
   const sgst = totalTax / 2;
 
   const effectiveUpi = store.upiId && store.upiId.trim() ? store.upiId.trim() : "";
+  const utrNumber = order.paymentUtr || order.notes?.match(/UTR:\s*(\d{12})/i)?.[1];
   const upiPayUrl = effectiveUpi
     ? `upi://pay?pa=${effectiveUpi}&pn=${encodeURIComponent(store.name)}&am=${grandTotal}&tn=${encodeURIComponent(invoiceNumber)}&cu=INR`
     : "";
@@ -91,7 +94,7 @@ export function InvoiceModal({ open, onClose, order, store }: InvoiceModalProps)
       `Namaste ${order.customerName}!\n\n` +
       `Here is your invoice for Order *#${invoiceNumber}* from *${store.name}*:\n` +
       `Total Amount: *₹${grandTotal.toLocaleString("en-IN")}*\n` +
-      `Payment Status: *${(order.paymentStatus || "unpaid").toUpperCase()}*\n\n` +
+      `Payment Status: *${(order.paymentStatus || "unpaid").toUpperCase()}*${utrNumber ? ` (UPI UTR: ${utrNumber})` : ""}\n\n` +
       `Items:\n` +
       items.map((i) => `• ${i.name} (x${i.quantity}) - ₹${i.price * i.quantity}`).join("\n") +
       `\n\nThank you for shopping with us! 🙏`;
@@ -203,6 +206,11 @@ export function InvoiceModal({ open, onClose, order, store }: InvoiceModalProps)
                 >
                   PAYMENT: {(order.paymentStatus || "unpaid").toUpperCase()}
                 </Tag>
+                {utrNumber && (
+                  <div style={{ fontSize: 11, color: "#059669", fontWeight: 700, fontFamily: "monospace", marginTop: 2 }}>
+                    UPI Ref: {utrNumber}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -349,7 +357,7 @@ export function InvoiceModal({ open, onClose, order, store }: InvoiceModalProps)
                 </div>
                 {order.paymentStatus === "paid" ? (
                   <div style={{ color: "#16a34a", fontWeight: 700, fontSize: 12, marginTop: 4 }}>
-                    ✓ 100% Paid directly to merchant bank
+                    ✓ 100% Paid directly to merchant bank {utrNumber ? `(UTR: ${utrNumber})` : ""}
                   </div>
                 ) : (
                   <div style={{ color: "#dc2626", fontWeight: 700, fontSize: 12, marginTop: 4 }}>

@@ -24,6 +24,7 @@ import {
   Alert,
   Segmented,
   Tooltip,
+  QRCode,
 } from "antd";
 import {
   ShopOutlined,
@@ -47,6 +48,11 @@ import {
   AppstoreOutlined,
   ToolOutlined,
   PrinterOutlined,
+  ArrowLeftOutlined,
+  CopyOutlined,
+  MobileOutlined,
+  CheckCircleFilled,
+  LockOutlined,
 } from "@ant-design/icons";
 import { api } from "../../../lib/api";
 import { InvoiceModal } from "../../../components/InvoiceModal";
@@ -133,6 +139,11 @@ export default function PublicStorefrontPage() {
   const [fulfillmentType, setFulfillmentType] = useState<"delivery" | "pickup">("delivery");
   const [paymentMethod, setPaymentMethod] = useState<"upi" | "cod" | "whatsapp">("upi");
 
+  // Two-Step UPI Verification States (Order not placed until UTR is verified)
+  const [checkoutStep, setCheckoutStep] = useState<"form" | "upi_pay">("form");
+  const [pendingCheckoutValues, setPendingCheckoutValues] = useState<any>(null);
+  const [customerUtr, setCustomerUtr] = useState<string>("");
+
   const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
   const [orderResult, setOrderResult] = useState<{
     orderId: string;
@@ -140,6 +151,7 @@ export default function PublicStorefrontPage() {
     upiUri?: string;
     qrDataUrl?: string;
     paymentMethod?: string;
+    paymentUtr?: string;
     customerName?: string;
     customerPhone?: string;
     deliveryAddress?: string;
@@ -258,22 +270,8 @@ export default function PublicStorefrontPage() {
       return 0;
     });
 
-  const handleCheckout = async (values: any) => {
-    if (cartItems.length === 0) return;
+  const executeOrderSubmission = async (values: any, method: "upi" | "cod" | "whatsapp", utr?: string) => {
     setSubmitting(true);
-
-    // Save customer info locally for future visits
-    try {
-      localStorage.setItem(
-        "ginie_storefront_cust",
-        JSON.stringify({
-          customerName: values.customerName,
-          customerPhone: values.customerPhone,
-          deliveryAddress: values.deliveryAddress,
-        })
-      );
-    } catch {}
-
     try {
       const deliveryNote =
         fulfillmentType === "pickup"
@@ -288,15 +286,17 @@ export default function PublicStorefrontPage() {
         timeSlot: values.timeSlot,
         serviceMode: values.serviceMode,
         items: cartItems,
-        notes: `${deliveryNote} (Payment: ${paymentMethod.toUpperCase()})`,
+        notes: deliveryNote,
         couponCode: appliedCoupon?.code,
+        paymentMethod: method,
+        paymentUtr: utr ? utr.trim() : undefined,
       });
 
       const orderId = res.data.order.id;
       const totalAmount = res.data.order.totalAmount;
 
       // WhatsApp direct message checkout option
-      if (paymentMethod === "whatsapp" && store?.phone) {
+      if (method === "whatsapp" && store?.phone) {
         const orderSummaryText =
           `Namaste ${store.name}!\nI would like to place an order:\n\n` +
           cartItems.map((i) => `• ${i.name} (${i.quantity} ${i.unit}) — ₹${i.price * i.quantity}`).join("\n") +
@@ -317,7 +317,8 @@ export default function PublicStorefrontPage() {
         totalAmount,
         upiUri: res.data.upiUri,
         qrDataUrl: res.data.qrDataUrl,
-        paymentMethod,
+        paymentMethod: method,
+        paymentUtr: utr ? utr.trim() : undefined,
         customerName: values.customerName,
         customerPhone: values.customerPhone,
         deliveryAddress: fulfillmentType === "pickup" ? "Self Store Pickup" : values.deliveryAddress,
@@ -332,12 +333,60 @@ export default function PublicStorefrontPage() {
       setCart({});
       setAppliedCoupon(null);
       setCouponInput("");
-      message.success("Order placed successfully!");
+      setCheckoutStep("form");
+      setCustomerUtr("");
+      message.success(method === "upi" ? "UPI Payment verified & Order placed successfully!" : "Order placed successfully!");
     } catch (err: any) {
-      message.error(err.message || "Could not place order");
+      message.error(err.response?.data?.error || err.message || "Could not place order");
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleCheckout = async (values: any) => {
+    if (cartItems.length === 0) return;
+
+    // Save customer info locally for future visits
+    try {
+      localStorage.setItem(
+        "ginie_storefront_cust",
+        JSON.stringify({
+          customerName: values.customerName,
+          customerPhone: values.customerPhone,
+          deliveryAddress: values.deliveryAddress,
+        })
+      );
+    } catch {}
+
+    // Strict UPI Validation & 2-Step Gate:
+    // If paying via UPI, do NOT place order in database yet.
+    // Transition to Step 2 so customer scans QR/pays and enters 12-digit UTR.
+    if (paymentMethod === "upi") {
+      if (!store?.upiId || !store.upiId.trim()) {
+        message.warning("Store has not added their UPI ID yet. Please select Cash on Delivery or WhatsApp Chat.");
+        return;
+      }
+      setPendingCheckoutValues(values);
+      setCheckoutStep("upi_pay");
+      return;
+    }
+
+    // COD or WhatsApp checkout submits immediately
+    await executeOrderSubmission(values, paymentMethod);
+  };
+
+  const handleConfirmUpiPayment = async () => {
+    const cleanUtr = customerUtr.trim();
+    if (!/^\d{12}$/.test(cleanUtr)) {
+      message.error("Kripya 12-digit UPI UTR / Transaction Reference number enter karein (e.g. 432198765432).");
+      return;
+    }
+    if (!pendingCheckoutValues) {
+      message.error("Order details missing. Please re-fill checkout form.");
+      setCheckoutStep("form");
+      return;
+    }
+    await executeOrderSubmission(pendingCheckoutValues, "upi", cleanUtr);
   };
 
   const handleTrackOrder = async () => {
@@ -1175,11 +1224,22 @@ export default function PublicStorefrontPage() {
 
       {/* Cart & Checkout Drawer */}
       <Drawer
-        title={orderResult ? "Order Confirmed!" : `Your Cart (${cartCount} items)`}
+        title={
+          orderResult
+            ? "Order Confirmed!"
+            : checkoutStep === "upi_pay"
+            ? "Pay via UPI & Confirm"
+            : `Your Cart (${cartCount} items)`
+        }
         placement="right"
         width={440}
         open={cartOpen}
-        onClose={() => setCartOpen(false)}
+        onClose={() => {
+          setCartOpen(false);
+          if (checkoutStep === "upi_pay") {
+            setCheckoutStep("form");
+          }
+        }}
       >
         {orderResult ? (
           <div style={{ textAlign: "center", padding: "12px 0" }}>
@@ -1189,7 +1249,24 @@ export default function PublicStorefrontPage() {
               Total Payable: <Text strong>₹{Number(orderResult.totalAmount).toLocaleString("en-IN")}</Text>
             </Text>
 
-            {orderResult.paymentMethod === "cod" ? (
+            {orderResult.paymentMethod === "upi" ? (
+              <Alert
+                type="success"
+                showIcon
+                style={{ marginTop: 20, textAlign: "left", borderRadius: 10 }}
+                message="UPI Payment Verified & Confirmed ✅"
+                description={
+                  <div>
+                    <div>Aapka payment successfully verify ho gaya hai aur order <strong>PAID</strong> mark ho chuka hai.</div>
+                    {orderResult.paymentUtr && (
+                      <div style={{ marginTop: 6, padding: "4px 8px", background: "#dcfce7", borderRadius: 6, display: "inline-block", fontFamily: "monospace", fontSize: 12, color: "#166534" }}>
+                        Bank UTR Ref: <strong>{orderResult.paymentUtr}</strong>
+                      </div>
+                    )}
+                  </div>
+                }
+              />
+            ) : orderResult.paymentMethod === "cod" ? (
               <Alert
                 type="success"
                 showIcon
@@ -1233,7 +1310,7 @@ export default function PublicStorefrontPage() {
                 block
                 style={{ marginTop: 16 }}
                 href={`https://wa.me/${store.phone.replace(/\D/g, "")}?text=${encodeURIComponent(
-                  `Hi ${store.name}, I just placed Order #${orderResult.orderId.slice(-6).toUpperCase()} for ₹${orderResult.totalAmount}.`
+                  `Hi ${store.name}, I placed Order #${orderResult.orderId.slice(-6).toUpperCase()} for ₹${orderResult.totalAmount}${orderResult.paymentUtr ? ` (Paid via UPI, UTR: ${orderResult.paymentUtr})` : ""}.`
                 )}`}
                 target="_blank"
               >
@@ -1252,6 +1329,129 @@ export default function PublicStorefrontPage() {
           </div>
         ) : cartItems.length === 0 ? (
           <Empty description="Your cart is empty. Add products from the catalog." />
+        ) : checkoutStep === "upi_pay" ? (
+          <div>
+            {/* Step 2: UPI Payment & UTR Entry */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+              <Button
+                type="text"
+                icon={<ArrowLeftOutlined />}
+                onClick={() => setCheckoutStep("form")}
+                style={{ padding: 0, fontWeight: 600, color: "#047857" }}
+              >
+                Back to Details
+              </Button>
+              <Tag color="green" style={{ fontWeight: 700, borderRadius: 6 }}>
+                Step 2 of 2: Pay &amp; Verify
+              </Tag>
+            </div>
+
+            <div style={{ textAlign: "center", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 12, padding: "16px 14px", marginBottom: 16 }}>
+              <div style={{ fontSize: 13, color: "#64748b", fontWeight: 600 }}>Total Payable to {store.name}</div>
+              <div style={{ fontSize: 28, fontWeight: 900, color: "#059669", margin: "4px 0 12px" }}>
+                ₹{cartTotal.toLocaleString("en-IN")}
+              </div>
+
+              {/* Dynamic QR Code */}
+              {store?.upiId ? (
+                <>
+                  <div style={{ background: "#fff", padding: 10, borderRadius: 12, display: "inline-block", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", margin: "0 auto 12px" }}>
+                    <QRCode
+                      value={`upi://pay?pa=${encodeURIComponent(store.upiId.trim())}&pn=${encodeURIComponent(store.name)}&am=${cartTotal.toFixed(2)}&cu=INR&tn=${encodeURIComponent(`Order at ${store.name}`)}`}
+                      size={180}
+                    />
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 12 }}>
+                    <span style={{ fontSize: 12, color: "#475569" }}>UPI ID: <strong>{store.upiId}</strong></span>
+                    <Button
+                      size="small"
+                      icon={<CopyOutlined />}
+                      onClick={() => {
+                        navigator.clipboard?.writeText(store.upiId!);
+                        message.success("UPI ID copied!");
+                      }}
+                    >
+                      Copy
+                    </Button>
+                  </div>
+                  <Button
+                    type="primary"
+                    icon={<MobileOutlined />}
+                    block
+                    href={`upi://pay?pa=${encodeURIComponent(store.upiId.trim())}&pn=${encodeURIComponent(store.name)}&am=${cartTotal.toFixed(2)}&cu=INR&tn=${encodeURIComponent(`Order at ${store.name}`)}`}
+                    style={{ background: "#16a34a", borderColor: "#16a34a", height: 42, fontWeight: 700, borderRadius: 8 }}
+                  >
+                    📱 Pay via UPI App (GPay / PhonePe / Paytm)
+                  </Button>
+                </>
+              ) : (
+                <Alert
+                  type="warning"
+                  message="Store UPI ID Not Available"
+                  description="Please choose Cash on Delivery or contact store directly."
+                  style={{ textAlign: "left" }}
+                />
+              )}
+            </div>
+
+            {/* Step 2: 12-Digit UTR Input */}
+            <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 12, padding: 14, marginBottom: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 700, fontSize: 13, color: "#166534", marginBottom: 4 }}>
+                <CheckCircleFilled style={{ color: "#16a34a" }} />
+                <span>Enter 12-Digit Bank UTR / Ref Number:</span>
+              </div>
+              <div style={{ fontSize: 12, color: "#15803d", marginBottom: 10, lineHeight: 1.4 }}>
+                Payment success hone ke baad apne GPay, PhonePe ya Paytm receipt se <strong>12-digit UPI Reference / UTR No.</strong> yahan daalein:
+              </div>
+              <Input
+                placeholder="e.g. 432198765432"
+                maxLength={12}
+                value={customerUtr}
+                onChange={(e) => setCustomerUtr(e.target.value.replace(/\D/g, ""))}
+                style={{
+                  height: 48,
+                  fontSize: 18,
+                  textAlign: "center",
+                  letterSpacing: 3,
+                  fontWeight: 800,
+                  borderRadius: 8,
+                  borderColor: customerUtr.length === 12 ? "#16a34a" : undefined,
+                }}
+              />
+              <div style={{ marginTop: 6, display: "flex", justifyContent: "space-between", fontSize: 11 }}>
+                <span style={{ color: customerUtr.length === 12 ? "#16a34a" : "#64748b", fontWeight: customerUtr.length === 12 ? 700 : 400 }}>
+                  {customerUtr.length === 12 ? "✓ 12 Digits Completed" : `${customerUtr.length}/12 digits entered`}
+                </span>
+                <span style={{ color: "#94a3b8" }}>NPCI Standard UTR</span>
+              </div>
+            </div>
+
+            <Button
+              type="primary"
+              size="large"
+              block
+              loading={submitting}
+              disabled={customerUtr.trim().length !== 12}
+              onClick={handleConfirmUpiPayment}
+              style={{
+                height: 48,
+                background: customerUtr.trim().length === 12 ? "#047857" : undefined,
+                borderColor: customerUtr.trim().length === 12 ? "#047857" : undefined,
+                fontWeight: 800,
+                borderRadius: 8,
+              }}
+            >
+              Confirm Payment &amp; Place Order (₹{cartTotal.toLocaleString("en-IN")})
+            </Button>
+            <Button
+              type="text"
+              block
+              onClick={() => setCheckoutStep("form")}
+              style={{ marginTop: 8, color: "#64748b" }}
+            >
+              Cancel / Change Payment Method
+            </Button>
+          </div>
         ) : (
           <div>
             {/* Fulfillment Type Toggle */}
@@ -1472,6 +1672,8 @@ export default function PublicStorefrontPage() {
               >
                 {hasServiceInCart
                   ? `Confirm Booking (₹${cartTotal.toLocaleString("en-IN")})`
+                  : paymentMethod === "upi"
+                  ? `Proceed to Pay via UPI (₹${cartTotal.toLocaleString("en-IN")}) ➡️`
                   : paymentMethod === "whatsapp"
                   ? `Order on WhatsApp (₹${cartTotal.toLocaleString("en-IN")}) 📲`
                   : `Place Order (₹${cartTotal.toLocaleString("en-IN")})`}
@@ -1572,6 +1774,8 @@ export default function PublicStorefrontPage() {
           totalAmount: orderResult.totalAmount,
           status: "confirmed",
           paymentStatus: orderResult.paymentMethod === "upi" ? "paid" : "unpaid",
+          paymentUtr: orderResult.paymentUtr,
+          notes: orderResult.paymentUtr ? `Payment: UPI | UTR: ${orderResult.paymentUtr}` : undefined,
           discountAmount: orderResult.discountAmount,
           deliveryCharge: orderResult.deliveryCharge,
           couponCode: orderResult.couponCode,

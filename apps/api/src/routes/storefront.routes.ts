@@ -210,7 +210,19 @@ export function createStorefrontRouter(
   router.post("/:storeId/orders", async (req: Request, res: Response): Promise<void> => {
     try {
       const resolved = await resolveStoreOwner(db, String(req.params.storeId || "").trim());
-      const { customerName, customerPhone, items, notes, couponCode, deliveryAddress, bookingDate, timeSlot, serviceMode } = req.body;
+      const {
+        customerName,
+        customerPhone,
+        items,
+        notes,
+        couponCode,
+        deliveryAddress,
+        bookingDate,
+        timeSlot,
+        serviceMode,
+        paymentMethod,
+        paymentUtr,
+      } = req.body;
 
       if (!resolved || !customerName || !customerPhone || !Array.isArray(items) || items.length === 0) {
         res.status(400).json({ error: "Customer name, WhatsApp phone, and at least one item are required" });
@@ -222,6 +234,33 @@ export function createStorefrontRouter(
       if (!phoneDigits || phoneDigits.length < 10) {
         res.status(400).json({ error: "Please enter a valid 10-digit WhatsApp mobile number" });
         return;
+      }
+
+      // Strict UPI Payment Verification
+      const isUpiPayment = String(paymentMethod || "").toLowerCase() === "upi";
+      let cleanUtr = "";
+      if (isUpiPayment) {
+        cleanUtr = String(paymentUtr || "").trim();
+        if (!/^\d{12}$/.test(cleanUtr)) {
+          res.status(400).json({
+            error: "UPI payment verify karne ke liye 12-digit UTR/Transaction Reference number enter karna zaroori hai (e.g. 432198765432).",
+          });
+          return;
+        }
+
+        // Anti-fraud: prevent reuse of duplicate UTR
+        const existingOrders = await db.orders.findMany({ userId: storeId }).catch(() => []);
+        const duplicateOrder = existingOrders.find((o) => {
+          const oNotes = String(o.notes || "");
+          return oNotes.includes(cleanUtr);
+        });
+
+        if (duplicateOrder) {
+          res.status(400).json({
+            error: `Yeh UPI UTR Reference (${cleanUtr}) pehle se Order #${duplicateOrder.id.slice(-6).toUpperCase()} me use ho chuka hai. Kripya apna valid payment receipt UTR enter karein.`,
+          });
+          return;
+        }
       }
 
       if (business?.settingsJson) {
@@ -332,6 +371,23 @@ export function createStorefrontRouter(
         } catch {}
       }
 
+      const finalPaymentStatus = isUpiPayment ? "paid" : "unpaid";
+      const finalPaidAmount = isUpiPayment ? totalAmount : 0;
+      const finalOrderStatus = isUpiPayment ? "confirmed" : "pending";
+
+      const paymentTag = isUpiPayment
+        ? `Payment: UPI | UTR: ${cleanUtr}`
+        : paymentMethod === "cod"
+        ? "Payment: COD"
+        : paymentMethod === "whatsapp"
+        ? "Payment: WhatsApp Chat"
+        : "";
+
+      const fullNotes = [
+        notes ? `[Online Store] ${notes.trim()}` : "[Online Store Order]",
+        paymentTag,
+      ].filter(Boolean).join(" • ");
+
       // Create the order
       const order = await db.orders.create({
         userId: storeId,
@@ -340,9 +396,9 @@ export function createStorefrontRouter(
         customerPhone: e164Phone,
         itemsJson: JSON.stringify(verifiedItems),
         totalAmount,
-        status: "pending",
-        paymentStatus: "unpaid",
-        paidAmount: 0,
+        status: finalOrderStatus,
+        paymentStatus: finalPaymentStatus,
+        paidAmount: finalPaidAmount,
         discountAmount,
         deliveryCharge,
         couponCode: appliedCoupon || undefined,
@@ -350,7 +406,7 @@ export function createStorefrontRouter(
         bookingDate: bookingDate ? String(bookingDate).trim() : undefined,
         timeSlot: timeSlot ? String(timeSlot).trim() : undefined,
         serviceMode: serviceMode ? String(serviceMode).trim() : undefined,
-        notes: notes ? `[Online Store] ${notes.trim()}` : "[Online Store Order]",
+        notes: fullNotes,
       });
 
       // Decrement product stock safely in background (skip for unlimited services)
@@ -380,6 +436,11 @@ export function createStorefrontRouter(
             : serviceMode === "online"
             ? "Online / Remote"
             : serviceMode || "";
+        const paymentReceiptLine = isUpiPayment
+          ? `💳 *Payment:* Direct Bank UPI (UTR: ${cleanUtr}) — Paid ✅`
+          : paymentMethod === "cod"
+          ? `💵 *Payment:* Cash on Delivery (COD)`
+          : "";
         const receipt =
           `${isServiceBooking ? "🗓️ *Booking Received" : "🛍️ *Order Received"} — ${business?.name || "Our Store"}*\n` +
           `Ref ID: *#${order.id.slice(-6).toUpperCase()}*\n` +
@@ -387,6 +448,7 @@ export function createStorefrontRouter(
           (bookingDate ? `📅 Date: ${String(bookingDate).trim()}${timeSlot ? ` | ⏰ ${String(timeSlot).trim()}` : ""}\n` : "") +
           (modeLabel ? `🛠️ Mode: ${modeLabel}\n` : "") +
           (deliveryAddress ? `📍 Address: ${String(deliveryAddress).trim()}\n` : "") +
+          (paymentReceiptLine ? `${paymentReceiptLine}\n` : "") +
           `\n${lines}\n` +
           (discountAmount > 0 ? `🎟️ Discount: -₹${discountAmount}\n` : "") +
           (deliveryCharge > 0 ? `🚚 Visit / Delivery Fee: +₹${deliveryCharge}\n` : "") +
@@ -416,7 +478,8 @@ export function createStorefrontRouter(
         order,
         upiUri,
         qrDataUrl,
-        message: "Order placed successfully!",
+        paymentUtr: cleanUtr || undefined,
+        message: isUpiPayment ? "UPI Payment verified & Order placed successfully!" : "Order placed successfully!",
       });
     } catch {
       res.status(500).json({ error: "Could not place storefront order" });

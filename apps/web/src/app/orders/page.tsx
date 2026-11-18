@@ -509,6 +509,7 @@ export default function OrdersPage() {
         const total = Number(record.totalAmount) || 0;
         const paid = currentStatus === "paid" ? total : Number(record.paidAmount) || 0;
         const due = Math.max(0, total - paid);
+        const utrMatch = record.notes?.match(/UTR:\s*(\d{12})/i)?.[1];
         return (
           <div>
             <Select
@@ -523,6 +524,11 @@ export default function OrdersPage() {
                 { value: "paid", label: <Tag color="green">Paid</Tag> },
               ]}
             />
+            {utrMatch && (
+              <div style={{ fontSize: 11, color: "#059669", fontWeight: 600, marginTop: 3, fontFamily: "monospace" }}>
+                UTR: {utrMatch}
+              </div>
+            )}
             {currentStatus !== "paid" && due > 0 && record.status !== "cancelled" && (
               <div style={{ fontSize: 11, color: "#b91c1c", marginTop: 2 }}>
                 Due: ₹{due.toLocaleString("en-IN")}
