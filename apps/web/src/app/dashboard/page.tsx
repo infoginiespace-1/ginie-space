@@ -375,6 +375,57 @@ export default function DashboardPage() {
         </Space>
       </div>
 
+      {/* Prominent Counter Standee Banner */}
+      <div
+        style={{
+          background: "linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)",
+          border: "1px solid #a7f3d0",
+          borderRadius: 12,
+          padding: "12px 18px",
+          marginBottom: 20,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: 12,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div
+            style={{
+              width: 42,
+              height: 42,
+              borderRadius: 10,
+              background: "#059669",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#fff",
+              fontSize: 22,
+              flexShrink: 0,
+            }}
+          >
+            🖨️
+          </div>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 14, color: "#065f46" }}>
+              Counter Standee &amp; Table QR Poster Ready!
+            </div>
+            <div style={{ fontSize: 12, color: "#047857" }}>
+              Apne store counter par lagane ke liye Store Catalog QR + Direct UPI QR poster download karein.
+            </div>
+          </div>
+        </div>
+        <Button
+          type="primary"
+          icon={<PrinterOutlined />}
+          onClick={() => setStandeeModalOpen(true)}
+          style={{ background: "#059669", borderColor: "#059669", fontWeight: 700, borderRadius: 8 }}
+        >
+          Download / Print Standee
+        </Button>
+      </div>
+
       {todayBookingsCount > 0 && (
         <Alert
           type="info"
