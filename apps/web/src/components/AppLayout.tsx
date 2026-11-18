@@ -200,22 +200,19 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   const sidebarHeader = (
     <div style={{ padding: "20px 24px", display: "flex", alignItems: "center", gap: 8 }}>
-      <div
+      <img
+        src="/logo.png"
+        alt="GinieSpace"
+        width={34}
+        height={34}
         style={{
           width: 34,
           height: 34,
           borderRadius: 8,
-          background: "#25D366",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "#fff",
-          fontWeight: 700,
-          fontSize: 18,
+          objectFit: "contain",
+          boxShadow: "0 2px 6px rgba(37,211,102,0.25)",
         }}
-      >
-        G
-      </div>
+      />
       <div>
         <div style={{ fontWeight: 700, fontSize: 16, color: "#1f1f1f", lineHeight: 1.2 }}>GinieSpace</div>
         <div style={{ fontSize: 11, color: "#8c8c8c" }}>
@@ -296,22 +293,18 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   style={{ border: "none", background: "#f1f5f9" }}
                 />
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <div
+                  <img
+                    src="/logo.png"
+                    alt="GinieSpace"
+                    width={26}
+                    height={26}
                     style={{
                       width: 26,
                       height: 26,
                       borderRadius: 6,
-                      background: "#25D366",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "#fff",
-                      fontWeight: 800,
-                      fontSize: 14,
+                      objectFit: "contain",
                     }}
-                  >
-                    G
-                  </div>
+                  />
                   <span style={{ fontWeight: 700, fontSize: 15, color: "#0f172a", letterSpacing: "-0.3px" }}>
                     GinieSpace
                   </span>

@@ -60,23 +60,19 @@ export default function MarketingNav({ currentPath, lang = "en" }: MarketingNavP
       >
         {/* Brand Logo */}
         <Link href={lang === "hi" ? "/hi" : "/"} style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 10 }}>
-          <div
+          <img
+            src="/logo.png"
+            alt="GinieSpace Logo"
+            width={38}
+            height={38}
             style={{
               width: 38,
               height: 38,
-              borderRadius: 10,
-              background: "linear-gradient(135deg, #25D366 0%, #128C7E 100%)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#fff",
-              fontWeight: 800,
-              fontSize: 20,
+              borderRadius: 9,
+              objectFit: "contain",
               boxShadow: "0 4px 12px rgba(37, 211, 102, 0.3)",
             }}
-          >
-            G
-          </div>
+          />
           <div>
             <div style={{ fontWeight: 800, fontSize: 19, color: "#0f172a", lineHeight: 1.1, letterSpacing: "-0.02em" }}>
               GinieSpace
@@ -192,6 +188,7 @@ export default function MarketingNav({ currentPath, lang = "en" }: MarketingNavP
       <Drawer
         title={
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <img src="/logo.png" alt="GinieSpace" width={28} height={28} style={{ borderRadius: 6, objectFit: "contain" }} />
             <span style={{ fontWeight: 800, color: "#0f172a" }}>GinieSpace</span>
           </div>
         }

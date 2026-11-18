@@ -24,22 +24,18 @@ export default function MarketingFooter({ lang = "en" }: MarketingFooterProps) {
           {/* Brand Info */}
           <Col xs={24} md={8}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-              <div
+              <img
+                src="/logo.png"
+                alt="GinieSpace"
+                width={36}
+                height={36}
                 style={{
                   width: 36,
                   height: 36,
                   borderRadius: 8,
-                  background: "linear-gradient(135deg, #25D366 0%, #128C7E 100%)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#fff",
-                  fontWeight: 800,
-                  fontSize: 18,
+                  objectFit: "contain",
                 }}
-              >
-                G
-              </div>
+              />
               <span style={{ fontSize: 20, fontWeight: 800, color: "#fff" }}>GinieSpace</span>
             </div>
             <p style={{ fontSize: 13, lineHeight: 1.7, color: "#94a3b8", maxWidth: 340 }}>

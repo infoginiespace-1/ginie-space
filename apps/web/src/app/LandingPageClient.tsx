@@ -182,23 +182,19 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
             style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}
             onClick={() => router.push("/")}
           >
-            <div
+            <img
+              src="/logo.png"
+              alt="GinieSpace Logo"
+              width={isMobile ? 34 : 38}
+              height={isMobile ? 34 : 38}
               style={{
                 width: isMobile ? 34 : 38,
                 height: isMobile ? 34 : 38,
-                borderRadius: 10,
-                background: "linear-gradient(135deg, #25D366 0%, #128C7E 100%)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#fff",
-                fontWeight: 800,
-                fontSize: isMobile ? 18 : 20,
+                borderRadius: 9,
+                objectFit: "contain",
                 boxShadow: "0 4px 12px rgba(37, 211, 102, 0.3)",
               }}
-            >
-              G
-            </div>
+            />
             <div>
               <div style={{ fontWeight: 800, fontSize: isMobile ? 18 : 19, color: "#0f172a", lineHeight: 1.1, letterSpacing: "-0.02em" }}>
                 GinieSpace
@@ -294,22 +290,18 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
       <Drawer
         title={
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div
+            <img
+              src="/logo.png"
+              alt="GinieSpace"
+              width={32}
+              height={32}
               style={{
                 width: 32,
                 height: 32,
                 borderRadius: 8,
-                background: "linear-gradient(135deg, #25D366 0%, #128C7E 100%)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#fff",
-                fontWeight: 800,
-                fontSize: 18,
+                objectFit: "contain",
               }}
-            >
-              G
-            </div>
+            />
             <div>
               <div style={{ fontWeight: 800, fontSize: 16, color: "#0f172a", lineHeight: 1.1 }}>GinieSpace</div>
               <div style={{ fontSize: 11, color: "#64748b" }}>WhatsApp Commerce Hub</div>
@@ -2326,22 +2318,18 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
           <Row gutter={[24, 24]}>
             <Col xs={24} md={7}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                <div
+                <img
+                  src="/logo.png"
+                  alt="GinieSpace"
+                  width={32}
+                  height={32}
                   style={{
                     width: 32,
                     height: 32,
                     borderRadius: 8,
-                    background: "#25D366",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "#fff",
-                    fontWeight: 800,
-                    fontSize: 18,
+                    objectFit: "contain",
                   }}
-                >
-                  G
-                </div>
+                />
                 <div style={{ fontWeight: 800, fontSize: 18, color: "#fff" }}>GinieSpace</div>
               </div>
               <Paragraph style={{ color: "#64748b", fontSize: 13, lineHeight: 1.6 }}>

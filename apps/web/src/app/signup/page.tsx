@@ -48,23 +48,20 @@ export default function SignupPage() {
         }}
       >
         <div style={{ textAlign: "center", marginBottom: 28 }}>
-          <div
+          <img
+            src="/logo.png"
+            alt="GinieSpace Logo"
+            width={48}
+            height={48}
             style={{
               width: 48,
               height: 48,
               borderRadius: 12,
-              background: "#25D366",
-              color: "#fff",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 24,
-              fontWeight: 800,
+              objectFit: "contain",
               margin: "0 auto 12px",
+              display: "block",
             }}
-          >
-            G
-          </div>
+          />
           <Title level={3} style={{ margin: 0, color: "#0f172a" }}>Get Started with GinieSpace</Title>
           <Text type="secondary">Create your automated WhatsApp business workspace</Text>
         </div>
