@@ -302,6 +302,93 @@ export function createOrdersRouter(
     }
   });
 
+  // Feature 5: Hyperlocal Delivery Boy Dispatch
+  router.post("/:id/dispatch-delivery", async (req: Request, res: Response): Promise<void> => {
+    try {
+      const order = await db.orders.findById((req.params.id as string));
+      if (!order) {
+        res.status(404).json({ error: "Order not found" });
+        return;
+      }
+      if (req.user?.role !== "admin" && order.userId !== req.user!.id) {
+        res.status(403).json({ error: "Access denied" });
+        return;
+      }
+
+      const { deliveryBoyName, deliveryBoyPhone } = req.body;
+      if (!deliveryBoyName || !deliveryBoyPhone) {
+        res.status(400).json({ error: "Delivery person name and mobile number are required" });
+        return;
+      }
+
+      const cleanRiderPhone = normalizePhoneDigits(deliveryBoyPhone);
+      const updated = await db.orders.update(order.id, {
+        status: "dispatched" as OrderStatus,
+        assignedStaff: String(deliveryBoyName).trim(),
+      });
+
+      io.to(`user:${order.userId}`).emit("order:updated", updated);
+
+      const total = Number(order.totalAmount) || 0;
+      const paid = order.paymentStatus === "paid" ? total : Number(order.paidAmount) || 0;
+      const balanceToCollect = Math.max(0, total - paid);
+
+      let itemsSummary = "";
+      try {
+        const parsed = JSON.parse(order.itemsJson || "[]");
+        itemsSummary = parsed.map((i: any) => `  • ${i.name} × ${i.quantity}`).join("\n");
+      } catch {}
+
+      const merchantState = waManager.getSessionState(order.userId);
+
+      // 1. WhatsApp message to Delivery Boy
+      const riderMsg =
+        `🛵 *New Delivery Assigned!*\n` +
+        `Order Ref: *#${order.id.slice(-6).toUpperCase()}*\n` +
+        `Customer: *${order.customerName}* (📞 ${order.customerPhone})\n` +
+        `Delivery Address: ${order.deliveryAddress || "Store Pickup / Counter"}\n` +
+        `Amount to Collect: *₹${balanceToCollect}* (${order.paymentStatus === "paid" ? "ALREADY PAID ONLINE ✅" : "COLLECT CASH / UPI 💵"})\n` +
+        (itemsSummary ? `Items:\n${itemsSummary}\n` : "") +
+        `Please deliver safely! 🙏`;
+
+      if (merchantState.status === "connected") {
+        waManager.sendMessage({
+          userId: order.userId,
+          recipientPhone: cleanRiderPhone,
+          messageText: riderMsg,
+        }).catch(() => {});
+      }
+
+      // 2. WhatsApp notification to Customer
+      if (order.customerPhone) {
+        const custMsg =
+          `🛵 Namaste *${order.customerName}*!\n\n` +
+          `Aapka Order *#${order.id.slice(-6).toUpperCase()}* dispatch ho gaya hai aur delivery ke liye nikal chuka hai.\n\n` +
+          `Delivery Partner: *${deliveryBoyName}* (📞 ${deliveryBoyPhone})\n` +
+          (balanceToCollect > 0 ? `Payable on Delivery: *₹${balanceToCollect}*\n` : `Payment Status: *PAID ONLINE ✅*\n`) +
+          `Thank you for shopping with us! 🙏`;
+
+        if (merchantState.status === "connected") {
+          waManager.sendMessage({
+            userId: order.userId,
+            recipientPhone: order.customerPhone,
+            messageText: custMsg,
+          }).catch(() => {});
+        } else if (notificationService) {
+          notificationService.sendSupportNotification(order.customerPhone, custMsg).catch(() => {});
+        }
+      }
+
+      res.json({
+        success: true,
+        order: updated,
+        message: `Order #${order.id.slice(-6).toUpperCase()} dispatched to ${deliveryBoyName}!`,
+      });
+    } catch {
+      res.status(500).json({ error: "Failed to dispatch delivery" });
+    }
+  });
+
   router.put("/:id/booking", async (req: Request, res: Response): Promise<void> => {
     try {
       const existing = await db.orders.findById((req.params.id as string));

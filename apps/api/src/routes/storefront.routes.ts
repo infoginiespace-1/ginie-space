@@ -48,6 +48,19 @@ function buildUpiUri(params: {
   return `upi://pay?${qs.toString()}`;
 }
 
+interface CartSession {
+  id: string;
+  storeId: string;
+  customerName: string;
+  customerPhone: string;
+  items: any[];
+  totalAmount: number;
+  deliveryAddress?: string;
+  updatedAt: string;
+}
+
+const activeCartSessions = new Map<string, CartSession>();
+
 export function createStorefrontRouter(
   db: IDatabase,
   io: Server,
@@ -55,6 +68,117 @@ export function createStorefrontRouter(
   waManager?: WhatsAppSessionManager
 ): Router {
   const router = Router();
+
+  // Feature 2: Incomplete Cart Session Capture (Debounced from Storefront)
+  router.post("/:storeId/cart-session", async (req: Request, res: Response): Promise<void> => {
+    try {
+      const resolved = await resolveStoreOwner(db, String(req.params.storeId || "").trim());
+      if (!resolved) {
+        res.status(404).json({ error: "Store not found" });
+        return;
+      }
+      const { storeId } = resolved;
+      const { customerName, customerPhone, items, totalAmount, deliveryAddress } = req.body;
+      const phoneDigits = normalizePhoneDigits(customerPhone);
+      if (!phoneDigits || phoneDigits.length < 10) {
+        res.status(400).json({ error: "Valid 10-digit mobile number required" });
+        return;
+      }
+
+      const session: CartSession = {
+        id: `cs_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        storeId,
+        customerName: String(customerName || "").trim() || "Visitor",
+        customerPhone: phoneDigits,
+        items: Array.isArray(items) ? items : [],
+        totalAmount: Number(totalAmount) || 0,
+        deliveryAddress: deliveryAddress ? String(deliveryAddress).trim() : undefined,
+        updatedAt: new Date().toISOString(),
+      };
+
+      activeCartSessions.set(`${storeId}::${phoneDigits}`, session);
+      io.to(`user:${storeId}`).emit("cart_session:updated", session);
+      res.json({ success: true, session });
+    } catch {
+      res.status(500).json({ error: "Could not save cart session" });
+    }
+  });
+
+  // Feature 2: Merchant Abandoned Carts lookup
+  router.get("/:storeId/abandoned-carts", async (req: Request, res: Response): Promise<void> => {
+    try {
+      const resolved = await resolveStoreOwner(db, String(req.params.storeId || "").trim());
+      if (!resolved) {
+        res.status(404).json({ error: "Store not found" });
+        return;
+      }
+      const { storeId, business } = resolved;
+      const cutoff = Date.now() - 7 * 86400000; // Last 7 days
+
+      const sessions: CartSession[] = [];
+      for (const [key, sess] of activeCartSessions.entries()) {
+        if (key.startsWith(`${storeId}::`) && new Date(sess.updatedAt).getTime() >= cutoff) {
+          sessions.push(sess);
+        }
+      }
+
+      sessions.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      res.json({
+        abandonedCarts: sessions,
+        storeSlug: business?.slug || storeId,
+        storeName: business?.name || "Our Store",
+      });
+    } catch {
+      res.status(500).json({ error: "Could not load abandoned carts" });
+    }
+  });
+
+  // Feature 6: Customer Loyalty / Cashback Coins lookup
+  router.get("/:storeId/loyalty-coins", async (req: Request, res: Response): Promise<void> => {
+    try {
+      const resolved = await resolveStoreOwner(db, String(req.params.storeId || "").trim());
+      if (!resolved) {
+        res.status(404).json({ error: "Store not found" });
+        return;
+      }
+      const { storeId } = resolved;
+      const phoneDigits = normalizePhoneDigits(String(req.query.phone || "")).slice(-10);
+      if (!phoneDigits || phoneDigits.length < 10) {
+        res.json({ availableCoins: 0, coinValueInInr: 1 });
+        return;
+      }
+
+      const allOrders = await db.orders.findMany({ userId: storeId });
+      let totalSpent = 0;
+      let totalRedeemed = 0;
+
+      for (const o of allOrders) {
+        if (o.status === "cancelled") continue;
+        const ordDigits = normalizePhoneDigits(o.customerPhone || "").slice(-10);
+        if (ordDigits === phoneDigits && (o.status === "delivered" || o.paymentStatus === "paid")) {
+          totalSpent += Number(o.totalAmount) || 0;
+          const matchRedeemed = (o.notes || "").match(/Redeemed\s+(\d+)\s+Coins/i);
+          if (matchRedeemed) {
+            totalRedeemed += Number(matchRedeemed[1]) || 0;
+          }
+        }
+      }
+
+      // 5% cashback rate: 1 coin earned per ₹20 spent, each coin worth ₹1
+      const totalEarned = Math.floor(totalSpent / 20);
+      const availableCoins = Math.max(0, totalEarned - totalRedeemed);
+
+      res.json({
+        availableCoins,
+        coinValueInInr: 1,
+        totalEarned,
+        totalRedeemed,
+        earnRate: "5%",
+      });
+    } catch {
+      res.status(500).json({ error: "Could not load loyalty coins" });
+    }
+  });
 
   // Public UPI QR Code generator for Invoices & Payment Reminders
   router.get("/upi-qr", async (req: Request, res: Response): Promise<void> => {
@@ -222,6 +346,7 @@ export function createStorefrontRouter(
         serviceMode,
         paymentMethod,
         paymentUtr,
+        redeemCoins,
       } = req.body;
 
       if (!resolved || !customerName || !customerPhone || !Array.isArray(items) || items.length === 0) {
@@ -351,6 +476,12 @@ export function createStorefrontRouter(
         } catch {}
       }
 
+      // Feature 6: Redeem Loyalty Coins
+      const coinsToRedeem = Math.min(totalAmount - discountAmount, Math.max(0, Math.floor(Number(redeemCoins) || 0)));
+      if (coinsToRedeem > 0) {
+        discountAmount += coinsToRedeem;
+      }
+
       totalAmount = Math.max(0, totalAmount - discountAmount + deliveryCharge);
 
       // Auto-register customer if not already in store's directory
@@ -383,9 +514,12 @@ export function createStorefrontRouter(
         ? "Payment: WhatsApp Chat"
         : "";
 
+      const coinTag = coinsToRedeem > 0 ? `Redeemed ${coinsToRedeem} Coins (₹${coinsToRedeem})` : "";
+
       const fullNotes = [
         notes ? `[Online Store] ${notes.trim()}` : "[Online Store Order]",
         paymentTag,
+        coinTag,
       ].filter(Boolean).join(" • ");
 
       // Create the order
@@ -408,6 +542,9 @@ export function createStorefrontRouter(
         serviceMode: serviceMode ? String(serviceMode).trim() : undefined,
         notes: fullNotes,
       });
+
+      // Feature 2: Clear active cart session on order conversion
+      activeCartSessions.delete(`${storeId}::${phoneDigits}`);
 
       // Decrement product stock safely in background (skip for unlimited services)
       for (const vi of verifiedItems) {

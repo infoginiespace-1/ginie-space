@@ -18,6 +18,7 @@ import {
   Tag,
   Upload,
   Alert,
+  Segmented,
 } from "antd";
 import {
   PlusOutlined,
@@ -32,6 +33,7 @@ import {
   ThunderboltOutlined,
   CrownOutlined,
   WhatsAppOutlined,
+  WarningOutlined,
 } from "@ant-design/icons";
 import { Radio } from "antd";
 import { api } from "../../lib/api";
@@ -181,6 +183,17 @@ export default function ProductsPage() {
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [form] = Form.useForm();
 
+  // Feature 7: Low Stock Alerts & Supplier WhatsApp PO State
+  const [stockFilter, setStockFilter] = useState<"all" | "low_stock">("all");
+  const [poProduct, setPoProduct] = useState<Product | null>(null);
+  const [poQty, setPoQty] = useState<number>(10);
+  const [poSupplierPhone, setPoSupplierPhone] = useState<string>("");
+  const [poNotes, setPoNotes] = useState<string>("");
+  const [bulkPoModalOpen, setBulkPoModalOpen] = useState<boolean>(false);
+  const [bulkPoSupplierPhone, setBulkPoSupplierPhone] = useState<string>("");
+  const [businessName, setBusinessName] = useState<string>("Our Store");
+  const [businessAddress, setBusinessAddress] = useState<string>("");
+
   const watchedItemType = Form.useWatch("itemType", form) || "product";
   const watchedUnitType = Form.useWatch("unitType", form) || "pcs";
   const watchedPackQty = Form.useWatch("packQty", form);
@@ -206,8 +219,11 @@ export default function ProductsPage() {
     loadProducts();
     api.get("/api/settings")
       .then((res) => {
-        if (res.data?.business?.slug) {
-          setStoreSlug(String(res.data.business.slug));
+        const b = res.data?.business;
+        if (b) {
+          if (b.name) setBusinessName(b.name);
+          if (b.address) setBusinessAddress(b.address);
+          if (b.slug) setStoreSlug(String(b.slug));
         }
       })
       .catch(() => {});
@@ -560,9 +576,13 @@ export default function ProductsPage() {
       render: (stock: number, record: Product) =>
         record.itemType === "service" ? (
           <Tag color="purple">Service / On Demand</Tag>
+        ) : Number(stock) <= 5 ? (
+          <Tag color="red" style={{ fontWeight: 700 }}>
+            ⚠️ {Number(stock) <= 0 ? "Out of Stock" : `Low Stock: ${stock} left`}
+          </Tag>
         ) : (
-          <Tag color={stock > 10 ? "green" : stock > 0 ? "orange" : "red"}>
-            {stock > 0 ? `${stock} (${record.unit || "pcs"})` : "Out of stock"}
+          <Tag color={stock > 10 ? "green" : "orange"}>
+            {stock} ({record.unit || "pcs"})
           </Tag>
         ),
     },
@@ -570,7 +590,22 @@ export default function ProductsPage() {
       title: "Actions",
       key: "actions",
       render: (_: any, record: Product) => (
-        <Space>
+        <Space wrap size="small">
+          {record.itemType !== "service" && Number(record.stock) <= 5 && (
+            <Button
+              size="small"
+              icon={<WhatsAppOutlined />}
+              style={{ color: "#ea580c", borderColor: "#fed7aa", fontWeight: 600 }}
+              onClick={() => {
+                setPoProduct(record);
+                setPoQty(Math.max(10, (record.minOrderQty || 1) * 5));
+                setPoSupplierPhone("");
+                setPoNotes("");
+              }}
+            >
+              Supplier PO
+            </Button>
+          )}
           <Button icon={<EditOutlined />} size="small" onClick={() => openEditModal(record)}>
             Edit
           </Button>
@@ -686,39 +721,70 @@ export default function ProductsPage() {
       )}
 
       <Card style={{ borderRadius: 12 }}>
-        <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
-          <Input
-            placeholder="Search products or services..."
-            allowClear
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ maxWidth: 300 }}
-          />
-          <Select
-            value={typeFilter}
-            onChange={setTypeFilter}
-            style={{ width: 165 }}
-            options={[
-              { value: "all", label: "All Types (Hybrid)" },
-              { value: "product", label: "Products Only" },
-              { value: "service", label: "Services Only" },
-            ]}
-          />
-          <Select
-            value={categoryFilter}
-            onChange={setCategoryFilter}
-            style={{ width: 190 }}
-            options={[
-              { value: "all", label: "All Categories" },
-              ...Array.from(new Set(products.map((p) => p.category || "General"))).map((cat) => ({
-                value: cat,
-                label: cat,
-              })),
-            ]}
-          />
+        <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+            <Segmented
+              value={stockFilter}
+              onChange={(val: any) => setStockFilter(val)}
+              options={[
+                { label: `All Items (${products.length})`, value: "all" },
+                {
+                  label: `⚠️ Low Stock Alerts (${products.filter((p) => p.itemType !== "service" && Number(p.stock) <= 5).length})`,
+                  value: "low_stock",
+                },
+              ]}
+              style={{ fontWeight: 600 }}
+            />
+            {products.filter((p) => p.itemType !== "service" && Number(p.stock) <= 5).length > 0 && (
+              <Button
+                icon={<WhatsAppOutlined />}
+                style={{ color: "#ea580c", borderColor: "#fed7aa", fontWeight: 600 }}
+                onClick={() => {
+                  setBulkPoSupplierPhone("");
+                  setBulkPoModalOpen(true);
+                }}
+              >
+                Bulk Supplier PO ({products.filter((p) => p.itemType !== "service" && Number(p.stock) <= 5).length})
+              </Button>
+            )}
+          </div>
+
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <Input
+              placeholder="Search products or services..."
+              allowClear
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{ width: 240 }}
+            />
+            <Select
+              value={typeFilter}
+              onChange={setTypeFilter}
+              style={{ width: 155 }}
+              options={[
+                { value: "all", label: "All Types" },
+                { value: "product", label: "Products Only" },
+                { value: "service", label: "Services Only" },
+              ]}
+            />
+            <Select
+              value={categoryFilter}
+              onChange={setCategoryFilter}
+              style={{ width: 170 }}
+              options={[
+                { value: "all", label: "All Categories" },
+                ...Array.from(new Set(products.map((p) => p.category || "General"))).map((cat) => ({
+                  value: cat,
+                  label: cat,
+                })),
+              ]}
+            />
+          </div>
         </div>
         <Table
           dataSource={products.filter((p) => {
+            const matchesStock =
+              stockFilter === "all" || (p.itemType !== "service" && Number(p.stock) <= 5);
             const matchesType =
               typeFilter === "all" || (p.itemType || "product") === typeFilter;
             const matchesCat = categoryFilter === "all" || (p.category || "General") === categoryFilter;
@@ -728,7 +794,7 @@ export default function ProductsPage() {
               p.name.toLowerCase().includes(q) ||
               (p.description || "").toLowerCase().includes(q) ||
               (p.category || "").toLowerCase().includes(q);
-            return matchesType && matchesCat && matchesSearch;
+            return matchesStock && matchesType && matchesCat && matchesSearch;
           })}
           columns={columns}
           rowKey="id"
@@ -1176,6 +1242,187 @@ export default function ProductsPage() {
         }}
         currentPlan={user?.plan}
       />
+
+      {/* Feature 7: Single Product Supplier PO Modal */}
+      <Modal
+        title={
+          <Space>
+            <WhatsAppOutlined style={{ color: "#25D366" }} />
+            <span>Supplier Purchase Order (WhatsApp) — {poProduct?.name}</span>
+          </Space>
+        }
+        open={Boolean(poProduct)}
+        onCancel={() => setPoProduct(null)}
+        footer={null}
+        destroyOnClose
+      >
+        {poProduct && (
+          <Space direction="vertical" style={{ width: "100%" }} size={14}>
+            <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", padding: "12px 14px", borderRadius: 8 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#9a3412" }}>
+                Current Stock Alert:
+              </div>
+              <div style={{ fontSize: 14, color: "#0f172a", marginTop: 2 }}>
+                <strong>{poProduct.name}</strong> — Only <strong>{poProduct.stock} {poProduct.unit}</strong> remaining in store!
+              </div>
+              {poProduct.costPrice && (
+                <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>
+                  Last Recorded Cost Price: ₹{poProduct.costPrice} / {poProduct.unit}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <Text strong style={{ display: "block", marginBottom: 4 }}>
+                Reorder Quantity ({poProduct.unit || "pcs"}):
+              </Text>
+              <InputNumber
+                style={{ width: "100%" }}
+                min={1}
+                value={poQty}
+                onChange={(val) => setPoQty(Number(val) || 1)}
+              />
+            </div>
+
+            <div>
+              <Text strong style={{ display: "block", marginBottom: 4 }}>
+                Supplier WhatsApp Mobile Number:
+              </Text>
+              <Input
+                placeholder="e.g. 919876543210 (with country code)"
+                value={poSupplierPhone}
+                onChange={(e) => setPoSupplierPhone(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>
+                Special PO Note / Quality Requirements:
+              </Text>
+              <Input
+                placeholder="e.g. urgent delivery by tomorrow evening"
+                value={poNotes}
+                onChange={(e) => setPoNotes(e.target.value)}
+              />
+            </div>
+
+            <Button
+              type="primary"
+              icon={<WhatsAppOutlined />}
+              block
+              style={{ background: "#25D366", borderColor: "#25D366", fontWeight: 700, height: 42 }}
+              onClick={() => {
+                const cleanPhone = poSupplierPhone.replace(/\D/g, "");
+                const poMsg =
+                  `📦 *Purchase Order (PO) — ${businessName}*\n\n` +
+                  `Namaste Supplier Ji,\n` +
+                  `Hamare store ke liye naya stock required hai:\n\n` +
+                  `• *Item:* ${poProduct.name}\n` +
+                  `• *Required Quantity:* ${poQty} ${poProduct.unit || "pcs"}\n` +
+                  (poNotes ? `• *Note:* ${poNotes}\n` : "") +
+                  `📍 *Delivery Address:* ${businessAddress || "Store counter"}\n\n` +
+                  `Kripya bill amount aur dispatch timeline confirm karein. Dhanyavaad! 🙏`;
+
+                if (cleanPhone) {
+                  window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(poMsg)}`, "_blank");
+                } else {
+                  window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(poMsg)}`, "_blank");
+                }
+                setPoProduct(null);
+              }}
+            >
+              Send Purchase Order on WhatsApp
+            </Button>
+          </Space>
+        )}
+      </Modal>
+
+      {/* Feature 7: Bulk Supplier Purchase Order Modal */}
+      <Modal
+        title={
+          <Space>
+            <WhatsAppOutlined style={{ color: "#25D366" }} />
+            <span>Bulk Supplier Reorder (All Low Stock Items)</span>
+          </Space>
+        }
+        open={bulkPoModalOpen}
+        onCancel={() => setBulkPoModalOpen(false)}
+        footer={null}
+        width={580}
+        destroyOnClose
+      >
+        <Space direction="vertical" style={{ width: "100%" }} size={14}>
+          <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", padding: "10px 14px", borderRadius: 8 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "#9a3412" }}>
+              ⚠️ {products.filter((p) => p.itemType !== "service" && Number(p.stock) <= 5).length} Items with Low Stock (≤ 5 units)
+            </span>
+          </div>
+
+          <div style={{ maxHeight: 220, overflowY: "auto", border: "1px solid #e2e8f0", borderRadius: 8, padding: 8 }}>
+            {products
+              .filter((p) => p.itemType !== "service" && Number(p.stock) <= 5)
+              .map((item) => (
+                <div
+                  key={item.id}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    padding: "6px 8px",
+                    borderBottom: "1px solid #f1f5f9",
+                    fontSize: 13,
+                  }}
+                >
+                  <span>
+                    <strong>{item.name}</strong> (Stock: <span style={{ color: "#dc2626" }}>{item.stock}</span>)
+                  </span>
+                  <Tag color="orange">Suggested Reorder: {Math.max(10, (item.minOrderQty || 1) * 5)} {item.unit}</Tag>
+                </div>
+              ))}
+          </div>
+
+          <div>
+            <Text strong style={{ display: "block", marginBottom: 4 }}>
+              Wholesale Supplier WhatsApp Number:
+            </Text>
+            <Input
+              placeholder="e.g. 919876543210 (with country code)"
+              value={bulkPoSupplierPhone}
+              onChange={(e) => setBulkPoSupplierPhone(e.target.value)}
+            />
+          </div>
+
+          <Button
+            type="primary"
+            icon={<WhatsAppOutlined />}
+            block
+            style={{ background: "#25D366", borderColor: "#25D366", fontWeight: 700, height: 42 }}
+            onClick={() => {
+              const cleanPhone = bulkPoSupplierPhone.replace(/\D/g, "");
+              const lowItems = products.filter((p) => p.itemType !== "service" && Number(p.stock) <= 5);
+              const itemsText = lowItems
+                .map((p) => `• *${p.name}:* ${Math.max(10, (p.minOrderQty || 1) * 5)} ${p.unit} (Current Stock: ${p.stock})`)
+                .join("\n");
+
+              const bulkPoMsg =
+                `📦 *Bulk Purchase Order (PO) — ${businessName}*\n\n` +
+                `Namaste Supplier Ji,\n` +
+                `Hamare store ke liye urgent stock replenishment required hai:\n\n` +
+                `${itemsText}\n\n` +
+                `📍 *Delivery Address:* ${businessAddress || "Store address"}\n\n` +
+                `Kripya bill amount aur dispatch delivery confirmation share karein. Dhanyavaad! 🙏`;
+
+              if (cleanPhone) {
+                window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(bulkPoMsg)}`, "_blank");
+              } else {
+                window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(bulkPoMsg)}`, "_blank");
+              }
+              setBulkPoModalOpen(false);
+            }}
+          >
+            Send Bulk Purchase Order on WhatsApp
+          </Button>
+        </Space>
+      </Modal>
     </AppLayout>
   );
 }

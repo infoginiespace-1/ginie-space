@@ -37,7 +37,10 @@ import {
   WhatsAppOutlined,
   AccountBookOutlined,
   CopyOutlined,
+  CheckCircleFilled,
+  CreditCardOutlined,
 } from "@ant-design/icons";
+import { Segmented } from "antd";
 import { api } from "../../lib/api";
 import { downloadCsv, parseCsv } from "../../lib/csv";
 import { useRouter } from "next/navigation";
@@ -111,6 +114,57 @@ export default function CustomersPage() {
     orders: any[];
     summary: { totalOrders: number; totalSpent: number; totalPaid: number; pendingDue: number };
   } | null>(null);
+
+  // Feature 1: Digital Udhaar & Khata Book State
+  const [viewMode, setViewMode] = useState<"all" | "khata">("all");
+  const [settleCustomer, setSettleCustomer] = useState<Customer | null>(null);
+  const [settleAmount, setSettleAmount] = useState<number>(0);
+  const [settlePaymentMode, setSettlePaymentMode] = useState<string>("cash");
+  const [settleNotes, setSettleNotes] = useState<string>("");
+  const [settling, setSettling] = useState<boolean>(false);
+  const [settleReceipt, setSettleReceipt] = useState<{
+    customer: Customer;
+    settledAmount: number;
+    remainingDue: number;
+    updatedOrdersCount: number;
+    date: string;
+  } | null>(null);
+
+  const handleSettleDues = async () => {
+    if (!settleCustomer) return;
+    if (settleAmount <= 0) {
+      message.warning("Please enter a valid amount greater than 0 to settle");
+      return;
+    }
+    setSettling(true);
+    try {
+      const res = await api.post(`/api/customers/${settleCustomer.id}/settle-dues`, {
+        settleAmount,
+        paymentMode: settlePaymentMode,
+        notes: settleNotes,
+      });
+      message.success(res.data?.message || `Settled ₹${settleAmount} successfully!`);
+      const targetPhoneNorm = normalizePhone(settleCustomer.phone);
+      const prevDue = dueByPhone[targetPhoneNorm] || 0;
+      const remaining = Math.max(0, prevDue - settleAmount);
+      setSettleReceipt({
+        customer: settleCustomer,
+        settledAmount: Number(res.data?.settledAmount) || settleAmount,
+        remainingDue: remaining,
+        updatedOrdersCount: Number(res.data?.updatedOrdersCount) || 1,
+        date: new Date().toLocaleDateString("en-IN"),
+      });
+      setSettleCustomer(null);
+      loadCustomers();
+      if (ledgerOpen && ledgerData && ledgerData.customer.id === settleCustomer.id) {
+        openCustomerLedger(settleCustomer);
+      }
+    } catch (err: any) {
+      message.error(err.response?.data?.error || err.message || "Failed to settle customer dues");
+    } finally {
+      setSettling(false);
+    }
+  };
 
   const openCustomerLedger = async (cust: Customer) => {
     setLedgerOpen(true);
@@ -312,54 +366,72 @@ export default function CustomersPage() {
     {
       title: "Actions",
       key: "actions",
-      render: (_: any, record: Customer) => (
-        <Space>
-          <Button
-            type="primary"
-            icon={<MessageOutlined />}
-            size="small"
-            onClick={() => router.push(`/inbox?phone=${encodeURIComponent(record.phone || "")}`)}
-            style={{ background: "#25D366", borderColor: "#25D366" }}
-          >
-            Chat
-          </Button>
-          <Button
-            icon={<AccountBookOutlined />}
-            size="small"
-            onClick={() => openCustomerLedger(record)}
-          >
-            Ledger
-          </Button>
-          <Button
-            icon={<EditOutlined />}
-            size="small"
-            onClick={() => openEditCustomer(record)}
-          >
-            Edit
-          </Button>
-          <Button
-            icon={<DollarOutlined />}
-            size="small"
-            onClick={() => {
-              const due = dueByPhone[normalizePhone(record.phone)] || 0;
-              setReminderTarget(record);
-              setReminderAmount(due > 0 ? due : null);
-              setReminderNote("");
-            }}
-          >
-            Remind
-          </Button>
-          <Popconfirm
-            title="Remove customer?"
-            description="Are you sure you want to delete this customer record?"
-            onConfirm={() => handleDeleteCustomer(record.id)}
-            okText="Yes, delete"
-            cancelText="Cancel"
-          >
-            <Button icon={<DeleteOutlined />} size="small" danger />
-          </Popconfirm>
-        </Space>
-      ),
+      render: (_: any, record: Customer) => {
+        const due = dueByPhone[normalizePhone(record.phone)] || 0;
+        return (
+          <Space wrap size="small">
+            {due > 0 && (
+              <Button
+                type="primary"
+                icon={<CreditCardOutlined />}
+                size="small"
+                onClick={() => {
+                  setSettleCustomer(record);
+                  setSettleAmount(due);
+                  setSettlePaymentMode("cash");
+                  setSettleNotes("");
+                }}
+                style={{ background: "#059669", borderColor: "#059669", fontWeight: 600 }}
+              >
+                Settle
+              </Button>
+            )}
+            <Button
+              type="primary"
+              icon={<MessageOutlined />}
+              size="small"
+              onClick={() => router.push(`/inbox?phone=${encodeURIComponent(record.phone || "")}`)}
+              style={{ background: "#25D366", borderColor: "#25D366" }}
+            >
+              Chat
+            </Button>
+            <Button
+              icon={<AccountBookOutlined />}
+              size="small"
+              onClick={() => openCustomerLedger(record)}
+            >
+              Ledger
+            </Button>
+            <Button
+              icon={<EditOutlined />}
+              size="small"
+              onClick={() => openEditCustomer(record)}
+            >
+              Edit
+            </Button>
+            <Button
+              icon={<DollarOutlined />}
+              size="small"
+              onClick={() => {
+                setReminderTarget(record);
+                setReminderAmount(due > 0 ? due : null);
+                setReminderNote("");
+              }}
+            >
+              Remind
+            </Button>
+            <Popconfirm
+              title="Remove customer?"
+              description="Are you sure you want to delete this customer record?"
+              onConfirm={() => handleDeleteCustomer(record.id)}
+              okText="Yes, delete"
+              cancelText="Cancel"
+            >
+              <Button icon={<DeleteOutlined />} size="small" danger />
+            </Popconfirm>
+          </Space>
+        );
+      },
     },
   ];
 
@@ -371,29 +443,43 @@ export default function CustomersPage() {
     )
   );
 
-  const filteredCustomers = customers.filter((c) => {
-    const matchesTag =
-      tagFilter === "all" ||
-      String(c.tags || "")
-        .split(",")
-        .map((t) => t.trim().toLowerCase())
-        .includes(tagFilter.toLowerCase());
-    if (!matchesTag) return false;
-    const q = searchText.trim().toLowerCase();
-    if (!q) return true;
-    return (
-      c.name.toLowerCase().includes(q) ||
-      (c.phone || "").toLowerCase().includes(q) ||
-      (c.tags || "").toLowerCase().includes(q)
-    );
-  });
+  const totalMarketDue = Object.values(dueByPhone).reduce((acc, v) => acc + (Number(v) || 0), 0);
+  const customersWithDueCount = customers.filter((c) => (dueByPhone[normalizePhone(c.phone)] || 0) > 0).length;
+
+  const filteredCustomers = customers
+    .filter((c) => {
+      const due = dueByPhone[normalizePhone(c.phone)] || 0;
+      if (viewMode === "khata" && due <= 0) return false;
+      const matchesTag =
+        tagFilter === "all" ||
+        String(c.tags || "")
+          .split(",")
+          .map((t) => t.trim().toLowerCase())
+          .includes(tagFilter.toLowerCase());
+      if (!matchesTag) return false;
+      const q = searchText.trim().toLowerCase();
+      if (!q) return true;
+      return (
+        c.name.toLowerCase().includes(q) ||
+        (c.phone || "").toLowerCase().includes(q) ||
+        (c.tags || "").toLowerCase().includes(q)
+      );
+    })
+    .sort((a, b) => {
+      if (viewMode === "khata") {
+        const dueA = dueByPhone[normalizePhone(a.phone)] || 0;
+        const dueB = dueByPhone[normalizePhone(b.phone)] || 0;
+        return dueB - dueA;
+      }
+      return 0;
+    });
 
   return (
     <AppLayout>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
         <div>
-          <Title level={4} style={{ margin: 0 }}>Customer Directory</Title>
-          <Text type="secondary">Manage your clients, Udhaar/Khata balance, tags, and bulk WhatsApp broadcasts</Text>
+          <Title level={4} style={{ margin: 0 }}>Customer Directory &amp; Digital Khata</Title>
+          <Text type="secondary">Manage customer relations, pending Udhaar balances, and 1-click WhatsApp collection</Text>
         </div>
         <Space wrap>
           <Button
@@ -437,25 +523,78 @@ export default function CustomersPage() {
         </Space>
       </div>
 
+      {/* Feature 1: Market Udhaar / Khata Metrics Strip */}
+      <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
+        <Col xs={24} sm={8}>
+          <Card size="small" style={{ borderRadius: 10, background: "#fef2f2", border: "1px solid #fecaca" }}>
+            <Statistic
+              title={<span style={{ color: "#991b1b", fontWeight: 600 }}>Total Market Udhaar / Due</span>}
+              value={totalMarketDue}
+              prefix="₹"
+              valueStyle={{ color: "#dc2626", fontWeight: 800 }}
+            />
+            <div style={{ fontSize: 11, color: "#b91c1c", marginTop: 2 }}>
+              Across {customersWithDueCount} customer(s) with pending balance
+            </div>
+          </Card>
+        </Col>
+        <Col xs={12} sm={8}>
+          <Card size="small" style={{ borderRadius: 10, background: "#f0fdf4", border: "1px solid #bbf7d0" }}>
+            <Statistic
+              title={<span style={{ color: "#166534", fontWeight: 600 }}>Total Customer Directory</span>}
+              value={customers.length}
+              valueStyle={{ color: "#15803d", fontWeight: 800 }}
+            />
+            <div style={{ fontSize: 11, color: "#16a34a", marginTop: 2 }}>
+              Active buyers and WhatsApp contacts
+            </div>
+          </Card>
+        </Col>
+        <Col xs={12} sm={8}>
+          <Card size="small" style={{ borderRadius: 10, background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+            <Statistic
+              title={<span style={{ color: "#334155", fontWeight: 600 }}>Settled / Zero-Due Customers</span>}
+              value={Math.max(0, customers.length - customersWithDueCount)}
+              valueStyle={{ color: "#059669", fontWeight: 800 }}
+            />
+            <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>
+              100% payments cleared on time
+            </div>
+          </Card>
+        </Col>
+      </Row>
+
       <Card style={{ borderRadius: 12 }}>
-        <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
-          <Input
-            prefix={<SearchOutlined style={{ color: "#94a3b8" }} />}
-            placeholder="Search by customer name, phone, or tags..."
-            allowClear
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            style={{ maxWidth: 340 }}
-          />
-          <Select
-            value={tagFilter}
-            onChange={setTagFilter}
-            style={{ width: 180 }}
+        <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap", justifyContent: "space-between", alignItems: "center" }}>
+          <Segmented
+            value={viewMode}
+            onChange={(val: any) => setViewMode(val)}
             options={[
-              { value: "all", label: "All Customer Tags" },
-              ...uniqueTags.map((t) => ({ value: t, label: t })),
+              { label: `👥 All Directory (${customers.length})`, value: "all" },
+              { label: `📒 Digital Khata / Udhaar (${customersWithDueCount})`, value: "khata" },
             ]}
+            style={{ fontWeight: 600 }}
           />
+
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <Input
+              prefix={<SearchOutlined style={{ color: "#94a3b8" }} />}
+              placeholder="Search by customer name, phone, or tags..."
+              allowClear
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              style={{ width: 280 }}
+            />
+            <Select
+              value={tagFilter}
+              onChange={setTagFilter}
+              style={{ width: 170 }}
+              options={[
+                { value: "all", label: "All Customer Tags" },
+                ...uniqueTags.map((t) => ({ value: t, label: t })),
+              ]}
+            />
+          </div>
         </div>
         <Table
           dataSource={filteredCustomers}
@@ -786,18 +925,33 @@ export default function CustomersPage() {
                 Copy Khata Summary
               </Button>
               {ledgerData.summary.pendingDue > 0 && (
-                <Button
-                  type="primary"
-                  icon={<WhatsAppOutlined />}
-                  style={{ background: "#25D366", borderColor: "#25D366" }}
-                  onClick={() => {
-                    setReminderTarget(ledgerData.customer);
-                    setReminderAmount(ledgerData.summary.pendingDue);
-                    setReminderNote("Complete Khata Balance");
-                  }}
-                >
-                  Send ₹{ledgerData.summary.pendingDue.toLocaleString("en-IN")} Due Reminder
-                </Button>
+                <>
+                  <Button
+                    type="primary"
+                    icon={<CreditCardOutlined />}
+                    style={{ background: "#059669", borderColor: "#059669", fontWeight: 600 }}
+                    onClick={() => {
+                      setSettleCustomer(ledgerData.customer);
+                      setSettleAmount(ledgerData.summary.pendingDue);
+                      setSettlePaymentMode("cash");
+                      setSettleNotes("Khata Settlement");
+                    }}
+                  >
+                    Record Payment / Settle
+                  </Button>
+                  <Button
+                    type="primary"
+                    icon={<WhatsAppOutlined />}
+                    style={{ background: "#25D366", borderColor: "#25D366" }}
+                    onClick={() => {
+                      setReminderTarget(ledgerData.customer);
+                      setReminderAmount(ledgerData.summary.pendingDue);
+                      setReminderNote("Complete Khata Balance");
+                    }}
+                  >
+                    Send ₹{ledgerData.summary.pendingDue.toLocaleString("en-IN")} Reminder
+                  </Button>
+                </>
               )}
             </Space>
 
@@ -853,6 +1007,143 @@ export default function CustomersPage() {
           </Space>
         )}
       </Drawer>
+
+      {/* Feature 1: Settle Customer Dues Modal */}
+      <Modal
+        title={
+          <Space>
+            <CreditCardOutlined style={{ color: "#059669" }} />
+            <span>Record Payment / Settle Khata — {settleCustomer?.name}</span>
+          </Space>
+        }
+        open={Boolean(settleCustomer)}
+        onCancel={() => setSettleCustomer(null)}
+        confirmLoading={settling}
+        okText="Confirm & Settle Dues"
+        okButtonProps={{ style: { background: "#059669", borderColor: "#059669", fontWeight: 700 } }}
+        onOk={handleSettleDues}
+        destroyOnClose
+      >
+        {settleCustomer && (
+          <Space direction="vertical" style={{ width: "100%" }} size={14}>
+            <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", padding: "12px 14px", borderRadius: 8 }}>
+              <div style={{ fontSize: 12, color: "#166534" }}>Customer:</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: "#0f172a" }}>
+                {settleCustomer.name} (+{String(settleCustomer.phone || "").replace(/^\+/, "")})
+              </div>
+              <div style={{ fontSize: 13, color: "#b91c1c", fontWeight: 700, marginTop: 4 }}>
+                Current Outstanding Udhaar: ₹{(dueByPhone[normalizePhone(settleCustomer.phone)] || 0).toLocaleString("en-IN")}
+              </div>
+            </div>
+
+            <div>
+              <Text strong style={{ display: "block", marginBottom: 4 }}>
+                Amount to Settle (₹):
+              </Text>
+              <InputNumber
+                style={{ width: "100%" }}
+                min={1}
+                max={Math.max(1, dueByPhone[normalizePhone(settleCustomer.phone)] || 99999999)}
+                value={settleAmount}
+                onChange={(val) => setSettleAmount(Number(val) || 0)}
+              />
+              <div style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}>
+                Will automatically clear and mark oldest unpaid orders as PAID or PARTIAL.
+              </div>
+            </div>
+
+            <div>
+              <Text strong style={{ display: "block", marginBottom: 4 }}>
+                Payment Received Via:
+              </Text>
+              <Select
+                value={settlePaymentMode}
+                onChange={setSettlePaymentMode}
+                style={{ width: "100%" }}
+                options={[
+                  { value: "cash", label: "💵 Cash in Hand" },
+                  { value: "upi", label: "📱 UPI (GPay / PhonePe / Paytm)" },
+                  { value: "bank_transfer", label: "🏦 Bank Transfer / NEFT / IMPS" },
+                  { value: "cheque", label: "📜 Cheque" },
+                ]}
+              />
+            </div>
+
+            <div>
+              <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>
+                Reference / Receipt Note (Optional):
+              </Text>
+              <Input
+                placeholder="e.g. Received via GPay cash counter"
+                value={settleNotes}
+                onChange={(e) => setSettleNotes(e.target.value)}
+              />
+            </div>
+          </Space>
+        )}
+      </Modal>
+
+      {/* Feature 1: Settlement Receipt & WhatsApp Share Modal */}
+      <Modal
+        title={
+          <Space>
+            <CheckCircleFilled style={{ color: "#16a34a" }} />
+            <span>Khata Settlement Receipt</span>
+          </Space>
+        }
+        open={Boolean(settleReceipt)}
+        onCancel={() => setSettleReceipt(null)}
+        footer={[
+          <Button key="close" onClick={() => setSettleReceipt(null)}>
+            Close
+          </Button>,
+          <Button
+            key="wa"
+            type="primary"
+            icon={<WhatsAppOutlined />}
+            style={{ background: "#25D366", borderColor: "#25D366", fontWeight: 700 }}
+            onClick={() => {
+              if (!settleReceipt) return;
+              const phone = settleReceipt.customer.phone.replace(/\D/g, "");
+              const receiptText =
+                `🧾 *Payment Receipt — ${businessName}*\n\n` +
+                `Namaste *${settleReceipt.customer.name}* ji,\n` +
+                `Aapka Udhaar Khata payment successfully update ho gaya hai:\n\n` +
+                `✅ *Amount Paid:* ₹${settleReceipt.settledAmount.toLocaleString("en-IN")}\n` +
+                `📉 *Remaining Due:* ₹${settleReceipt.remainingDue.toLocaleString("en-IN")}\n` +
+                `📅 *Date:* ${settleReceipt.date}\n\n` +
+                `Dhanyavaad for your business! 🙏`;
+              window.open(`https://wa.me/${phone}?text=${encodeURIComponent(receiptText)}`, "_blank");
+            }}
+          >
+            Send Receipt on WhatsApp
+          </Button>,
+        ]}
+      >
+        {settleReceipt && (
+          <div style={{ textAlign: "center", padding: "10px 0" }}>
+            <div style={{ fontSize: 13, color: "#64748b" }}>Payment Received from</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: "#0f172a", margin: "2px 0 8px" }}>
+              {settleReceipt.customer.name}
+            </div>
+            <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 12, padding: "16px", margin: "12px 0" }}>
+              <div style={{ fontSize: 12, color: "#15803d", fontWeight: 600 }}>Amount Settled</div>
+              <div style={{ fontSize: 32, fontWeight: 900, color: "#16a34a" }}>
+                ₹{settleReceipt.settledAmount.toLocaleString("en-IN")}
+              </div>
+              <div style={{ fontSize: 12, color: "#059669", marginTop: 4 }}>
+                Applied across {settleReceipt.updatedOrdersCount} unpaid order(s)
+              </div>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "8px 12px", background: "#f8fafc", borderRadius: 8 }}>
+              <span>Remaining Balance:</span>
+              <strong style={{ color: settleReceipt.remainingDue > 0 ? "#dc2626" : "#16a34a" }}>
+                {settleReceipt.remainingDue > 0 ? `₹${settleReceipt.remainingDue.toLocaleString("en-IN")}` : "✓ All Settled (₹0)"}
+              </strong>
+            </div>
+          </div>
+        )}
+      </Modal>
     </AppLayout>
   );
 }

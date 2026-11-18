@@ -25,6 +25,7 @@ import {
   Segmented,
   Tooltip,
   QRCode,
+  Checkbox,
 } from "antd";
 import {
   ShopOutlined,
@@ -53,6 +54,7 @@ import {
   MobileOutlined,
   CheckCircleFilled,
   LockOutlined,
+  GlobalOutlined,
 } from "@ant-design/icons";
 import { api } from "../../../lib/api";
 import { InvoiceModal } from "../../../components/InvoiceModal";
@@ -110,6 +112,80 @@ const STORE_SERVICE_MODE_TEXT: Record<string, string> = {
   any: "Store or Home Visit",
 };
 
+// Feature 3: Storefront Multi-Language Dictionary (English / Hindi)
+const I18N = {
+  en: {
+    specialOffer: "Free Local Delivery on orders above ₹499!",
+    verified: "Verified Merchant",
+    instantWa: "Instant WhatsApp Order",
+    open: "● Open (9 AM – 9 PM)",
+    closed: "CLOSED",
+    trackOrder: "Track Order",
+    cart: "Cart",
+    searchPlaceholder: "Search products or services...",
+    allCategories: "All",
+    addToCart: "Add",
+    inStock: "In Stock",
+    outOfStock: "Out of Stock",
+    deliveryPref: "Delivery Preference:",
+    homeDelivery: "🛵 Home Delivery",
+    storePickup: "🏪 Store Self-Pickup",
+    subtotal: "Subtotal",
+    deliveryFee: "Delivery Charge",
+    grandTotal: "Grand Total",
+    fullName: "Your Full Name",
+    mobile: "WhatsApp Mobile Number",
+    address: "Delivery Address & Pincode",
+    paymentMethod: "Payment Method:",
+    payUpi: "💳 Pay via UPI",
+    payCod: "💵 Cash on Delivery",
+    payWa: "📲 WhatsApp Chat",
+    proceedUpi: "Proceed to Pay via UPI ➡️",
+    step2Title: "Step 2 of 2: Pay & Verify",
+    backToDetails: "Back to Details",
+    utrPrompt: "Enter 12-Digit Bank UTR / Ref Number:",
+    utrSubtext: "After payment, enter the 12-digit UTR from your GPay, PhonePe, or Paytm receipt:",
+    confirmPay: "Confirm Payment & Place Order",
+    coinsEarnedMsg: "GinieCoins Available from past orders!",
+    redeemCoinsText: "Redeem Coins",
+  },
+  hi: {
+    specialOffer: "₹499 से अधिक के ऑर्डर पर मुफ्त होम डिलीवरी!",
+    verified: "सत्यापित विक्रेता",
+    instantWa: "तुरंत व्हाट्सएप आर्डर",
+    open: "● खुला है (सुबह 9 – रात 9)",
+    closed: "दुकान बंद है",
+    trackOrder: "ऑर्डर ट्रैक करें",
+    cart: "टोकरी (कार्ट)",
+    searchPlaceholder: "सामान या सेवा खोजें...",
+    allCategories: "सभी",
+    addToCart: "जोड़ें",
+    inStock: "उपलब्ध",
+    outOfStock: "स्टॉक ख़त्म",
+    deliveryPref: "डिलीवरी का प्रकार:",
+    homeDelivery: "🛵 घर पर डिलीवरी",
+    storePickup: "🏪 दुकान से पिकअप",
+    subtotal: "सामान का मूल्य",
+    deliveryFee: "डिलीवरी चार्ज",
+    grandTotal: "कुल देय राशि",
+    fullName: "आपका पूरा नाम",
+    mobile: "व्हाट्सएप मोबाइल नंबर",
+    address: "डिलीवरी का पता और पिनकोड",
+    paymentMethod: "भुगतान का तरीका:",
+    payUpi: "💳 UPI से पेमेंट",
+    payCod: "💵 कैश ऑन डिलीवरी (COD)",
+    payWa: "📲 व्हाट्सएप चैट आर्डर",
+    proceedUpi: "UPI से भुगतान करें ➡️",
+    step2Title: "स्टेप 2: भुगतान करें और UTR दर्ज करें",
+    backToDetails: "वापस जाएँ",
+    utrPrompt: "12-अंकों का बैंक UTR / रेफ़रंस नंबर दर्ज करें:",
+    utrSubtext: "पेमेंट के बाद अपने GPay, PhonePe या Paytm रसीद से 12-अंकों का UTR नंबर यहाँ दर्ज करें:",
+    confirmPay: "भुगतान की पुष्टि करें और ऑर्डर सबमिट करें",
+    coinsEarnedMsg: "पिछले ऑर्डर्स से GinieCoins उपलब्ध हैं!",
+    redeemCoinsText: "Coins का उपयोग करें",
+  },
+};
+
 export default function PublicStorefrontPage() {
   const params = useParams();
   const storeId = String(params?.storeId || "");
@@ -133,6 +209,15 @@ export default function PublicStorefrontPage() {
   const [trackedOrders, setTrackedOrders] = useState<any[] | null>(null);
   const [bookedSlots, setBookedSlots] = useState<string[]>([]);
   const [selectedBookingDate, setSelectedBookingDate] = useState<string>("");
+
+  // Feature 3: Multi-Language State
+  const [lang, setLang] = useState<"en" | "hi">("en");
+  const t = I18N[lang];
+
+  // Feature 6: Customer Loyalty / Cashback Coins State
+  const [loyaltyCoins, setLoyaltyCoins] = useState<number>(0);
+  const [redeemCoins, setRedeemCoins] = useState<boolean>(false);
+  const [loadingCoins, setLoadingCoins] = useState<boolean>(false);
 
   // Professional Upgrades State
   const [quickViewProduct, setQuickViewProduct] = useState<StoreProduct | null>(null);
@@ -182,9 +267,32 @@ export default function PublicStorefrontPage() {
       .finally(() => setLoading(false));
   }, [storeId]);
 
-  // Auto-restore customer contact info from local storage
+  const fetchLoyaltyCoins = async (phone: string) => {
+    const clean = phone.replace(/\D/g, "").slice(-10);
+    if (!clean || clean.length < 10 || !storeId) {
+      setLoyaltyCoins(0);
+      return;
+    }
+    try {
+      setLoadingCoins(true);
+      const res = await api.get(`/api/storefront/${storeId}/loyalty-coins`, {
+        params: { phone: clean },
+      });
+      setLoyaltyCoins(Number(res.data?.availableCoins) || 0);
+    } catch {
+      setLoyaltyCoins(0);
+    } finally {
+      setLoadingCoins(false);
+    }
+  };
+
+  // Auto-restore customer contact info and language from local storage
   useEffect(() => {
     try {
+      const savedLang = localStorage.getItem("ginie_store_lang") as "en" | "hi";
+      if (savedLang === "en" || savedLang === "hi") {
+        setLang(savedLang);
+      }
       const saved = localStorage.getItem("ginie_storefront_cust");
       if (saved) {
         const parsed = JSON.parse(saved);
@@ -193,6 +301,9 @@ export default function PublicStorefrontPage() {
           customerPhone: parsed.customerPhone || "",
           deliveryAddress: parsed.deliveryAddress || "",
         });
+        if (parsed.customerPhone) {
+          fetchLoyaltyCoins(parsed.customerPhone);
+        }
       }
     } catch {}
   }, [form]);
@@ -248,7 +359,30 @@ export default function PublicStorefrontPage() {
   const cartSubtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const discountAmount = appliedCoupon ? Math.round((cartSubtotal * appliedCoupon.discountPercent) / 100) : 0;
   const effectiveDeliveryFee = fulfillmentType === "pickup" ? 0 : cartItems.length > 0 ? Number(store?.deliveryFee) || 0 : 0;
-  const cartTotal = Math.max(0, cartSubtotal - discountAmount + effectiveDeliveryFee);
+  
+  // Feature 6: Redeem Loyalty Coins calculation
+  const coinsDiscount = redeemCoins ? Math.min(Math.max(0, cartSubtotal - discountAmount), loyaltyCoins) : 0;
+  const cartTotal = Math.max(0, cartSubtotal - discountAmount - coinsDiscount + effectiveDeliveryFee);
+
+  // Feature 2: In-Session Cart Tracking for Abandoned Cart recovery
+  useEffect(() => {
+    if (!storeId || cartItems.length === 0) return;
+    const phone = form.getFieldValue("customerPhone");
+    const clean = String(phone || "").replace(/\D/g, "").slice(-10);
+    if (!clean || clean.length < 10) return;
+
+    const timer = setTimeout(() => {
+      api.post(`/api/storefront/${storeId}/cart-session`, {
+        customerPhone: clean,
+        customerName: form.getFieldValue("customerName") || "",
+        items: cartItems,
+        totalAmount: cartTotal,
+        deliveryAddress: form.getFieldValue("deliveryAddress") || "",
+      }).catch(() => {});
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [storeId, cart, cartTotal, form]);
 
   const categories = ["all", ...Array.from(new Set(products.map((p) => p.category || "General")))];
 
@@ -290,6 +424,7 @@ export default function PublicStorefrontPage() {
         couponCode: appliedCoupon?.code,
         paymentMethod: method,
         paymentUtr: utr ? utr.trim() : undefined,
+        redeemCoins: coinsDiscount > 0 ? coinsDiscount : undefined,
       });
 
       const orderId = res.data.order.id;
@@ -302,6 +437,7 @@ export default function PublicStorefrontPage() {
           cartItems.map((i) => `• ${i.name} (${i.quantity} ${i.unit}) — ₹${i.price * i.quantity}`).join("\n") +
           `\n\nSubtotal: ₹${cartSubtotal}\n` +
           (discountAmount > 0 ? `Coupon Discount: -₹${discountAmount}\n` : "") +
+          (coinsDiscount > 0 ? `GinieCoins Redeemed: -₹${coinsDiscount}\n` : "") +
           (effectiveDeliveryFee > 0 ? `Delivery Fee: +₹${effectiveDeliveryFee}\n` : "") +
           `*Total Payable: ₹${totalAmount}*\n\n` +
           `Customer: ${values.customerName} (${values.customerPhone})\n` +
@@ -326,7 +462,7 @@ export default function PublicStorefrontPage() {
         bookingDate: values.bookingDate,
         timeSlot: values.timeSlot,
         couponCode: appliedCoupon?.code,
-        discountAmount: discountAmount,
+        discountAmount: discountAmount + coinsDiscount,
         deliveryCharge: effectiveDeliveryFee,
         createdAt: new Date().toISOString(),
       });
@@ -335,6 +471,8 @@ export default function PublicStorefrontPage() {
       setCouponInput("");
       setCheckoutStep("form");
       setCustomerUtr("");
+      setRedeemCoins(false);
+      setLoyaltyCoins(0);
       message.success(method === "upi" ? "UPI Payment verified & Order placed successfully!" : "Order placed successfully!");
     } catch (err: any) {
       message.error(err.response?.data?.error || err.message || "Could not place order");
@@ -428,43 +566,64 @@ export default function PublicStorefrontPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8fafc", paddingBottom: 100 }}>
-      {/* Top Announcement Bar */}
+      {/* Top Announcement Bar with Feature 3: Multi-Language Switcher */}
       <div
         style={{
           background: "linear-gradient(90deg, #065f46 0%, #047857 50%, #059669 100%)",
           color: "#fff",
-          padding: "7px 16px",
+          padding: "6px 16px",
           fontSize: 12,
           fontWeight: 500,
           display: "flex",
           alignItems: "center",
-          justifyContent: "center",
-          gap: 8,
-          textAlign: "center",
+          justifyContent: "space-between",
+          gap: 12,
           flexWrap: "wrap",
         }}
       >
-        <span>🎉 <strong>Special Online Offer:</strong> Free Local Delivery on orders above ₹499!</span>
-        {store.coupons && store.coupons.length > 0 && (
-          <Tag
-            color="gold"
-            style={{
-              cursor: "pointer",
-              fontWeight: 700,
-              margin: 0,
-              padding: "0 8px",
-              borderRadius: 6,
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <span>🎉 <strong>{t.specialOffer}</strong></span>
+          {store.coupons && store.coupons.length > 0 && (
+            <Tag
+              color="gold"
+              style={{
+                cursor: "pointer",
+                fontWeight: 700,
+                margin: 0,
+                padding: "0 8px",
+                borderRadius: 6,
+              }}
+              onClick={() => {
+                const c = store.coupons![0];
+                setCouponInput(c.code);
+                setAppliedCoupon(c);
+                message.success(`Coupon ${c.code} (${c.discountPercent}% OFF) ready for cart!`);
+              }}
+            >
+              Use Code {store.coupons[0].code} ({store.coupons[0].discountPercent}% OFF) ⚡
+            </Tag>
+          )}
+        </div>
+
+        {/* Feature 3: Header Language Switcher */}
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: "auto" }}>
+          <GlobalOutlined style={{ color: "#a7f3d0" }} />
+          <Segmented
+            size="small"
+            value={lang}
+            onChange={(val: any) => {
+              setLang(val);
+              try {
+                localStorage.setItem("ginie_store_lang", val);
+              } catch {}
             }}
-            onClick={() => {
-              const c = store.coupons![0];
-              setCouponInput(c.code);
-              setAppliedCoupon(c);
-              message.success(`Coupon ${c.code} (${c.discountPercent}% OFF) ready for cart!`);
-            }}
-          >
-            Use Code {store.coupons[0].code} ({store.coupons[0].discountPercent}% OFF) ⚡
-          </Tag>
-        )}
+            options={[
+              { label: "English", value: "en" },
+              { label: "हिंदी", value: "hi" },
+            ]}
+            style={{ background: "rgba(255, 255, 255, 0.2)", color: "#fff", fontWeight: 700 }}
+          />
+        </div>
       </div>
 
       {/* Store Cover Banner Header */}
@@ -554,15 +713,15 @@ export default function PublicStorefrontPage() {
                     border: "1px solid #a7f3d0",
                   }}
                 >
-                  <SafetyCertificateFilled style={{ marginRight: 4 }} /> Verified Merchant
+                  <SafetyCertificateFilled style={{ marginRight: 4 }} /> {t.verified}
                 </Tag>
                 <Tag color="gold" style={{ margin: 0, fontWeight: 700, borderRadius: 6, fontSize: 11 }}>
-                  ⚡ Instant WhatsApp Order
+                  ⚡ {t.instantWa}
                 </Tag>
                 {store.isOpen === false ? (
-                  <Tag color="error">CLOSED</Tag>
+                  <Tag color="error">{t.closed}</Tag>
                 ) : (
-                  <Tag color="cyan" style={{ margin: 0, fontWeight: 600 }}>● Open (9 AM – 9 PM)</Tag>
+                  <Tag color="cyan" style={{ margin: 0, fontWeight: 600 }}>{t.open}</Tag>
                 )}
               </div>
 
@@ -611,7 +770,7 @@ export default function PublicStorefrontPage() {
                 setTrackOpen(true);
               }}
             >
-              Track Order
+              {t.trackOrder}
             </Button>
 
             <Badge count={cartCount} showZero={false}>
@@ -631,7 +790,7 @@ export default function PublicStorefrontPage() {
                   setCartOpen(true);
                 }}
               >
-                Cart {cartTotal > 0 ? `(₹${cartTotal.toLocaleString("en-IN")})` : ""}
+                {t.cart} {cartTotal > 0 ? `(₹${cartTotal.toLocaleString("en-IN")})` : ""}
               </Button>
             </Badge>
           </Space>
@@ -763,7 +922,7 @@ export default function PublicStorefrontPage() {
         >
           <Input
             prefix={<SearchOutlined style={{ color: "#94a3b8" }} />}
-            placeholder="Search products in this store..."
+            placeholder={t.searchPlaceholder}
             allowClear
             size="large"
             value={searchTerm}
@@ -795,7 +954,7 @@ export default function PublicStorefrontPage() {
                 style={selectedCategory === cat ? { background: "#047857", borderColor: "#047857" } : undefined}
                 onClick={() => setSelectedCategory(cat)}
               >
-                {cat === "all" ? "All Categories" : cat}
+                {cat === "all" ? t.allCategories : cat}
               </Button>
             ))}
           </div>
@@ -916,7 +1075,7 @@ export default function PublicStorefrontPage() {
                           </Space>
                         </div>
                         <Tag color={isService ? "purple" : outOfStock ? "red" : "green"}>
-                          {isService ? "Available" : outOfStock ? "Out of Stock" : `${p.stock} ${p.unit} left`}
+                          {isService ? (lang === "hi" ? "उपलब्ध" : "Available") : outOfStock ? t.outOfStock : `${p.stock} ${p.unit} ${lang === "hi" ? "बचे हैं" : "left"}`}
                         </Tag>
                       </div>
 
@@ -983,7 +1142,7 @@ export default function PublicStorefrontPage() {
                             style={!outOfStock ? { background: "#047857", borderColor: "#047857" } : undefined}
                             onClick={() => updateQty(p.id, 1, effectiveMax, Number(p.minOrderQty) || 1)}
                           >
-                            {isService ? "Book" : Number(p.minOrderQty) > 1 ? `Add (${p.minOrderQty})` : "Add"}
+                            {isService ? (lang === "hi" ? "बुक करें" : "Book") : Number(p.minOrderQty) > 1 ? `${t.addToCart} (${p.minOrderQty})` : t.addToCart}
                           </Button>
                         ) : (
                           <Space>
@@ -1339,10 +1498,10 @@ export default function PublicStorefrontPage() {
                 onClick={() => setCheckoutStep("form")}
                 style={{ padding: 0, fontWeight: 600, color: "#047857" }}
               >
-                Back to Details
+                {t.backToDetails}
               </Button>
               <Tag color="green" style={{ fontWeight: 700, borderRadius: 6 }}>
-                Step 2 of 2: Pay &amp; Verify
+                {t.step2Title}
               </Tag>
             </div>
 
@@ -1398,10 +1557,10 @@ export default function PublicStorefrontPage() {
             <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 12, padding: 14, marginBottom: 16 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 700, fontSize: 13, color: "#166534", marginBottom: 4 }}>
                 <CheckCircleFilled style={{ color: "#16a34a" }} />
-                <span>Enter 12-Digit Bank UTR / Ref Number:</span>
+                <span>{t.utrPrompt}</span>
               </div>
               <div style={{ fontSize: 12, color: "#15803d", marginBottom: 10, lineHeight: 1.4 }}>
-                Payment success hone ke baad apne GPay, PhonePe ya Paytm receipt se <strong>12-digit UPI Reference / UTR No.</strong> yahan daalein:
+                {t.utrSubtext}
               </div>
               <Input
                 placeholder="e.g. 432198765432"
@@ -1441,7 +1600,7 @@ export default function PublicStorefrontPage() {
                 borderRadius: 8,
               }}
             >
-              Confirm Payment &amp; Place Order (₹{cartTotal.toLocaleString("en-IN")})
+              {t.confirmPay} (₹{cartTotal.toLocaleString("en-IN")})
             </Button>
             <Button
               type="text"
@@ -1457,15 +1616,15 @@ export default function PublicStorefrontPage() {
             {/* Fulfillment Type Toggle */}
             <div style={{ marginBottom: 14 }}>
               <Text strong style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
-                Delivery Preference:
+                {t.deliveryPref}
               </Text>
               <Segmented
                 block
                 value={fulfillmentType}
                 onChange={(val: any) => setFulfillmentType(val)}
                 options={[
-                  { label: "🛵 Home Delivery", value: "delivery" },
-                  { label: "🏪 Store Self-Pickup", value: "pickup" },
+                  { label: t.homeDelivery, value: "delivery" },
+                  { label: t.storePickup, value: "pickup" },
                 ]}
               />
             </div>
@@ -1527,10 +1686,33 @@ export default function PublicStorefrontPage() {
               </div>
             )}
 
+            {/* Feature 6: GinieCoins Loyalty Reward Banner */}
+            {loyaltyCoins > 0 && (
+              <div style={{ background: "#fefce8", border: "1px solid #fde047", borderRadius: 10, padding: "10px 14px", marginBottom: 14 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                  <div>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "#854d0e" }}>
+                      🪙 {loyaltyCoins} GinieCoins
+                    </span>
+                    <div style={{ fontSize: 11, color: "#a16207" }}>
+                      {t.coinsEarnedMsg}
+                    </div>
+                  </div>
+                  <Checkbox
+                    checked={redeemCoins}
+                    onChange={(e) => setRedeemCoins(e.target.checked)}
+                    style={{ fontWeight: 700, color: "#854d0e" }}
+                  >
+                    {t.redeemCoinsText} (-₹{Math.min(cartSubtotal - discountAmount, loyaltyCoins)})
+                  </Checkbox>
+                </div>
+              </div>
+            )}
+
             {/* Price Breakdown */}
             <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 16 }}>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
-                <Text type="secondary">Subtotal</Text>
+                <Text type="secondary">{t.subtotal}</Text>
                 <Text>₹{cartSubtotal.toLocaleString("en-IN")}</Text>
               </div>
               {discountAmount > 0 && (
@@ -1539,9 +1721,15 @@ export default function PublicStorefrontPage() {
                   <span>-₹{discountAmount.toLocaleString("en-IN")}</span>
                 </div>
               )}
+              {coinsDiscount > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#ca8a04", fontWeight: 600 }}>
+                  <span>GinieCoins Redeemed</span>
+                  <span>-₹{coinsDiscount.toLocaleString("en-IN")}</span>
+                </div>
+              )}
               {effectiveDeliveryFee > 0 && (
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
-                  <Text type="secondary">Delivery Charge</Text>
+                  <Text type="secondary">{t.deliveryFee}</Text>
                   <Text>+₹{effectiveDeliveryFee.toLocaleString("en-IN")}</Text>
                 </div>
               )}
@@ -1552,7 +1740,7 @@ export default function PublicStorefrontPage() {
                 </div>
               )}
               <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
-                <Title level={5} style={{ margin: 0 }}>Grand Total</Title>
+                <Title level={5} style={{ margin: 0 }}>{t.grandTotal}</Title>
                 <Title level={4} style={{ margin: 0, color: "#16a34a" }}>₹{cartTotal.toLocaleString("en-IN")}</Title>
               </div>
             </div>
@@ -1561,7 +1749,7 @@ export default function PublicStorefrontPage() {
             <Form form={form} layout="vertical" onFinish={handleCheckout}>
               <Form.Item
                 name="customerName"
-                label="Your Full Name"
+                label={t.fullName}
                 rules={[{ required: true, message: "Please enter your name" }]}
                 style={{ marginBottom: 12 }}
               >
@@ -1570,11 +1758,19 @@ export default function PublicStorefrontPage() {
 
               <Form.Item
                 name="customerPhone"
-                label="WhatsApp Mobile Number"
+                label={t.mobile}
                 rules={[{ required: true, message: "Please enter your WhatsApp mobile number" }]}
                 style={{ marginBottom: 12 }}
               >
-                <Input placeholder="e.g. 9876543210" />
+                <Input
+                  placeholder="e.g. 9876543210"
+                  onChange={(e) => {
+                    const clean = e.target.value.replace(/\D/g, "");
+                    if (clean.length >= 10) {
+                      fetchLoyaltyCoins(clean);
+                    }
+                  }}
+                />
               </Form.Item>
 
               {hasServiceInCart && (
@@ -1624,7 +1820,7 @@ export default function PublicStorefrontPage() {
               {fulfillmentType === "delivery" ? (
                 <Form.Item
                   name="deliveryAddress"
-                  label={hasServiceInCart ? "Service / Visit Address & Pincode" : "Delivery Address & Pincode"}
+                  label={t.address}
                   rules={[{ required: true, message: "Please enter your delivery address" }]}
                   style={{ marginBottom: 12 }}
                 >
@@ -1643,16 +1839,16 @@ export default function PublicStorefrontPage() {
               {/* Payment Method Switcher */}
               <div style={{ marginBottom: 14 }}>
                 <Text strong style={{ display: "block", marginBottom: 6, fontSize: 13 }}>
-                  Payment Method:
+                  {t.paymentMethod}
                 </Text>
                 <Segmented
                   block
                   value={paymentMethod}
                   onChange={(val: any) => setPaymentMethod(val)}
                   options={[
-                    { label: "💳 Pay via UPI", value: "upi" },
-                    { label: "💵 Cash on Delivery", value: "cod" },
-                    { label: "📲 WhatsApp Chat", value: "whatsapp" },
+                    { label: t.payUpi, value: "upi" },
+                    { label: t.payCod, value: "cod" },
+                    { label: t.payWa, value: "whatsapp" },
                   ]}
                 />
               </div>
@@ -1673,10 +1869,10 @@ export default function PublicStorefrontPage() {
                 {hasServiceInCart
                   ? `Confirm Booking (₹${cartTotal.toLocaleString("en-IN")})`
                   : paymentMethod === "upi"
-                  ? `Proceed to Pay via UPI (₹${cartTotal.toLocaleString("en-IN")}) ➡️`
+                  ? `${t.proceedUpi} (₹${cartTotal.toLocaleString("en-IN")})`
                   : paymentMethod === "whatsapp"
-                  ? `Order on WhatsApp (₹${cartTotal.toLocaleString("en-IN")}) 📲`
-                  : `Place Order (₹${cartTotal.toLocaleString("en-IN")})`}
+                  ? `${t.payWa} (₹${cartTotal.toLocaleString("en-IN")})`
+                  : `${t.confirmPay} (₹${cartTotal.toLocaleString("en-IN")})`}
               </Button>
             </Form>
 

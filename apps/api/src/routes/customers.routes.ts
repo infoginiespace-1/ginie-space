@@ -83,6 +83,76 @@ export function createCustomersRouter(db: IDatabase, io: Server): Router {
     }
   });
 
+  // Feature 1: Settle Customer Udhaar / Khata Dues across oldest unpaid orders
+  router.post("/:id/settle-dues", async (req: Request, res: Response): Promise<void> => {
+    try {
+      const customer = await db.customers.findById((req.params.id as string));
+      if (!customer) {
+        res.status(404).json({ error: "Customer not found" });
+        return;
+      }
+      if (req.user?.role !== "admin" && customer.userId !== req.user!.id) {
+        res.status(403).json({ error: "Access denied" });
+        return;
+      }
+
+      const settleAmount = Number(req.body.settleAmount) || 0;
+      if (settleAmount <= 0) {
+        res.status(400).json({ error: "Please enter a valid settlement amount greater than 0" });
+        return;
+      }
+
+      const custDigits = normalizePhoneDigits(customer.phone || "").slice(-10);
+      const allOrders = await db.orders.findMany({ userId: customer.userId });
+      // Find unpaid or partial orders sorted oldest to newest
+      const unpaidOrders = allOrders
+        .filter((o) => {
+          if (o.status === "cancelled" || o.paymentStatus === "paid") return false;
+          if (o.customerId === customer.id) return true;
+          const ordDigits = normalizePhoneDigits(o.customerPhone || "").slice(-10);
+          return Boolean(custDigits && ordDigits && ordDigits === custDigits);
+        })
+        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+      let remainingToSettle = settleAmount;
+      const updatedOrderIds: string[] = [];
+
+      for (const order of unpaidOrders) {
+        if (remainingToSettle <= 0) break;
+        const total = Number(order.totalAmount) || 0;
+        const currentPaid = Number(order.paidAmount) || 0;
+        const currentDue = Math.max(0, total - currentPaid);
+
+        if (currentDue > 0) {
+          const paying = Math.min(currentDue, remainingToSettle);
+          const newPaid = currentPaid + paying;
+          const newStatus = newPaid >= total ? "paid" : "partial";
+          const settleTag = `[Khata Settle ₹${paying} on ${new Date().toLocaleDateString()}]`;
+          const newNotes = order.notes ? `${order.notes} • ${settleTag}` : settleTag;
+
+          await db.orders.update(order.id, {
+            paidAmount: newPaid,
+            paymentStatus: newStatus,
+            notes: newNotes,
+          });
+
+          remainingToSettle -= paying;
+          updatedOrderIds.push(order.id);
+        }
+      }
+
+      res.json({
+        success: true,
+        settledAmount: settleAmount - remainingToSettle,
+        remainingBalance: remainingToSettle,
+        updatedOrdersCount: updatedOrderIds.length,
+        message: `Successfully settled ₹${settleAmount - remainingToSettle} across ${updatedOrderIds.length} orders!`,
+      });
+    } catch {
+      res.status(500).json({ error: "Failed to settle customer dues" });
+    }
+  });
+
   router.post("/", async (req: Request, res: Response): Promise<void> => {
     try {
       const { name, phone, email, notes, tags } = req.body;

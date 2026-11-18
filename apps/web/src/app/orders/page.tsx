@@ -18,6 +18,10 @@ import {
   Checkbox,
   Divider,
   Popconfirm,
+  Segmented,
+  Row,
+  Col,
+  Statistic,
 } from "antd";
 import {
   PlusOutlined,
@@ -30,6 +34,10 @@ import {
   DeleteOutlined,
   MinusCircleOutlined,
   CalendarOutlined,
+  CarOutlined,
+  SendOutlined,
+  ClockCircleOutlined,
+  CheckCircleFilled,
 } from "@ant-design/icons";
 import { api } from "../../lib/api";
 import { getSocket } from "../../lib/socket";
@@ -135,6 +143,56 @@ export default function OrdersPage() {
   const [invoiceOrder, setInvoiceOrder] = useState<Order | null>(null);
   const [invoiceQrUrl, setInvoiceQrUrl] = useState<string | null>(null);
 
+  // Feature 2: Incomplete & Abandoned Carts State
+  const [activeTab, setActiveTab] = useState<"orders" | "abandoned">("orders");
+  const [abandonedCarts, setAbandonedCarts] = useState<any[]>([]);
+  const [loadingAbandoned, setLoadingAbandoned] = useState(false);
+  const [storeSlug, setStoreSlug] = useState("");
+
+  // Feature 5: Hyperlocal Delivery Rider Dispatch State
+  const [dispatchOrder, setDispatchOrder] = useState<Order | null>(null);
+  const [dispatchForm] = Form.useForm();
+  const [dispatching, setDispatching] = useState(false);
+  const [dispatchResult, setDispatchResult] = useState<any | null>(null);
+
+  const loadAbandonedCarts = async (overrideSlug?: string) => {
+    try {
+      setLoadingAbandoned(true);
+      const target = overrideSlug || storeSlug || user?.id;
+      if (!target) return;
+      const res = await api.get(`/api/storefront/${target}/abandoned-carts`);
+      setAbandonedCarts(res.data?.abandonedCarts || []);
+      if (res.data?.storeSlug) setStoreSlug(res.data.storeSlug);
+    } catch {
+    } finally {
+      setLoadingAbandoned(false);
+    }
+  };
+
+  const handleDispatchDelivery = async (values: any) => {
+    if (!dispatchOrder) return;
+    try {
+      setDispatching(true);
+      const res = await api.post(`/api/orders/${dispatchOrder.id}/dispatch-delivery`, {
+        deliveryBoyName: values.riderName,
+        deliveryBoyPhone: values.riderPhone,
+      });
+      message.success(`Delivery dispatched to ${values.riderName}!`);
+      setDispatchResult(res.data);
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === dispatchOrder.id
+            ? { ...o, status: "dispatched", assignedStaff: String(values.riderName).trim() }
+            : o
+        )
+      );
+    } catch (err: any) {
+      message.error(err.response?.data?.error || err.message || "Failed to dispatch delivery");
+    } finally {
+      setDispatching(false);
+    }
+  };
+
   const handleDownloadPdf = async (order: Order) => {
     try {
       message.loading({ content: "Generating Tax Invoice PDF...", key: "pdf-dl" });
@@ -220,6 +278,12 @@ export default function OrdersPage() {
       .then((res) => {
         const b = res.data?.business;
         if (b) {
+          if (b.slug) {
+            setStoreSlug(b.slug);
+            loadAbandonedCarts(b.slug);
+          } else {
+            loadAbandonedCarts();
+          }
           let parsed: any = {};
           if (b.settingsJson) {
             try {
@@ -243,6 +307,11 @@ export default function OrdersPage() {
       socket.on("order:created", (newOrder: Order) => {
         setOrders((prev) => [newOrder, ...prev]);
         message.info(`New order received from ${newOrder.customerName}`);
+        loadAbandonedCarts();
+      });
+
+      socket.on("cart_session:updated", () => {
+        loadAbandonedCarts();
       });
 
       socket.on("order:updated", (updatedOrder: Order) => {
@@ -257,6 +326,7 @@ export default function OrdersPage() {
     return () => {
       if (socket) {
         socket.off("order:created");
+        socket.off("cart_session:updated");
         socket.off("order:updated");
         socket.off("order:deleted");
       }
@@ -577,6 +647,23 @@ export default function OrdersPage() {
       key: "action",
       render: (_: any, record: Order) => (
         <Space size="small" wrap>
+          {record.status !== "cancelled" && (
+            <Button
+              size="small"
+              icon={<CarOutlined />}
+              style={{ color: "#0284c7", borderColor: "#7dd3fc", fontWeight: 600 }}
+              onClick={() => {
+                setDispatchOrder(record);
+                setDispatchResult(null);
+                dispatchForm.setFieldsValue({
+                  riderName: record.assignedStaff || "",
+                  riderPhone: "",
+                });
+              }}
+            >
+              Rider
+            </Button>
+          )}
           <Button
             size="small"
             icon={<CalendarOutlined />}
@@ -798,6 +885,130 @@ export default function OrdersPage() {
         </Space>
       </div>
 
+      {/* Feature 2: Segmented Switcher for Orders vs Abandoned Carts */}
+      <div style={{ marginBottom: 14 }}>
+        <Segmented
+          value={activeTab}
+          onChange={(val: any) => {
+            setActiveTab(val);
+            if (val === "abandoned") loadAbandonedCarts();
+          }}
+          options={[
+            { label: `🛍️ Orders & Sales (${orders.length})`, value: "orders" },
+            { label: `🛒 Incomplete & Abandoned Carts (${abandonedCarts.length})`, value: "abandoned" },
+          ]}
+          style={{ fontWeight: 600 }}
+        />
+      </div>
+
+      {activeTab === "abandoned" ? (
+        <Card style={{ borderRadius: 12 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
+            <div>
+              <Title level={5} style={{ margin: 0 }}>
+                🛒 Incomplete Checkouts &amp; Abandoned Carts ({abandonedCarts.length})
+              </Title>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                Shoppers who entered contact details but did not complete order. Send 1-click WhatsApp recovery nudge!
+              </Text>
+            </div>
+            <Button icon={<SyncOutlined />} onClick={() => loadAbandonedCarts()} loading={loadingAbandoned}>
+              Refresh Carts
+            </Button>
+          </div>
+
+          <Table
+            dataSource={abandonedCarts}
+            rowKey={(r) => `${r.customerPhone}_${r.updatedAt}`}
+            loading={loadingAbandoned}
+            pagination={{ pageSize: 8 }}
+            columns={[
+              {
+                title: "Shopper",
+                key: "customer",
+                render: (_: any, r: any) => (
+                  <div>
+                    <div style={{ fontWeight: 600 }}>{r.customerName || "Online Visitor"}</div>
+                    <Text type="secondary" style={{ fontSize: 12 }}>+{String(r.customerPhone || "").replace(/^\+/, "")}</Text>
+                    {r.deliveryAddress && (
+                      <div style={{ fontSize: 11, color: "#64748b" }}>{r.deliveryAddress}</div>
+                    )}
+                  </div>
+                ),
+              },
+              {
+                title: "Incomplete Items",
+                key: "items",
+                render: (_: any, r: any) => (
+                  <div>
+                    {Array.isArray(r.items) && r.items.map((it: any, idx: number) => (
+                      <div key={idx} style={{ fontSize: 12 }}>
+                        • <strong>{it.name}</strong> × {it.quantity} {it.unit || ""} (₹{it.price * it.quantity})
+                      </div>
+                    ))}
+                  </div>
+                ),
+              },
+              {
+                title: "Cart Value",
+                dataIndex: "totalAmount",
+                key: "totalAmount",
+                render: (val: number) => (
+                  <Text strong style={{ color: "#059669", fontSize: 14 }}>
+                    ₹{Number(val || 0).toLocaleString("en-IN")}
+                  </Text>
+                ),
+              },
+              {
+                title: "Active",
+                dataIndex: "updatedAt",
+                key: "updatedAt",
+                render: (dt: string) => {
+                  const d = new Date(dt);
+                  const minsAgo = Math.round((Date.now() - d.getTime()) / 60000);
+                  const timeText = minsAgo < 60 ? `${minsAgo} mins ago` : `${Math.round(minsAgo / 60)} hrs ago`;
+                  return (
+                    <div>
+                      <Tag color="orange">{timeText}</Tag>
+                      <div style={{ fontSize: 11, color: "#8c8c8c" }}>{d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                    </div>
+                  );
+                },
+              },
+              {
+                title: "Action",
+                key: "action",
+                render: (_: any, r: any) => {
+                  const cleanPhone = String(r.customerPhone || "").replace(/\D/g, "");
+                  const storeUrl = `${typeof window !== "undefined" ? window.location.origin : "https://app.ginie.space"}/shop/${storeSlug || user?.id}`;
+                  const itemsList = Array.isArray(r.items)
+                    ? r.items.map((it: any) => `• ${it.name} x ${it.quantity} (₹${it.price * it.quantity})`).join("\n")
+                    : "";
+                  const nudgeMsg =
+                    `🙏 *Namaste ${r.customerName || "ji"}! — ${businessProfile.name}*\n\n` +
+                    `Aapke cart mein items wait kar rahe hain:\n${itemsList}\n\n` +
+                    `💰 *Cart Total:* ₹${r.totalAmount}\n\n` +
+                    `Order complete karne ke liye direct link par tap karein:\n👉 ${storeUrl}\n\n` +
+                    `Kisi bhi sahayata ke liye reply karein. Dhanyavaad!`;
+
+                  return (
+                    <Button
+                      type="primary"
+                      icon={<WhatsAppOutlined />}
+                      style={{ background: "#25D366", borderColor: "#25D366", fontWeight: 600 }}
+                      size="small"
+                      href={`https://wa.me/${cleanPhone}?text=${encodeURIComponent(nudgeMsg)}`}
+                      target="_blank"
+                    >
+                      Recovery Nudge
+                    </Button>
+                  );
+                },
+              },
+            ]}
+          />
+        </Card>
+      ) : (
       <Card style={{ borderRadius: 12 }}>
         <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
           <Input
@@ -842,6 +1053,7 @@ export default function OrdersPage() {
           scroll={{ x: 1000 }}
         />
       </Card>
+      )}
 
       {/* Create Order Modal */}
       <Modal
@@ -1154,6 +1366,93 @@ export default function OrdersPage() {
             Save Schedule
           </Button>
         </Form>
+      </Modal>
+
+      {/* Feature 5: Hyperlocal Delivery Rider Dispatch Modal */}
+      <Modal
+        title={
+          <Space>
+            <CarOutlined style={{ color: "#0284c7" }} />
+            <span>Dispatch Delivery Rider — #{dispatchOrder?.id.slice(-6).toUpperCase()}</span>
+          </Space>
+        }
+        open={Boolean(dispatchOrder)}
+        onCancel={() => {
+          setDispatchOrder(null);
+          setDispatchResult(null);
+        }}
+        footer={null}
+        destroyOnClose
+      >
+        {dispatchOrder && (
+          <Space direction="vertical" style={{ width: "100%" }} size={14}>
+            <div style={{ background: "#f0f9ff", border: "1px solid #bae6fd", padding: "12px 14px", borderRadius: 8 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#0369a1" }}>
+                Delivery Address:
+              </div>
+              <div style={{ fontSize: 14, color: "#0f172a", marginTop: 2 }}>
+                {dispatchOrder.deliveryAddress || "Self store delivery"}
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, fontSize: 12 }}>
+                <span>Customer: <strong>{dispatchOrder.customerName}</strong></span>
+                <span>Phone: <strong>+{dispatchOrder.customerPhone.replace(/^\+/, "")}</strong></span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: 12 }}>
+                <span>Order Total: <strong>₹{dispatchOrder.totalAmount}</strong></span>
+                <span>Payment: <Tag color={dispatchOrder.paymentStatus === "paid" ? "green" : "volcano"}>{(dispatchOrder.paymentStatus || "unpaid").toUpperCase()}</Tag></span>
+              </div>
+            </div>
+
+            <Form form={dispatchForm} layout="vertical" onFinish={handleDispatchDelivery}>
+              <Form.Item
+                name="riderName"
+                label="Delivery Rider / Boy Name"
+                rules={[{ required: true, message: "Please enter rider name" }]}
+              >
+                <Input placeholder="e.g. Raju Kumar (Rider)" />
+              </Form.Item>
+
+              <Form.Item
+                name="riderPhone"
+                label="Rider WhatsApp Mobile Number"
+                rules={[{ required: true, message: "Please enter rider mobile number" }]}
+              >
+                <Input placeholder="e.g. 919876543210" />
+              </Form.Item>
+
+              <Button
+                type="primary"
+                htmlType="submit"
+                block
+                loading={dispatching}
+                style={{ background: "#0284c7", borderColor: "#0284c7", fontWeight: 700, height: 40 }}
+              >
+                Confirm Dispatch &amp; Generate Task Slip
+              </Button>
+            </Form>
+
+            {dispatchResult && (
+              <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", padding: 12, borderRadius: 8, marginTop: 10 }}>
+                <div style={{ color: "#15803d", fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
+                  <CheckCircleFilled /> Dispatch Confirmed!
+                </div>
+                <div style={{ fontSize: 12, color: "#166534", marginTop: 4 }}>
+                  Task details and customer address ready to send to rider.
+                </div>
+                <Button
+                  type="primary"
+                  icon={<WhatsAppOutlined />}
+                  block
+                  style={{ background: "#25D366", borderColor: "#25D366", fontWeight: 700, marginTop: 10 }}
+                  href={`https://wa.me/${dispatchResult.riderPhone}?text=${encodeURIComponent(dispatchResult.riderWhatsappText)}`}
+                  target="_blank"
+                >
+                  Send Delivery Task to Rider on WhatsApp
+                </Button>
+              </div>
+            )}
+          </Space>
+        )}
       </Modal>
     </AppLayout>
   );

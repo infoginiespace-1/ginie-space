@@ -1,8 +1,8 @@
 "use client";
 
-import React from "react";
-import { Modal, Button, Space, Tag, Typography, Table, Divider, Row, Col } from "antd";
-import { PrinterOutlined, WhatsAppOutlined, DownloadOutlined, CheckCircleFilled, BankOutlined } from "@ant-design/icons";
+import React, { useState } from "react";
+import { Modal, Button, Space, Tag, Typography, Table, Divider, Row, Col, Segmented } from "antd";
+import { PrinterOutlined, WhatsAppOutlined, DownloadOutlined, CheckCircleFilled, BankOutlined, QrcodeOutlined } from "@ant-design/icons";
 import { QRCode } from "antd";
 
 const { Title, Text, Paragraph } = Typography;
@@ -83,6 +83,9 @@ export function InvoiceModal({ open, onClose, order, store }: InvoiceModalProps)
     ? `upi://pay?pa=${effectiveUpi}&pn=${encodeURIComponent(store.name)}&am=${grandTotal}&tn=${encodeURIComponent(invoiceNumber)}&cu=INR`
     : "";
 
+  // Feature 4: POS Thermal Receipt Mode Toggle
+  const [receiptMode, setReceiptMode] = useState<"standard" | "thermal">("standard");
+
   const handlePrint = () => {
     window.print();
   };
@@ -107,7 +110,7 @@ export function InvoiceModal({ open, onClose, order, store }: InvoiceModalProps)
         open={open}
         onCancel={onClose}
         footer={null}
-        width={760}
+        width={receiptMode === "thermal" ? 440 : 760}
         destroyOnClose
         className="invoice-modal-dialog"
       >
@@ -115,20 +118,29 @@ export function InvoiceModal({ open, onClose, order, store }: InvoiceModalProps)
         <div className="no-print" style={{ marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
           <div>
             <Title level={4} style={{ margin: 0, color: "#0f172a" }}>
-              🧾 {isTaxInvoice ? "Tax Invoice" : "Retail Bill & Order Receipt"}
+              🧾 {receiptMode === "thermal" ? "POS Thermal Receipt Slip" : isTaxInvoice ? "GST Tax Invoice (A4)" : "Retail Bill & Order Receipt"}
             </Title>
             <Text type="secondary" style={{ fontSize: 13 }}>
-              Official invoice with itemized tax breakdown and Direct UPI payment verification.
+              {receiptMode === "thermal" ? "58mm / 80mm compact thermal printer roll mode" : "Official invoice with tax breakdown and direct UPI verification"}
             </Text>
           </div>
-          <Space>
+          <Space wrap>
+            <Segmented
+              value={receiptMode}
+              onChange={(val: any) => setReceiptMode(val)}
+              options={[
+                { label: "📄 A4 Tax Invoice", value: "standard" },
+                { label: "🧾 POS Thermal Slip", value: "thermal" },
+              ]}
+              style={{ fontWeight: 600 }}
+            />
             {order.customerPhone && (
               <Button
                 icon={<WhatsAppOutlined />}
                 onClick={handleShareWhatsApp}
                 style={{ color: "#25D366", borderColor: "#25D366", fontWeight: 600 }}
               >
-                Share on WhatsApp
+                Share
               </Button>
             )}
             <Button
@@ -137,12 +149,13 @@ export function InvoiceModal({ open, onClose, order, store }: InvoiceModalProps)
               onClick={handlePrint}
               style={{ background: "#25D366", borderColor: "#25D366", fontWeight: 700 }}
             >
-              Print / Save PDF
+              Print
             </Button>
           </Space>
         </div>
 
-        {/* Printable Invoice Sheet */}
+        {/* Feature 4: Standard A4 Tax Invoice */}
+        {receiptMode === "standard" && (
         <div
           id="printable-invoice-root"
           style={{
@@ -380,6 +393,130 @@ export function InvoiceModal({ open, onClose, order, store }: InvoiceModalProps)
             </div>
           </div>
         </div>
+        )}
+
+        {/* Feature 4: Compact POS Thermal Slip (58mm / 80mm) */}
+        {receiptMode === "thermal" && (
+          <div
+            id="printable-thermal-root"
+            style={{
+              background: "#ffffff",
+              border: "1px dashed #94a3b8",
+              borderRadius: 8,
+              padding: "16px 14px",
+              fontFamily: "Courier, Consolas, Monaco, monospace",
+              color: "#000",
+              maxWidth: 320,
+              margin: "0 auto",
+              fontSize: 12,
+              lineHeight: 1.4,
+            }}
+          >
+            <div style={{ textAlign: "center", marginBottom: 8 }}>
+              <div style={{ fontSize: 16, fontWeight: 900, letterSpacing: 0.5, textTransform: "uppercase" }}>
+                {store.name}
+              </div>
+              {store.address && <div style={{ fontSize: 11, marginTop: 2 }}>{store.address}</div>}
+              {store.phone && <div style={{ fontSize: 11 }}>PH: +{store.phone.replace(/\D/g, "")}</div>}
+              {store.gstin && <div style={{ fontSize: 11, fontWeight: 700 }}>GSTIN: {store.gstin}</div>}
+            </div>
+
+            <div style={{ borderTop: "1px dashed #000", margin: "6px 0" }} />
+
+            <div style={{ fontSize: 11, display: "flex", justifyContent: "space-between" }}>
+              <span>SLIP: #{invoiceNumber}</span>
+              <span>{orderDate}</span>
+            </div>
+            <div style={{ fontSize: 11 }}>
+              CUST: {order.customerName} (+{order.customerPhone.replace(/^\+/, "")})
+            </div>
+            {order.deliveryAddress && (
+              <div style={{ fontSize: 10, color: "#333" }}>
+                ADDR: {order.deliveryAddress}
+              </div>
+            )}
+
+            <div style={{ borderTop: "1px dashed #000", margin: "6px 0" }} />
+
+            <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, fontSize: 11, marginBottom: 4 }}>
+              <span style={{ width: "55%" }}>ITEM</span>
+              <span style={{ width: "15%", textAlign: "center" }}>QTY</span>
+              <span style={{ width: "30%", textAlign: "right" }}>AMOUNT</span>
+            </div>
+            <div style={{ borderTop: "1px dashed #000", margin: "4px 0" }} />
+
+            {items.map((item, idx) => (
+              <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, padding: "2px 0" }}>
+                <span style={{ width: "55%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {item.name}
+                </span>
+                <span style={{ width: "15%", textAlign: "center" }}>{item.quantity}</span>
+                <span style={{ width: "30%", textAlign: "right" }}>
+                  ₹{(Number(item.price) * Number(item.quantity)).toFixed(2)}
+                </span>
+              </div>
+            ))}
+
+            <div style={{ borderTop: "1px dashed #000", margin: "6px 0" }} />
+
+            <div style={{ fontSize: 11, lineHeight: 1.6 }}>
+              {Number(order.discountAmount) > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span>DISCOUNT:</span>
+                  <span>-₹{Number(order.discountAmount).toFixed(2)}</span>
+                </div>
+              )}
+              {Number(order.deliveryCharge) > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span>DELIVERY:</span>
+                  <span>+₹{Number(order.deliveryCharge).toFixed(2)}</span>
+                </div>
+              )}
+              {gstRate > 0 && (
+                <>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span>CGST ({gstRate / 2}%):</span>
+                    <span>₹{cgst.toFixed(2)}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span>SGST ({gstRate / 2}%):</span>
+                    <span>₹{sgst.toFixed(2)}</span>
+                  </div>
+                </>
+              )}
+              <div style={{ borderTop: "1px dashed #000", margin: "4px 0" }} />
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, fontWeight: 900 }}>
+                <span>NET PAYABLE:</span>
+                <span>₹{grandTotal.toFixed(2)}</span>
+              </div>
+              <div style={{ borderTop: "1px dashed #000", margin: "4px 0" }} />
+              <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, fontSize: 11 }}>
+                <span>STATUS:</span>
+                <span>{(order.paymentStatus || "unpaid").toUpperCase()}</span>
+              </div>
+              {utrNumber && (
+                <div style={{ fontSize: 10, color: "#166534" }}>
+                  UPI REF: {utrNumber}
+                </div>
+              )}
+            </div>
+
+            {effectiveUpi && (
+              <div style={{ textAlign: "center", marginTop: 10, padding: 8, border: "1px dashed #000" }}>
+                <QRCode value={upiPayUrl || `upi://pay?pa=${effectiveUpi}`} size={96} bordered={false} errorLevel="M" style={{ margin: "0 auto" }} />
+                <div style={{ fontSize: 10, fontWeight: 700, marginTop: 4 }}>
+                  SCAN TO PAY VIA UPI
+                </div>
+                <div style={{ fontSize: 9 }}>{effectiveUpi}</div>
+              </div>
+            )}
+
+            <div style={{ textAlign: "center", marginTop: 12, fontSize: 10 }}>
+              <div>*** THANK YOU! VISIT AGAIN ***</div>
+              <div style={{ fontSize: 9, color: "#666", marginTop: 2 }}>GinieSpace Smart POS</div>
+            </div>
+          </div>
+        )}
 
         {/* Screen Bottom Actions (Hidden on print) */}
         <div className="no-print" style={{ textAlign: "center", marginTop: 20 }}>
@@ -393,7 +530,7 @@ export function InvoiceModal({ open, onClose, order, store }: InvoiceModalProps)
                 onClick={handleShareWhatsApp}
                 style={{ color: "#25D366", borderColor: "#25D366", fontWeight: 600, borderRadius: 8 }}
               >
-                Send to Customer on WhatsApp
+                Send on WhatsApp
               </Button>
             )}
             <Button
@@ -402,7 +539,7 @@ export function InvoiceModal({ open, onClose, order, store }: InvoiceModalProps)
               onClick={handlePrint}
               style={{ background: "#25D366", borderColor: "#25D366", fontWeight: 700, borderRadius: 8 }}
             >
-              Print / Save PDF
+              Print Receipt ({receiptMode === "thermal" ? "58/80mm" : "A4"})
             </Button>
           </Space>
         </div>
@@ -417,7 +554,9 @@ export function InvoiceModal({ open, onClose, order, store }: InvoiceModalProps)
           .invoice-modal-dialog,
           .invoice-modal-dialog .ant-modal-content,
           #printable-invoice-root,
-          #printable-invoice-root * {
+          #printable-invoice-root *,
+          #printable-thermal-root,
+          #printable-thermal-root * {
             visibility: visible !important;
           }
           .invoice-modal-dialog {
@@ -442,6 +581,14 @@ export function InvoiceModal({ open, onClose, order, store }: InvoiceModalProps)
             max-width: 100% !important;
             border: none !important;
             padding: 24px 16px !important;
+            page-break-inside: avoid !important;
+          }
+          #printable-thermal-root {
+            width: 80mm !important;
+            max-width: 80mm !important;
+            border: none !important;
+            padding: 4px 6px !important;
+            margin: 0 !important;
             page-break-inside: avoid !important;
           }
         }
