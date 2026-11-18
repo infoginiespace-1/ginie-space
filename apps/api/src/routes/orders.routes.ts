@@ -340,6 +340,8 @@ export function createOrdersRouter(
       } catch {}
 
       const merchantState = waManager.getSessionState(order.userId);
+      const isWaConnected = merchantState.status === "connected";
+      let riderSent = false;
 
       // 1. WhatsApp message to Delivery Boy
       const riderMsg =
@@ -351,12 +353,17 @@ export function createOrdersRouter(
         (itemsSummary ? `Items:\n${itemsSummary}\n` : "") +
         `Please deliver safely! 🙏`;
 
-      if (merchantState.status === "connected") {
-        waManager.sendMessage({
-          userId: order.userId,
-          recipientPhone: cleanRiderPhone,
-          messageText: riderMsg,
-        }).catch(() => {});
+      if (isWaConnected) {
+        try {
+          await waManager.sendMessage({
+            userId: order.userId,
+            recipientPhone: cleanRiderPhone,
+            messageText: riderMsg,
+          });
+          riderSent = true;
+        } catch (err) {
+          console.error("Direct WhatsApp to rider failed:", err);
+        }
       }
 
       // 2. WhatsApp notification to Customer
@@ -368,7 +375,7 @@ export function createOrdersRouter(
           (balanceToCollect > 0 ? `Payable on Delivery: *₹${balanceToCollect}*\n` : `Payment Status: *PAID ONLINE ✅*\n`) +
           `Thank you for shopping with us! 🙏`;
 
-        if (merchantState.status === "connected") {
+        if (isWaConnected) {
           waManager.sendMessage({
             userId: order.userId,
             recipientPhone: order.customerPhone,
@@ -382,10 +389,82 @@ export function createOrdersRouter(
       res.json({
         success: true,
         order: updated,
-        message: `Order #${order.id.slice(-6).toUpperCase()} dispatched to ${deliveryBoyName}!`,
+        message: riderSent
+          ? `Order #${order.id.slice(-6).toUpperCase()} dispatched! Task sent directly via your connected WhatsApp.`
+          : `Order #${order.id.slice(-6).toUpperCase()} dispatched to ${deliveryBoyName}!`,
+        whatsappDirectSent: riderSent,
+        whatsappConnected: isWaConnected,
+        connectedPhone: merchantState.phoneNumber || "",
+        riderName: String(deliveryBoyName).trim(),
+        riderPhone: cleanRiderPhone,
+        riderWhatsappText: riderMsg,
       });
     } catch {
       res.status(500).json({ error: "Failed to dispatch delivery" });
+    }
+  });
+
+  // Re-send Delivery Task to Rider directly via Connected WhatsApp
+  router.post("/:id/resend-delivery-task", async (req: Request, res: Response): Promise<void> => {
+    try {
+      const order = await db.orders.findById(req.params.id as string);
+      if (!order) {
+        res.status(404).json({ error: "Order not found" });
+        return;
+      }
+      if (req.user?.role !== "admin" && order.userId !== req.user!.id) {
+        res.status(403).json({ error: "Access denied" });
+        return;
+      }
+
+      const { deliveryBoyPhone, deliveryBoyName } = req.body;
+      const targetPhone = normalizePhoneDigits(deliveryBoyPhone || "");
+      if (!targetPhone) {
+        res.status(400).json({ error: "Rider mobile number is required" });
+        return;
+      }
+
+      const total = Number(order.totalAmount) || 0;
+      const paid = order.paymentStatus === "paid" ? total : Number(order.paidAmount) || 0;
+      const balanceToCollect = Math.max(0, total - paid);
+
+      let itemsSummary = "";
+      try {
+        const parsed = JSON.parse(order.itemsJson || "[]");
+        itemsSummary = parsed.map((i: any) => `  • ${i.name} × ${i.quantity}`).join("\n");
+      } catch {}
+
+      const riderMsg =
+        `🛵 *New Delivery Assigned!*\n` +
+        `Order Ref: *#${order.id.slice(-6).toUpperCase()}*\n` +
+        `Customer: *${order.customerName}* (📞 ${order.customerPhone})\n` +
+        `Delivery Address: ${order.deliveryAddress || "Store Pickup / Counter"}\n` +
+        `Amount to Collect: *₹${balanceToCollect}* (${order.paymentStatus === "paid" ? "ALREADY PAID ONLINE ✅" : "COLLECT CASH / UPI 💵"})\n` +
+        (itemsSummary ? `Items:\n${itemsSummary}\n` : "") +
+        `Please deliver safely! 🙏`;
+
+      const merchantState = waManager.getSessionState(order.userId);
+      const isWaConnected = merchantState.status === "connected";
+
+      if (isWaConnected) {
+        await waManager.sendMessage({
+          userId: order.userId,
+          recipientPhone: targetPhone,
+          messageText: riderMsg,
+        });
+        res.json({
+          success: true,
+          whatsappDirectSent: true,
+          message: `Delivery task successfully re-sent to ${deliveryBoyName || "rider"} from your connected WhatsApp!`,
+        });
+      } else {
+        res.status(400).json({
+          error: "Your WhatsApp is not connected. Please connect WhatsApp in Settings to send directly.",
+          riderWhatsappText: riderMsg,
+        });
+      }
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Failed to send delivery task" });
     }
   });
 

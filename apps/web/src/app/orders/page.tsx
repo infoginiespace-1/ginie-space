@@ -38,6 +38,9 @@ import {
   SendOutlined,
   ClockCircleOutlined,
   CheckCircleFilled,
+  ExclamationCircleFilled,
+  ShareAltOutlined,
+  ReloadOutlined,
 } from "@ant-design/icons";
 import { api } from "../../lib/api";
 import { getSocket } from "../../lib/socket";
@@ -169,6 +172,8 @@ export default function OrdersPage() {
     }
   };
 
+  const [resendingTask, setResendingTask] = useState(false);
+
   const handleDispatchDelivery = async (values: any) => {
     if (!dispatchOrder) return;
     try {
@@ -177,7 +182,7 @@ export default function OrdersPage() {
         deliveryBoyName: values.riderName,
         deliveryBoyPhone: values.riderPhone,
       });
-      message.success(`Delivery dispatched to ${values.riderName}!`);
+      message.success(res.data?.message || `Delivery dispatched to ${values.riderName}!`);
       setDispatchResult(res.data);
       setOrders((prev) =>
         prev.map((o) =>
@@ -190,6 +195,22 @@ export default function OrdersPage() {
       message.error(err.response?.data?.error || err.message || "Failed to dispatch delivery");
     } finally {
       setDispatching(false);
+    }
+  };
+
+  const handleResendRiderTask = async () => {
+    if (!dispatchOrder || !dispatchResult?.riderPhone) return;
+    try {
+      setResendingTask(true);
+      const res = await api.post(`/api/orders/${dispatchOrder.id}/resend-delivery-task`, {
+        deliveryBoyName: dispatchResult.riderName,
+        deliveryBoyPhone: dispatchResult.riderPhone,
+      });
+      message.success(res.data?.message || "Task re-sent to rider successfully!");
+    } catch (err: any) {
+      message.error(err.response?.data?.error || err.message || "Failed to send delivery task");
+    } finally {
+      setResendingTask(false);
     }
   };
 
@@ -1432,23 +1453,66 @@ export default function OrdersPage() {
             </Form>
 
             {dispatchResult && (
-              <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", padding: 12, borderRadius: 8, marginTop: 10 }}>
-                <div style={{ color: "#15803d", fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
-                  <CheckCircleFilled /> Dispatch Confirmed!
-                </div>
-                <div style={{ fontSize: 12, color: "#166534", marginTop: 4 }}>
-                  Task details and customer address ready to send to rider.
-                </div>
-                <Button
-                  type="primary"
-                  icon={<WhatsAppOutlined />}
-                  block
-                  style={{ background: "#25D366", borderColor: "#25D366", fontWeight: 700, marginTop: 10 }}
-                  href={`https://wa.me/${dispatchResult.riderPhone}?text=${encodeURIComponent(dispatchResult.riderWhatsappText)}`}
-                  target="_blank"
-                >
-                  Send Delivery Task to Rider on WhatsApp
-                </Button>
+              <div
+                style={{
+                  background: dispatchResult.whatsappDirectSent || dispatchResult.whatsappConnected ? "#f0fdf4" : "#fffbeb",
+                  border: `1px solid ${dispatchResult.whatsappDirectSent || dispatchResult.whatsappConnected ? "#bbf7d0" : "#fde68a"}`,
+                  padding: 14,
+                  borderRadius: 8,
+                  marginTop: 12,
+                }}
+              >
+                {dispatchResult.whatsappDirectSent || dispatchResult.whatsappConnected ? (
+                  <>
+                    <div style={{ color: "#15803d", fontWeight: 700, display: "flex", alignItems: "center", gap: 6, fontSize: 14 }}>
+                      <CheckCircleFilled style={{ color: "#16a34a" }} /> Task Sent Directly via Connected WhatsApp!
+                    </div>
+                    <div style={{ fontSize: 13, color: "#166534", marginTop: 4, lineHeight: 1.5 }}>
+                      Delivery details, customer address, and task slip were automatically sent to <strong>{dispatchResult.riderName}</strong> (+{dispatchResult.riderPhone}) directly from your linked WhatsApp ({dispatchResult.connectedPhone || "Connected"}).
+                    </div>
+                    <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+                      <Button
+                        type="primary"
+                        icon={<ReloadOutlined />}
+                        loading={resendingTask}
+                        onClick={handleResendRiderTask}
+                        style={{ background: "#16a34a", borderColor: "#16a34a", fontWeight: 600, flex: 1, minWidth: 200 }}
+                      >
+                        Resend Task via Connected WhatsApp
+                      </Button>
+                      <Button
+                        icon={<ShareAltOutlined />}
+                        onClick={() => {
+                          const text = dispatchResult.riderWhatsappText || "";
+                          const url = `https://wa.me/${dispatchResult.riderPhone}?text=${encodeURIComponent(text)}`;
+                          window.open(url, "_blank");
+                        }}
+                        style={{ fontWeight: 500 }}
+                      >
+                        Open WhatsApp Web (Manual)
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ color: "#b45309", fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
+                      <ExclamationCircleFilled style={{ color: "#d97706" }} /> Dispatch Confirmed (WhatsApp Not Connected)
+                    </div>
+                    <div style={{ fontSize: 12, color: "#92400e", marginTop: 4 }}>
+                      Connect your WhatsApp in Settings to send automatically without leaving GinieSpace, or click below to send manually:
+                    </div>
+                    <Button
+                      type="primary"
+                      icon={<WhatsAppOutlined />}
+                      block
+                      style={{ background: "#25D366", borderColor: "#25D366", fontWeight: 700, marginTop: 10 }}
+                      href={`https://wa.me/${dispatchResult.riderPhone}?text=${encodeURIComponent(dispatchResult.riderWhatsappText)}`}
+                      target="_blank"
+                    >
+                      Send Task via WhatsApp Web
+                    </Button>
+                  </>
+                )}
               </div>
             )}
           </Space>
