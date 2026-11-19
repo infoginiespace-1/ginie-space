@@ -13,6 +13,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/pricing", changeFrequency: "weekly" as const, priority: 0.9 },
     { path: "/hi/pricing", changeFrequency: "weekly" as const, priority: 0.9 },
 
+    // About & Founder
+    { path: "/about", changeFrequency: "weekly" as const, priority: 0.8 },
+    { path: "/hi/about", changeFrequency: "weekly" as const, priority: 0.8 },
+
     // Core Pillars (English)
     { path: "/whatsapp-catalog-maker", changeFrequency: "weekly" as const, priority: 0.9 },
     { path: "/upi-billing-software", changeFrequency: "weekly" as const, priority: 0.9 },

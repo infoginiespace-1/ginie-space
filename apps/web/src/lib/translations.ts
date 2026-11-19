@@ -7,6 +7,7 @@ export interface TranslationDictionary {
     features: string;
     pricing: string;
     faq: string;
+    about: string;
     login: string;
     getStarted: string;
     freeBadge: string;
@@ -186,6 +187,8 @@ export interface TranslationDictionary {
     helpline: string;
     operatingAddress: string;
     workingHours: string;
+    about: string;
+    founderNote: string;
   };
   trustStats: {
     upiVolume: string;
@@ -224,6 +227,23 @@ export interface TranslationDictionary {
       highlight: string;
     }>;
   };
+  founder: {
+    tag: string;
+    title: string;
+    subtitle: string;
+    name: string;
+    role: string;
+    education: string;
+    college: string;
+    visionQuote: string;
+    storyTitle: string;
+    storyText: string;
+    badge1: string;
+    badge2: string;
+    badge3: string;
+    badge4: string;
+    connectEmail: string;
+  };
 }
 
 export const translations: Record<Locale, TranslationDictionary> = {
@@ -234,6 +254,7 @@ export const translations: Record<Locale, TranslationDictionary> = {
       features: "Features",
       pricing: "Pricing (₹199)",
       faq: "FAQs",
+      about: "संस्थापक (Founder)",
       login: "Login",
       getStarted: "Free Shuru Karein",
       freeBadge: "100% Free Tier",
@@ -485,6 +506,8 @@ export const translations: Record<Locale, TranslationDictionary> = {
       helpline: "Official Support Helpline: +91 92792 59690",
       operatingAddress: "Registered Operating Hub: Boring Road, Patna, Bihar 800001, India",
       workingHours: "Mon – Sat: 9:30 AM – 7:30 PM IST (WhatsApp & Call)",
+      about: "संस्थापक व विज़न (About Founder)",
+      founderNote: "Founded by Homa Monawwar (B.Tech ECE, Maryland Institute of Technology and Management, Jamshedpur) with a mission to digitize Bharat's retail and MSME ecosystem.",
     },
     trustStats: {
       upiVolume: "₹0 Cut",
@@ -543,6 +566,23 @@ export const translations: Record<Locale, TranslationDictionary> = {
         },
       ],
     },
+    founder: {
+      tag: "FOUNDER'S VISION & LEADERSHIP",
+      title: "Meet the Founder Behind GinieSpace",
+      subtitle: "Engineering trust, 0% commission commerce aur Bharat ke local vyapariyon ki digital pragati ke liye samarpit.",
+      name: "Homa Monawwar",
+      role: "Founder & Chief Technology Officer (CTO)",
+      education: "B.Tech in Electronics & Communication Engineering (ECE)",
+      college: "Maryland Institute of Technology and Management (Jamshedpur, Jharkhand)",
+      visionQuote: "Hamara lakshya Bharat ke har chote aur bade dukandar ko bina kisi 2-3% payment gateway commission ke direct WhatsApp commerce aur instant UPI bank payments ki taqat dena hai. GinieSpace ko ground-up Bharat ke MSMEs ke bharose aur convenience ke liye banaya gaya hai.",
+      storyTitle: "Engineering for Bharat's MSMEs",
+      storyText: "Maryland Institute of Technology and Management, Jamshedpur se Electronics & Communication me B.Tech karne ke baad, Homa ne dekha ki local retailers aur distributors mehngi commissions aur complex software ke bojh tale dabe hain. GinieSpace ko ek ultra-lightweight, 100% direct bank UPI settlement engine ke roop me architect kiya gaya hai jaha har dukandar 60 seconds me live ho sake.",
+      badge1: "🎓 B.Tech ECE (MITM Jamshedpur)",
+      badge2: "⚡ Real-Time Socket Architect",
+      badge3: "🇮🇳 Built for Bharat's MSMEs",
+      badge4: "🛡️ 0% Cut & DPDP Compliant",
+      connectEmail: "info.giniespace@gmail.com",
+    },
   },
   en: {
     nav: {
@@ -551,6 +591,7 @@ export const translations: Record<Locale, TranslationDictionary> = {
       features: "Features",
       pricing: "Pricing (₹199)",
       faq: "FAQs",
+      about: "About Founder",
       login: "Sign In",
       getStarted: "Start Free Today",
       freeBadge: "100% Free Tier",
@@ -802,6 +843,8 @@ export const translations: Record<Locale, TranslationDictionary> = {
       helpline: "Official Support Helpline: +91 92792 59690",
       operatingAddress: "Registered Operating Hub: Boring Road, Patna, Bihar 800001, India",
       workingHours: "Mon – Sat: 9:30 AM – 7:30 PM IST (WhatsApp & Call)",
+      about: "About Founder & Vision",
+      founderNote: "Founded by Homa Monawwar (B.Tech ECE, Maryland Institute of Technology and Management, Jamshedpur) with a mission to digitize Bharat's retail and MSME ecosystem.",
     },
     trustStats: {
       upiVolume: "₹0 Cut",
@@ -859,6 +902,23 @@ export const translations: Record<Locale, TranslationDictionary> = {
           highlight: "20+ New Retail Clients",
         },
       ],
+    },
+    founder: {
+      tag: "FOUNDER'S VISION & LEADERSHIP",
+      title: "Meet the Founder Behind GinieSpace",
+      subtitle: "Dedicated to engineering trust, zero-commission commerce, and digital empowerment for Bharat's retail ecosystem.",
+      name: "Homa Monawwar",
+      role: "Founder & Chief Technology Officer (CTO)",
+      education: "B.Tech in Electronics & Communication Engineering (ECE)",
+      college: "Maryland Institute of Technology and Management (Jamshedpur, Jharkhand)",
+      visionQuote: "Our mission is to empower every Indian retailer, distributor, and local business operator with 0% commission direct UPI payments and hyper-fast WhatsApp automation without tech barriers. GinieSpace was engineered from the ground up for Bharat's merchants.",
+      storyTitle: "Engineering for Bharat's MSMEs",
+      storyText: "With an engineering degree in Electronics & Communication from Maryland Institute of Technology and Management (Jamshedpur, Jharkhand), Homa identified the critical pain point of Indian merchants losing margins to 2-3% payment gateways and bloated SaaS tools. GinieSpace was architected as a lightweight, secure, direct-to-bank commerce engine enabling any shopkeeper to go live in 60 seconds.",
+      badge1: "🎓 B.Tech ECE (MITM Jamshedpur)",
+      badge2: "⚡ Real-Time Socket Architect",
+      badge3: "🇮🇳 Built for Bharat's MSMEs",
+      badge4: "🛡️ 0% Cut & DPDP Compliant",
+      connectEmail: "info.giniespace@gmail.com",
     },
   },
 };

@@ -35,6 +35,7 @@ export default function MarketingNav({ currentPath, lang = "en" }: MarketingNavP
     { label: lang === "hi" ? "किराना स्टोर" : "Retail & Kirana", href: `${prefix}/retail-kirana-store` },
     { label: lang === "hi" ? "होलसेल" : "Wholesale", href: `${prefix}/wholesale-distributors` },
     { label: lang === "hi" ? "प्लान्स (₹199)" : "Pricing (₹199)", href: `${prefix}/pricing` },
+    { label: lang === "hi" ? "संस्थापक" : "About", href: `${prefix}/about` },
   ];
 
   return (

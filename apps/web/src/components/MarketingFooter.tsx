@@ -62,6 +62,21 @@ export default function MarketingFooter({ lang = "en" }: MarketingFooterProps) {
                 <EnvironmentOutlined style={{ color: "#f59e0b", marginRight: 8 }} />
                 <span>Boring Road, Patna, Bihar 800001, India</span>
               </div>
+              <div
+                style={{
+                  fontSize: 12,
+                  color: "#cbd5e1",
+                  marginTop: 10,
+                  paddingTop: 8,
+                  borderTop: "1px solid #1e293b",
+                  lineHeight: 1.5,
+                }}
+              >
+                <div>👨‍💻 <strong>Homa Monawwar</strong> • Founder &amp; CTO</div>
+                <div style={{ color: "#64748b", fontSize: 11 }}>
+                  B.Tech ECE (Maryland Institute of Technology and Management, Jamshedpur)
+                </div>
+              </div>
             </div>
           </Col>
 
@@ -100,6 +115,9 @@ export default function MarketingFooter({ lang = "en" }: MarketingFooterProps) {
             <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 13 }}>
               <Link href={`${prefix}/pricing`} style={{ color: "#94a3b8", textDecoration: "none" }}>
                 {lang === "hi" ? "प्लान्स व प्राइसिंग (₹199)" : "Pricing Plans (₹199)"}
+              </Link>
+              <Link href={`${prefix}/about`} style={{ color: "#94a3b8", textDecoration: "none" }}>
+                {lang === "hi" ? "संस्थापक व विज़न (About Us)" : "About Founder & Vision"}
               </Link>
               <Link href="/login" style={{ color: "#94a3b8", textDecoration: "none" }}>
                 {lang === "hi" ? "व्यापारी लॉगिन" : "Merchant Sign In"}

@@ -73,7 +73,22 @@ export default function HindiHomePage() {
         "@type": "Organization",
         "name": "GinieSpace",
         "url": "https://app.ginie.space",
-        "logo": "https://app.ginie.space/icon.svg",
+        "logo": "https://app.ginie.space/logo.png",
+        "founder": {
+          "@type": "Person",
+          "name": "Homa Monawwar",
+          "jobTitle": "Founder & Chief Technology Officer",
+          "alumniOf": {
+            "@type": "CollegeOrUniversity",
+            "name": "Maryland Institute of Technology and Management, Jamshedpur"
+          },
+          "knowsAbout": [
+            "Electronics & Communication Engineering",
+            "WhatsApp Cloud Commerce",
+            "UPI Direct Payment Architecture",
+            "SaaS Engineering"
+          ]
+        },
         "contactPoint": {
           "@type": "ContactPoint",
           "telephone": "+91 92792 59690",
@@ -90,6 +105,21 @@ export default function HindiHomePage() {
           "postalCode": "800001",
           "addressCountry": "IN"
         }
+      },
+      {
+        "@type": "Person",
+        "name": "Homa Monawwar",
+        "jobTitle": "Founder & Chief Technology Officer (CTO)",
+        "worksFor": {
+          "@type": "Organization",
+          "name": "GinieSpace",
+          "url": "https://app.ginie.space"
+        },
+        "alumniOf": {
+          "@type": "CollegeOrUniversity",
+          "name": "Maryland Institute of Technology and Management, Jamshedpur, Jharkhand"
+        },
+        "description": "Founder & CTO at GinieSpace. Engineering graduate (B.Tech in Electronics and Communication Engineering) from Maryland Institute of Technology and Management (Jamshedpur). Dedicated to building zero-commission commerce technology for Indian MSMEs."
       },
       {
         "@type": "FAQPage",

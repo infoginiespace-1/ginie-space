@@ -57,6 +57,8 @@ import {
   SendOutlined,
   MenuOutlined,
   CloseOutlined,
+  UserOutlined,
+  MailOutlined,
 } from "@ant-design/icons";
 
 const { Title, Text, Paragraph } = Typography;
@@ -219,6 +221,9 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
             <Link href="/pricing" style={{ color: "#475569", textDecoration: "none", fontWeight: 500, fontSize: 14 }}>
               {t.nav.pricing}
             </Link>
+            <Link href={locale === "hi" ? "/hi/about" : "/about"} style={{ color: "#475569", textDecoration: "none", fontWeight: 500, fontSize: 14 }}>
+              {t.nav.about}
+            </Link>
             <a href="#faqs" style={{ color: "#475569", textDecoration: "none", fontWeight: 500, fontSize: 14 }}>
               {t.nav.faq}
             </a>
@@ -366,6 +371,13 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
             style={{ color: "#1e293b", fontWeight: 600, fontSize: 15, textDecoration: "none", padding: "8px 0", borderBottom: "1px solid #f1f5f9" }}
           >
             👑 {t.nav.pricing}
+          </Link>
+          <Link
+            href={locale === "hi" ? "/hi/about" : "/about"}
+            onClick={() => setMobileMenuOpen(false)}
+            style={{ color: "#1e293b", fontWeight: 600, fontSize: 15, textDecoration: "none", padding: "8px 0", borderBottom: "1px solid #f1f5f9" }}
+          >
+            👨‍💻 {t.nav.about}
           </Link>
           <a
             href="#calculator"
@@ -2092,6 +2104,223 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
         </Row>
       </section>
 
+      {/* Leadership & Founder Vision Section */}
+      <section
+        id="founder"
+        style={{
+          maxWidth: 1140,
+          margin: isMobile ? "40px auto" : "64px auto",
+          padding: isMobile ? "0 16px" : "0 24px",
+        }}
+      >
+        <div style={{ textAlign: "center", marginBottom: isMobile ? 28 : 40 }}>
+          <Tag color="purple" style={{ padding: "4px 14px", borderRadius: 999, fontWeight: 700, fontSize: 12 }}>
+            {t.founder.tag}
+          </Tag>
+          <Title level={2} style={{ fontSize: "clamp(1.8rem, 3.2vw, 2.4rem)", fontWeight: 800, marginTop: 12, color: "#0f172a" }}>
+            {t.founder.title}
+          </Title>
+          <Paragraph style={{ color: "#64748b", fontSize: isMobile ? 14 : 16, maxWidth: 680, margin: "0 auto" }}>
+            {t.founder.subtitle}
+          </Paragraph>
+        </div>
+
+        <Card
+          style={{
+            borderRadius: 20,
+            border: "1px solid #e2e8f0",
+            background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
+            boxShadow: "0 12px 36px rgba(15, 23, 42, 0.05)",
+            overflow: "hidden",
+          }}
+          styles={{ body: { padding: isMobile ? "24px 18px" : "36px 36px" } }}
+        >
+          <Row gutter={[32, 32]} align="middle">
+            {/* Left Column: Founder Profile & Education */}
+            <Col xs={24} lg={9}>
+              <div
+                style={{
+                  background: "linear-gradient(145deg, #0f172a 0%, #1e293b 100%)",
+                  borderRadius: 16,
+                  padding: isMobile ? "28px 20px" : "32px 24px",
+                  color: "#fff",
+                  textAlign: "center",
+                  boxShadow: "0 8px 24px rgba(15, 23, 42, 0.15)",
+                }}
+              >
+                {/* Modern Avatar with Monogram & Verified Badge */}
+                <div style={{ position: "relative", display: "inline-block", marginBottom: 16 }}>
+                  <div
+                    style={{
+                      width: 96,
+                      height: 96,
+                      borderRadius: "50%",
+                      background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 34,
+                      fontWeight: 800,
+                      color: "#fff",
+                      boxShadow: "0 6px 20px rgba(16, 185, 129, 0.35)",
+                      border: "4px solid rgba(255, 255, 255, 0.15)",
+                      margin: "0 auto",
+                    }}
+                  >
+                    HM
+                  </div>
+                  <Tag
+                    color="success"
+                    style={{
+                      position: "absolute",
+                      bottom: -2,
+                      right: "50%",
+                      transform: "translateX(50%)",
+                      borderRadius: 999,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      padding: "1px 8px",
+                      border: "none",
+                    }}
+                  >
+                    ✓ Verified Founder
+                  </Tag>
+                </div>
+
+                <Title level={3} style={{ color: "#fff", margin: "10px 0 4px", fontSize: 22, fontWeight: 800 }}>
+                  {t.founder.name}
+                </Title>
+                <div style={{ color: "#34d399", fontSize: 13, fontWeight: 700, marginBottom: 16 }}>
+                  {t.founder.role}
+                </div>
+
+                <div
+                  style={{
+                    background: "rgba(255, 255, 255, 0.06)",
+                    borderRadius: 12,
+                    padding: "12px 14px",
+                    textAlign: "left",
+                    marginBottom: 16,
+                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                  }}
+                >
+                  <div style={{ fontSize: 11, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>
+                    Academic Background
+                  </div>
+                  <div style={{ fontSize: 13, color: "#f8fafc", fontWeight: 700, marginTop: 4 }}>
+                    🎓 {t.founder.education}
+                  </div>
+                  <div style={{ fontSize: 12, color: "#cbd5e1", marginTop: 2 }}>
+                    🏛️ {t.founder.college}
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 12, color: "#94a3b8" }}>
+                  <div>📍 Jamshedpur / Patna • Bharat</div>
+                  <div>✉️ <a href={`mailto:${t.founder.connectEmail}`} style={{ color: "#38bdf8", textDecoration: "none" }}>{t.founder.connectEmail}</a></div>
+                </div>
+              </div>
+            </Col>
+
+            {/* Right Column: Vision & Philosophy */}
+            <Col xs={24} lg={15}>
+              <div>
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 8, color: "#059669", fontWeight: 700, fontSize: 13, marginBottom: 12 }}>
+                  <SafetyCertificateOutlined style={{ fontSize: 18 }} />
+                  <span>FOUNDER&apos;S MISSION &amp; COMMITMENT</span>
+                </div>
+
+                {/* Pull Quote */}
+                <div
+                  style={{
+                    background: "#ecfdf5",
+                    borderLeft: "4px solid #10b981",
+                    borderRadius: "0 12px 12px 0",
+                    padding: "16px 20px",
+                    marginBottom: 20,
+                  }}
+                >
+                  <Paragraph
+                    style={{
+                      color: "#065f46",
+                      fontSize: isMobile ? 14 : 15,
+                      lineHeight: 1.7,
+                      fontWeight: 500,
+                      fontStyle: "italic",
+                      margin: 0,
+                    }}
+                  >
+                    &ldquo;{t.founder.visionQuote}&rdquo;
+                  </Paragraph>
+                </div>
+
+                <Title level={4} style={{ color: "#0f172a", marginBottom: 8, fontSize: 17, fontWeight: 700 }}>
+                  {t.founder.storyTitle}
+                </Title>
+                <Paragraph style={{ color: "#475569", fontSize: 14, lineHeight: 1.7, marginBottom: 20 }}>
+                  {t.founder.storyText}
+                </Paragraph>
+
+                {/* 4 Trust Badges */}
+                <Row gutter={[10, 10]} style={{ marginBottom: 24 }}>
+                  <Col xs={12} sm={12}>
+                    <div style={{ background: "#f1f5f9", padding: "8px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600, color: "#334155" }}>
+                      {t.founder.badge1}
+                    </div>
+                  </Col>
+                  <Col xs={12} sm={12}>
+                    <div style={{ background: "#f1f5f9", padding: "8px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600, color: "#334155" }}>
+                      {t.founder.badge2}
+                    </div>
+                  </Col>
+                  <Col xs={12} sm={12}>
+                    <div style={{ background: "#f1f5f9", padding: "8px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600, color: "#334155" }}>
+                      {t.founder.badge3}
+                    </div>
+                  </Col>
+                  <Col xs={12} sm={12}>
+                    <div style={{ background: "#f1f5f9", padding: "8px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600, color: "#334155" }}>
+                      {t.founder.badge4}
+                    </div>
+                  </Col>
+                </Row>
+
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+                  <Button
+                    type="primary"
+                    style={{
+                      background: "#0f172a",
+                      borderColor: "#0f172a",
+                      fontWeight: 600,
+                      borderRadius: 8,
+                      height: 40,
+                      paddingInline: 20,
+                    }}
+                    onClick={() => router.push(locale === "hi" ? "/hi/about" : "/about")}
+                  >
+                    Read Full Story &amp; Vision →
+                  </Button>
+                  <Button
+                    icon={<WhatsAppOutlined style={{ color: "#25D366" }} />}
+                    style={{
+                      borderRadius: 8,
+                      height: 40,
+                      borderColor: "#cbd5e1",
+                      fontWeight: 600,
+                    }}
+                    href="https://wa.me/919279259690"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Direct Helpline
+                  </Button>
+                </div>
+              </div>
+            </Col>
+          </Row>
+        </Card>
+      </section>
+
       {/* Real Merchant FAQs Accordion */}
       <section id="faqs" style={{ maxWidth: 880, margin: "64px auto", padding: "0 24px" }}>
         <div style={{ textAlign: "center", marginBottom: 36 }}>
@@ -2347,6 +2576,21 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
               <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 6 }}>
                 📍 {t.footer.operatingAddress}
               </div>
+              <div
+                style={{
+                  fontSize: 12,
+                  color: "#cbd5e1",
+                  marginTop: 12,
+                  paddingTop: 10,
+                  borderTop: "1px solid #1e293b",
+                  lineHeight: 1.5,
+                }}
+              >
+                <div>👨‍💻 <strong>{t.founder.name}</strong> • {t.founder.role}</div>
+                <div style={{ color: "#64748b", fontSize: 11, marginTop: 2 }}>
+                  {t.founder.education} — {t.founder.college}
+                </div>
+              </div>
             </Col>
 
             <Col xs={12} sm={6} md={4}>
@@ -2376,6 +2620,9 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
               <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13 }}>
                 <Link href="/terms" style={{ color: "#cbd5e1", textDecoration: "none" }}>
                   📜 {t.footer.terms}
+                </Link>
+                <Link href={locale === "hi" ? "/hi/about" : "/about"} style={{ color: "#cbd5e1", textDecoration: "none" }}>
+                  👥 {t.footer.about}
                 </Link>
                 <Link href="/privacy" style={{ color: "#cbd5e1", textDecoration: "none" }}>
                   🔒 {t.footer.privacy}
