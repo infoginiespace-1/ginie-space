@@ -288,7 +288,7 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
           </div>
 
           {/* Desktop Nav Links */}
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }} className="hide-on-mobile">
+          <div className="desktop-nav-links hide-on-mobile">
             <Dropdown menu={{ items: solutionsMenuItems }} placement="bottomLeft">
               <span className="nav-dropdown-trigger">
                 {t.nav.solutions || "Solutions"} <DownOutlined style={{ fontSize: 10, color: "#94a3b8" }} />
@@ -682,106 +682,43 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
           </span>
         </div>
 
-        {/* Real Grounded Trust & Growth Metrics */}
-        <div style={{ maxWidth: 960, margin: "0 auto 36px", minHeight: 96 }}>
-          <Row gutter={[12, 12]} justify="center">
-            <Col xs={12} sm={6}>
-              <div
-                className="trust-stats-card"
-                style={{
-                  background: "#ffffff",
-                  padding: "16px 10px",
-                  borderRadius: 14,
-                  border: "1px solid #e2e8f0",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
-                  height: "100%",
-                  minHeight: 88,
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "center",
-                }}
-              >
-                <div style={{ fontSize: "clamp(19px, 3.5vw, 24px)", fontWeight: 900, color: "#059669" }}>
-                  {t.trustStats.upiVolume}
-                </div>
-                <div style={{ fontSize: 12, color: "#64748b", marginTop: 4, fontWeight: 500 }}>
-                  {t.trustStats.upiVolumeSub}
-                </div>
-              </div>
-            </Col>
-            <Col xs={12} sm={6}>
-              <div
-                className="trust-stats-card"
-                style={{
-                  background: "#ffffff",
-                  padding: "16px 10px",
-                  borderRadius: 14,
-                  border: "1px solid #e2e8f0",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
-                  height: "100%",
-                  minHeight: 88,
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "center",
-                }}
-              >
-                <div style={{ fontSize: "clamp(19px, 3.5vw, 24px)", fontWeight: 900, color: "#0f172a" }}>
-                  {t.trustStats.merchantsCount}
-                </div>
-                <div style={{ fontSize: 12, color: "#64748b", marginTop: 4, fontWeight: 500 }}>
-                  {t.trustStats.merchantsSub}
-                </div>
-              </div>
-            </Col>
-            <Col xs={12} sm={6}>
-              <div
-                className="trust-stats-card"
-                style={{
-                  background: "#ffffff",
-                  padding: "16px 10px",
-                  borderRadius: 14,
-                  border: "1px solid #e2e8f0",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
-                  height: "100%",
-                  minHeight: 88,
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "center",
-                }}
-              >
-                <div style={{ fontSize: "clamp(19px, 3.5vw, 24px)", fontWeight: 900, color: "#2563eb" }}>
-                  {t.trustStats.commissionRate}
-                </div>
-                <div style={{ fontSize: 12, color: "#64748b", marginTop: 4, fontWeight: 500 }}>
-                  {t.trustStats.commissionSub}
-                </div>
-              </div>
-            </Col>
-            <Col xs={12} sm={6}>
-              <div
-                className="trust-stats-card"
-                style={{
-                  background: "#ffffff",
-                  padding: "16px 10px",
-                  borderRadius: 14,
-                  border: "1px solid #e2e8f0",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
-                  height: "100%",
-                  minHeight: 88,
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "center",
-                }}
-              >
-                <div style={{ fontSize: "clamp(19px, 3.5vw, 24px)", fontWeight: 900, color: "#d97706" }}>
-                  {t.trustStats.satisfactionRating}
-                </div>
-                <div style={{ fontSize: 12, color: "#64748b", marginTop: 4, fontWeight: 500 }}>
-                  {t.trustStats.satisfactionSub}
-                </div>
-              </div>
-            </Col>
-          </Row>
+        {/* Real Grounded Trust & Growth Metrics - Zero Layout Shift Pure CSS Grid */}
+        <div className="trust-stats-grid">
+          <div className="trust-stats-card">
+            <div style={{ fontSize: "clamp(19px, 3.5vw, 24px)", fontWeight: 900, color: "#059669" }}>
+              {t.trustStats.upiVolume}
+            </div>
+            <div style={{ fontSize: 12, color: "#64748b", marginTop: 4, fontWeight: 500 }}>
+              {t.trustStats.upiVolumeSub}
+            </div>
+          </div>
+
+          <div className="trust-stats-card">
+            <div style={{ fontSize: "clamp(19px, 3.5vw, 24px)", fontWeight: 900, color: "#0f172a" }}>
+              {t.trustStats.merchantsCount}
+            </div>
+            <div style={{ fontSize: 12, color: "#64748b", marginTop: 4, fontWeight: 500 }}>
+              {t.trustStats.merchantsSub}
+            </div>
+          </div>
+
+          <div className="trust-stats-card">
+            <div style={{ fontSize: "clamp(19px, 3.5vw, 24px)", fontWeight: 900, color: "#2563eb" }}>
+              {t.trustStats.commissionRate}
+            </div>
+            <div style={{ fontSize: 12, color: "#64748b", marginTop: 4, fontWeight: 500 }}>
+              {t.trustStats.commissionSub}
+            </div>
+          </div>
+
+          <div className="trust-stats-card">
+            <div style={{ fontSize: "clamp(19px, 3.5vw, 24px)", fontWeight: 900, color: "#d97706" }}>
+              {t.trustStats.satisfactionRating}
+            </div>
+            <div style={{ fontSize: 12, color: "#64748b", marginTop: 4, fontWeight: 500 }}>
+              {t.trustStats.satisfactionSub}
+            </div>
+          </div>
         </div>
       </section>
 
@@ -1845,13 +1782,15 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
               </span>
             </div>
 
-            <Slider
+            <input
+              type="range"
               min={10000}
               max={1000000}
               step={10000}
               value={monthlySales}
-              onChange={setMonthlySales}
-              tooltip={{ formatter: (v) => `₹${Number(v).toLocaleString("en-IN")}` }}
+              onChange={(e) => setMonthlySales(Number(e.target.value))}
+              aria-label={t.calculator.estimatedSales}
+              className="roi-range-input"
             />
 
             <Divider style={{ borderColor: "rgba(255,255,255,0.1)", margin: "18px 0" }} />

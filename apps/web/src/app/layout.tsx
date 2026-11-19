@@ -129,6 +129,32 @@ export default function RootLayout({
                 padding: 64px 24px 32px;
                 text-align: center;
               }
+              .trust-stats-grid {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 12px;
+                max-width: 960px;
+                margin: 0 auto 36px;
+                min-height: 88px;
+                contain: layout;
+              }
+              .desktop-nav-links {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                height: 36px;
+                contain: layout;
+              }
+              .roi-range-input {
+                width: 100%;
+                height: 8px;
+                border-radius: 4px;
+                background: #334155;
+                accent-color: #25D366;
+                cursor: pointer;
+                margin: 12px 0 8px;
+                outline: none;
+              }
               .trust-stats-card {
                 background: #ffffff;
                 padding: 16px 10px;
@@ -240,6 +266,11 @@ export default function RootLayout({
                 .show-on-mobile { display: flex !important; }
                 .mobile-header-controls { display: flex !important; align-items: center; gap: 8px; }
                 .hero-section { padding: 36px 16px 24px; }
+                .trust-stats-grid {
+                  grid-template-columns: repeat(2, 1fr) !important;
+                  min-height: 188px !important;
+                  margin: 0 16px 32px !important;
+                }
                 .hero-cta-group {
                   flex-direction: column !important;
                   gap: 12px !important;
