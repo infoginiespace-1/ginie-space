@@ -41,6 +41,7 @@ import {
   ExclamationCircleFilled,
   ShareAltOutlined,
   ReloadOutlined,
+  AudioOutlined,
 } from "@ant-design/icons";
 import { api } from "../../lib/api";
 import { getSocket } from "../../lib/socket";
@@ -128,6 +129,122 @@ export default function OrdersPage() {
   const [lineItems, setLineItems] = useState<OrderLineItem[]>([]);
   const [pickerProductId, setPickerProductId] = useState<string | undefined>(undefined);
   const [pickerQty, setPickerQty] = useState<number>(1);
+  const [isListeningVoice, setIsListeningVoice] = useState(false);
+  const [voiceTranscript, setVoiceTranscript] = useState("");
+
+  const handleVoiceBilling = () => {
+    if (typeof window === "undefined") return;
+    const SpeechRecognitionClass = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognitionClass) {
+      message.warning("Voice Recognition aapke browser me supported nahi hai. Google Chrome use karein.");
+      return;
+    }
+
+    if (isListeningVoice) {
+      setIsListeningVoice(false);
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognitionClass();
+      recognition.lang = "hi-IN";
+      recognition.continuous = false;
+      recognition.interimResults = false;
+
+      recognition.onstart = () => {
+        setIsListeningVoice(true);
+        setVoiceTranscript("बोलिए... जैसे: '2 किलो चावल' या '5 पैकेट दूध'");
+      };
+
+      recognition.onresult = (event: any) => {
+        const transcript = event.results?.[0]?.[0]?.transcript || "";
+        setVoiceTranscript(transcript);
+
+        if (!transcript.trim()) {
+          setIsListeningVoice(false);
+          return;
+        }
+
+        const hindiNumbers: Record<string, number> = {
+          ek: 1, do: 2, teen: 3, char: 4, paanch: 5, chhe: 6, saat: 7, aath: 8, nau: 9, dus: 10,
+          "एक": 1, "दो": 2, "तीन": 3, "चार": 4, "पांच": 5, "छह": 6, "सात": 7, "आठ": 8, "नौ": 9, "दस": 10,
+        };
+
+        let parsedQty = 1;
+        const matchNum = transcript.match(/\b\d+\b/);
+        if (matchNum) {
+          parsedQty = parseInt(matchNum[0], 10);
+        } else {
+          for (const [w, n] of Object.entries(hindiNumbers)) {
+            const re = new RegExp(`\\b${w}\\b`, "i");
+            if (re.test(transcript)) {
+              parsedQty = n;
+              break;
+            }
+          }
+        }
+
+        const cleanText = transcript
+          .replace(/\b\d+\b/g, "")
+          .replace(/kilo|kg|packet|pack|piece|pcs|l|litre|लीटर|किलो|पैकेट/gi, "")
+          .trim()
+          .toLowerCase();
+
+        const words = cleanText.split(/\s+/).filter((w: string) => w.length >= 2);
+        let matchedProduct = products.find((p) => {
+          const pName = p.name.toLowerCase();
+          return pName.includes(cleanText) || cleanText.includes(pName);
+        });
+
+        if (!matchedProduct && words.length > 0) {
+          matchedProduct = products.find((p) => {
+            const pName = p.name.toLowerCase();
+            return words.some((w: string) => pName.includes(w));
+          });
+        }
+
+        if (matchedProduct) {
+          setLineItems((prev) => {
+            const exists = prev.find((item) => item.productId === matchedProduct!.id);
+            if (exists) {
+              return prev.map((item) =>
+                item.productId === matchedProduct!.id
+                  ? { ...item, quantity: item.quantity + parsedQty }
+                  : item
+              );
+            }
+            return [
+              ...prev,
+              {
+                productId: matchedProduct!.id,
+                name: matchedProduct!.name,
+                price: Number(matchedProduct!.price) || 0,
+                quantity: parsedQty,
+                unit: matchedProduct!.unit || "pcs",
+              },
+            ];
+          });
+          message.success(`🎙️ Added: ${parsedQty} × ${matchedProduct.name}`);
+        } else {
+          message.info(`सुना: "${transcript}". कृपया ड्रॉपडाउन से चुनें।`);
+        }
+
+        setIsListeningVoice(false);
+      };
+
+      recognition.onerror = () => {
+        setIsListeningVoice(false);
+      };
+
+      recognition.onend = () => {
+        setIsListeningVoice(false);
+      };
+
+      recognition.start();
+    } catch {
+      setIsListeningVoice(false);
+    }
+  };
   const [statusUpdating, setStatusUpdating] = useState<string | null>(null);
   const [paymentUpdating, setPaymentUpdating] = useState<string | null>(null);
   const [partialModalOrder, setPartialModalOrder] = useState<Order | null>(null);
@@ -1111,9 +1228,32 @@ export default function OrdersPage() {
         )}
 
         <div style={{ marginBottom: 16, padding: 12, background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0" }}>
-          <Text strong style={{ display: "block", marginBottom: 8, fontSize: 13 }}>
-            <ShoppingCartOutlined /> Add Catalog Items (Optional — auto-calculates total &amp; deducts stock)
-          </Text>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, flexWrap: "wrap", gap: 8 }}>
+            <Text strong style={{ fontSize: 13 }}>
+              <ShoppingCartOutlined /> Add Catalog Items
+            </Text>
+            <Button
+              size="small"
+              icon={<AudioOutlined style={{ color: isListeningVoice ? "#ef4444" : "#059669" }} />}
+              onClick={handleVoiceBilling}
+              style={{
+                borderRadius: 16,
+                fontWeight: 600,
+                fontSize: 12,
+                borderColor: isListeningVoice ? "#ef4444" : "#10b981",
+                background: isListeningVoice ? "#fef2f2" : "#f0fdf4",
+                color: isListeningVoice ? "#b91c1c" : "#15803d",
+              }}
+            >
+              {isListeningVoice ? "🎙️ बोल रहे हैं... (Listening)" : "🎙️ आवाज़ से जोड़ें (Voice Add)"}
+            </Button>
+          </div>
+
+          {isListeningVoice && (
+            <div style={{ marginBottom: 10, padding: "6px 10px", background: "#fef2f2", border: "1px dashed #ef4444", borderRadius: 6, fontSize: 12, color: "#991b1b" }}>
+              🎙️ <strong>माइक्रोफोन चालू है:</strong> {voiceTranscript || "जैसे बोलें: '2 किलो चावल' या '5 पैकेट दूध'"}
+            </div>
+          )}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <Select
               showSearch

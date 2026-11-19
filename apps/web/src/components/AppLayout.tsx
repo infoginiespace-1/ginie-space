@@ -21,12 +21,15 @@ import {
   BellOutlined,
   CrownOutlined,
   PictureOutlined,
+  SoundOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "../context/AuthContext";
 import { usePathname, useRouter } from "next/navigation";
 import { getSocket } from "../lib/socket";
 import { api } from "../lib/api";
 import { UpgradeModal } from "./UpgradeModal";
+import { SoundboxModal } from "./SoundboxModal";
+import { announceOrderSoundbox, playSoundboxChime, getSoundboxSettings } from "../lib/soundbox";
 
 const { Header, Content, Sider } = Layout;
 const { Text } = Typography;
@@ -54,6 +57,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [announcement, setAnnouncement] = useState<{ message: string; title?: string; type?: "info" | "warning" | "success" | "error" } | null>(null);
   const [announcementDismissed, setAnnouncementDismissed] = useState(false);
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  const [soundboxModalOpen, setSoundboxModalOpen] = useState(false);
+  const [soundboxEnabled, setSoundboxEnabled] = useState(true);
+
+  useEffect(() => {
+    setSoundboxEnabled(getSoundboxSettings().enabled);
+  }, [soundboxModalOpen]);
 
   useEffect(() => {
     Promise.all([
@@ -106,13 +115,16 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         setQrModalVisible(true);
       });
 
-      socket.on("order:created", () => {
+      socket.on("order:created", (data: any) => {
         setPendingOrdersCount((c) => c + 1);
+        const total = Number(data?.totalAmount) || Number(data?.order?.totalAmount) || 0;
+        announceOrderSoundbox(total);
       });
 
       socket.on("whatsapp:message", (ev: any) => {
         if (!ev?.fromMe && pathname !== "/inbox") {
           setUnreadChatsCount((c) => c + 1);
+          playSoundboxChime(0.4);
         }
       });
     }
@@ -370,6 +382,19 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   )
                 )}
 
+                <Button
+                  size="small"
+                  icon={<SoundOutlined style={{ color: soundboxEnabled ? "#059669" : "#64748b", fontSize: 13 }} />}
+                  onClick={() => setSoundboxModalOpen(true)}
+                  title="Audio Soundbox"
+                  style={{
+                    padding: "0 6px",
+                    borderRadius: 6,
+                    border: soundboxEnabled ? "1px solid #10b981" : "1px solid #e2e8f0",
+                    background: soundboxEnabled ? "#f0fdf4" : "#ffffff",
+                  }}
+                />
+
                 <Popover
                   placement="bottomRight"
                   trigger="click"
@@ -491,6 +516,19 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     </Button>
                   )
                 )}
+                <Button
+                  size="small"
+                  icon={<SoundOutlined style={{ color: soundboxEnabled ? "#059669" : "#64748b", fontSize: 13 }} />}
+                  onClick={() => setSoundboxModalOpen(true)}
+                  title="Audio Soundbox"
+                  style={{
+                    padding: "0 6px",
+                    borderRadius: 6,
+                    border: soundboxEnabled ? "1px solid #10b981" : "1px solid #e2e8f0",
+                    background: soundboxEnabled ? "#f0fdf4" : "#ffffff",
+                  }}
+                />
+
                 <Popover
                   placement="bottomRight"
                   trigger="click"
@@ -633,6 +671,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         open={upgradeModalOpen}
         onClose={() => setUpgradeModalOpen(false)}
         currentPlan={user?.plan}
+      />
+
+      {/* Soundbox Configuration & Test Modal */}
+      <SoundboxModal
+        open={soundboxModalOpen}
+        onClose={() => setSoundboxModalOpen(false)}
       />
     </Layout>
   );

@@ -7,6 +7,44 @@ import { QRCode } from "antd";
 
 const { Title, Text, Paragraph } = Typography;
 
+function numToWordsINR(num: number): string {
+  const a = [
+    "", "One ", "Two ", "Three ", "Four ", "Five ", "Six ", "Seven ", "Eight ", "Nine ", "Ten ",
+    "Eleven ", "Twelve ", "Thirteen ", "Fourteen ", "Fifteen ", "Sixteen ", "Seventeen ", "Eighteen ", "Nineteen "
+  ];
+  const b = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+
+  const n = Math.floor(num);
+  if (n === 0) return "Zero Rupees Only";
+
+  const inWords = (val: number): string => {
+    let str = "";
+    if (val > 99) {
+      str += a[Math.floor(val / 100)] + "Hundred ";
+      val %= 100;
+    }
+    if (val > 19) {
+      str += b[Math.floor(val / 10)] + " " + a[val % 10];
+    } else {
+      str += a[val];
+    }
+    return str;
+  };
+
+  let output = "";
+  const crore = Math.floor(n / 10000000);
+  const lakh = Math.floor((n % 10000000) / 100000);
+  const thousand = Math.floor((n % 100000) / 1000);
+  const remaining = n % 1000;
+
+  if (crore > 0) output += inWords(crore) + "Crore ";
+  if (lakh > 0) output += inWords(lakh) + "Lakh ";
+  if (thousand > 0) output += inWords(thousand) + "Thousand ";
+  if (remaining > 0) output += inWords(remaining);
+
+  return `Rupees ${output.trim()} Only`;
+}
+
 export interface InvoiceItem {
   name: string;
   price: number;
@@ -100,7 +138,8 @@ export function InvoiceModal({ open, onClose, order, store }: InvoiceModalProps)
       `Payment Status: *${(order.paymentStatus || "unpaid").toUpperCase()}*${utrNumber ? ` (UPI UTR: ${utrNumber})` : ""}\n\n` +
       `Items:\n` +
       items.map((i) => `• ${i.name} (x${i.quantity}) - ₹${i.price * i.quantity}`).join("\n") +
-      `\n\nThank you for shopping with us! 🙏`;
+      `\n\n🎁 *Customer Special Offer:* Agle order par vishesh chhoot ke liye hamari dukan se dobara judein!\n` +
+      `Thank you for shopping with us! 🙏`;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, "_blank");
   };
 
@@ -377,6 +416,9 @@ export function InvoiceModal({ open, onClose, order, store }: InvoiceModalProps)
                     Balance Due: ₹{Math.max(0, grandTotal - (Number(order.paidAmount) || 0)).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                   </div>
                 )}
+                <div style={{ marginTop: 8, padding: "4px 8px", background: "#f8fafc", borderRadius: 4, fontSize: 11, color: "#475569", fontStyle: "italic", textAlign: "right" }}>
+                  <strong>In Words:</strong> {numToWordsINR(grandTotal)}
+                </div>
               </div>
             </Col>
           </Row>
