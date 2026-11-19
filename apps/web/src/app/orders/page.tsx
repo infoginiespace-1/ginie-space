@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { AppLayout } from "../../components/AppLayout";
 import {
   Card,
@@ -81,6 +81,8 @@ interface CatalogProduct {
   stock: number;
   itemType?: "product" | "service";
   duration?: string;
+  category?: string;
+  description?: string;
 }
 
 const BOOKING_TIME_SLOTS = [
@@ -97,6 +99,87 @@ const SERVICE_MODE_NAMES: Record<string, string> = {
   online: "Online / Video",
   any: "Flexible",
 };
+
+// Indian Grocery & Retail Devanagari-to-Roman Transliteration Dictionary
+const HINDI_GROCERY_SYNONYMS: Record<string, string[]> = {
+  "चावल": ["chawal", "rice", "basmati", "kolam"],
+  "आटा": ["atta", "aata", "flour", "wheat", "aashirvaad", "chakki"],
+  "मैदा": ["maida", "flour"],
+  "सूजी": ["sooji", "suji", "rawa", "semolina"],
+  "बेसन": ["besan", "gram flour"],
+  "चीनी": ["sugar", "cheeni", "shakkar", "sakkar"],
+  "शक्कर": ["sugar", "cheeni", "shakkar"],
+  "गुड़": ["jaggery", "gud", "gur"],
+  "नमक": ["salt", "namak", "tata"],
+  "तेल": ["oil", "tel", "fortune", "refined", "mustard", "sarson", "sunflower", "saffola", "dhara"],
+  "सरसों": ["sarson", "mustard", "oil", "tel"],
+  "रिफाइंड": ["refined", "oil", "fortune"],
+  "फॉर्च्यून": ["fortune", "oil"],
+  "घी": ["ghee", "amul", "desi ghee", "gowardhan"],
+  "मक्खन": ["butter", "amul"],
+  "बटर": ["butter", "amul"],
+  "दूध": ["milk", "doodh", "amul", "mother dairy", "toned"],
+  "दही": ["curd", "dahi", "yogurt"],
+  "पनीर": ["paneer", "cottage cheese"],
+  "ब्रेड": ["bread", "pav", "white bread", "brown bread"],
+  "पाव": ["pav", "bread"],
+  "अंडा": ["egg", "anda", "ande", "eggs"],
+  "अंडे": ["egg", "anda", "ande", "eggs"],
+  "दाल": ["dal", "daal", "pulses"],
+  "अरहर": ["arhar", "toor", "tur"],
+  "तूर": ["toor", "arhar", "tur"],
+  "चना": ["chana", "chickpea", "gram", "besan"],
+  "मूंग": ["moong", "mung"],
+  "उड़द": ["urad", "udad"],
+  "राजमा": ["rajma", "kidney beans"],
+  "छोले": ["chole", "chana", "kabuli"],
+  "चाय": ["tea", "chai", "taj mahal", "red label", "tata tea", "wagh bakri"],
+  "चायपत्ती": ["tea", "chai"],
+  "कॉफ़ी": ["coffee", "nescafe", "bru"],
+  "कॉफी": ["coffee", "nescafe", "bru"],
+  "बिस्कुट": ["biscuit", "biscuits", "parle", "britannia", "marie", "good day", "oreo", "monaco"],
+  "बिस्किट": ["biscuit", "biscuits", "parle", "britannia", "marie", "good day", "oreo", "monaco"],
+  "पारले": ["parle", "biscuit"],
+  "मैगी": ["maggi", "noodles", "yippee"],
+  "नूडल्स": ["noodles", "maggi"],
+  "नमकीन": ["namkeen", "bhujia", "mixture", "haldiram", "bikaji"],
+  "भुजिया": ["bhujia", "namkeen"],
+  "चॉकलेट": ["chocolate", "cadbury", "dairy milk", "kitkat"],
+  "चिप्स": ["chips", "lays", "kurkure", "bingo"],
+  "मसाला": ["masala", "spices", "mdh", "everest", "catch"],
+  "हल्दी": ["haldi", "turmeric"],
+  "मिर्च": ["mirch", "chilli", "red chilli"],
+  "धनिया": ["dhaniya", "coriander"],
+  "जीरा": ["jeera", "cumin"],
+  "राई": ["rai", "mustard seeds"],
+  "हींग": ["hing", "asafoetida"],
+  "गरम मसाला": ["garam masala"],
+  "साबुन": ["soap", "sabun", "lux", "dettol", "lifebuoy", "dove", "pears", "cinthol"],
+  "सर्फ": ["surf", "detergent", "ariel", "tide", "wheel", "rin", "surf excel"],
+  "डिटर्जेंट": ["detergent", "surf", "powder"],
+  "शैम्पू": ["shampoo", "clinic plus", "dove", "pantene", "head & shoulders", "sunsilk"],
+  "टूथपेस्ट": ["toothpaste", "colgate", "pepsodent", "sensodyne", "close up", "dabur red"],
+  "पेस्ट": ["paste", "toothpaste", "colgate"],
+  "ब्रश": ["brush", "toothbrush"],
+  "अगरबत्ती": ["agarbatti", "incense", "cycle", "zed"],
+  "माचिस": ["matchbox", "machis"],
+  "पानी": ["water", "bisleri", "aquafina", "kinley"],
+};
+
+const HINDI_NUMBER_WORDS: Record<string, number> = {
+  "ek": 1, "do": 2, "teen": 3, "char": 4, "paanch": 5, "chhe": 6, "saat": 7, "aath": 8, "nau": 9, "dus": 10,
+  "gyarah": 11, "barah": 12, "terah": 13, "chaudah": 14, "pandrah": 15, "solah": 16, "satrah": 17, "atharah": 18, "unnis": 19, "bees": 20,
+  "एक": 1, "दो": 2, "तीन": 3, "चार": 4, "पांच": 5, "छह": 6, "सात": 7, "आठ": 8, "नौ": 9, "दस": 10,
+  "ग्यारह": 11, "बारह": 12, "तेरह": 13, "चौदह": 14, "पंद्रह": 15, "सोलह": 16, "सत्रह": 17, "अठारह": 18, "उन्नीस": 19, "बीस": 20,
+  "आधा": 1, "डेढ़": 2, "ढाई": 3,
+};
+
+const VOICE_STOPWORDS = [
+  "add karo", "add kardo", "likho", "likh do", "daalo", "daal do", "chahiye", "de do",
+  "bhai", "bhaiya", "aur", "kripya", "please", "packet", "pack", "pkt", "kilo", "kg", "gram",
+  "gm", "litre", "liter", "ltr", "l", "bottle", "piece", "pcs", "pe", "ka", "ki", "ke", "ko",
+  "पैकेट", "किलो", "लीटर", "ग्राम", "पीस", "बोतल", "डब्बा", "लिखो", "डालो", "ऐड करो", "चाहिए", "भाई"
+];
 
 interface CustomerOption {
   id: string;
@@ -131,6 +214,8 @@ export default function OrdersPage() {
   const [pickerQty, setPickerQty] = useState<number>(1);
   const [isListeningVoice, setIsListeningVoice] = useState(false);
   const [voiceTranscript, setVoiceTranscript] = useState("");
+  const [voiceLang, setVoiceLang] = useState<"hi-IN" | "en-IN">("hi-IN");
+  const recognitionRef = useRef<any>(null);
 
   const handleVoiceBilling = () => {
     if (typeof window === "undefined") return;
@@ -141,99 +226,200 @@ export default function OrdersPage() {
     }
 
     if (isListeningVoice) {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch {}
+      }
       setIsListeningVoice(false);
       return;
     }
 
     try {
       const recognition = new SpeechRecognitionClass();
-      recognition.lang = "hi-IN";
+      recognitionRef.current = recognition;
+      recognition.lang = voiceLang;
       recognition.continuous = false;
       recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
 
       recognition.onstart = () => {
         setIsListeningVoice(true);
-        setVoiceTranscript("बोलिए... जैसे: '2 किलो चावल' या '5 पैकेट दूध'");
+        setVoiceTranscript(
+          voiceLang === "hi-IN"
+            ? "सुन रहे हैं... जैसे बोलें: '2 किलो चावल' या '5 पैकेट दूध'"
+            : "Listening... e.g. '2 kg rice' or '5 packet milk'"
+        );
       };
 
       recognition.onresult = (event: any) => {
-        const transcript = event.results?.[0]?.[0]?.transcript || "";
+        const rawTranscript = event.results?.[0]?.[0]?.transcript || "";
+        const transcript = rawTranscript.trim();
         setVoiceTranscript(transcript);
 
-        if (!transcript.trim()) {
+        if (!transcript) {
           setIsListeningVoice(false);
           return;
         }
 
-        const hindiNumbers: Record<string, number> = {
-          ek: 1, do: 2, teen: 3, char: 4, paanch: 5, chhe: 6, saat: 7, aath: 8, nau: 9, dus: 10,
-          "एक": 1, "दो": 2, "तीन": 3, "चार": 4, "पांच": 5, "छह": 6, "सात": 7, "आठ": 8, "नौ": 9, "दस": 10,
+        // Stage 1: Extract quantity from digits or English/Hindi words
+        const englishNumbers: Record<string, number> = {
+          one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
+          half: 1,
         };
 
         let parsedQty = 1;
-        const matchNum = transcript.match(/\b\d+\b/);
+        const matchNum = transcript.match(/\b\d+(\.\d+)?\b/);
         if (matchNum) {
-          parsedQty = parseInt(matchNum[0], 10);
+          parsedQty = Math.max(1, Math.round(parseFloat(matchNum[0])));
         } else {
-          for (const [w, n] of Object.entries(hindiNumbers)) {
-            const re = new RegExp(`\\b${w}\\b`, "i");
-            if (re.test(transcript)) {
-              parsedQty = n;
-              break;
+          // Check Hindi numbers (Devanagari or Romanized)
+          for (const [w, n] of Object.entries(HINDI_NUMBER_WORDS)) {
+            const isDevanagari = /[\u0900-\u097F]/.test(w);
+            if (isDevanagari) {
+              if (transcript.includes(w)) {
+                parsedQty = n;
+                break;
+              }
+            } else {
+              const re = new RegExp(`\\b${w}\\b`, "i");
+              if (re.test(transcript)) {
+                parsedQty = n;
+                break;
+              }
+            }
+          }
+          if (parsedQty === 1) {
+            for (const [w, n] of Object.entries(englishNumbers)) {
+              const re = new RegExp(`\\b${w}\\b`, "i");
+              if (re.test(transcript)) {
+                parsedQty = n;
+                break;
+              }
             }
           }
         }
 
-        const cleanText = transcript
-          .replace(/\b\d+\b/g, "")
-          .replace(/kilo|kg|packet|pack|piece|pcs|l|litre|लीटर|किलो|पैकेट/gi, "")
-          .trim()
-          .toLowerCase();
+        // Stage 2: Clean transcript & strip stopwords
+        let cleanText = transcript.toLowerCase();
+        // remove digits
+        cleanText = cleanText.replace(/\b\d+(\.\d+)?\b/g, " ");
 
-        const words = cleanText.split(/\s+/).filter((w: string) => w.length >= 2);
-        let matchedProduct = products.find((p) => {
-          const pName = p.name.toLowerCase();
-          return pName.includes(cleanText) || cleanText.includes(pName);
-        });
+        // remove stopwords
+        for (const stopword of VOICE_STOPWORDS) {
+          cleanText = cleanText.replace(new RegExp(stopword, "gi"), " ");
+        }
+        cleanText = cleanText.replace(/\s+/g, " ").trim();
 
-        if (!matchedProduct && words.length > 0) {
-          matchedProduct = products.find((p) => {
-            const pName = p.name.toLowerCase();
-            return words.some((w: string) => pName.includes(w));
-          });
+        // Stage 3: Build candidate search tokens (Devanagari synonyms + clean tokens)
+        const searchTokens: string[] = [];
+        const rawWords = cleanText.split(/\s+/).filter((w: string) => w.length >= 2);
+        searchTokens.push(...rawWords);
+
+        // Check dictionary matches in transcript
+        for (const [devKey, synonyms] of Object.entries(HINDI_GROCERY_SYNONYMS)) {
+          if (transcript.includes(devKey) || cleanText.includes(devKey)) {
+            searchTokens.push(...synonyms);
+          } else {
+            const hasSynonym = synonyms.some((syn) => cleanText.includes(syn));
+            if (hasSynonym) {
+              searchTokens.push(...synonyms);
+            }
+          }
         }
 
-        if (matchedProduct) {
-          setLineItems((prev) => {
-            const exists = prev.find((item) => item.productId === matchedProduct!.id);
-            if (exists) {
-              return prev.map((item) =>
-                item.productId === matchedProduct!.id
-                  ? { ...item, quantity: item.quantity + parsedQty }
-                  : item
-              );
+        const uniqueTokens = Array.from(new Set(searchTokens.map((t) => t.toLowerCase())));
+
+        // Stage 4: Score all catalog products
+        if (products.length === 0) {
+          message.warning("Aapke catalog me koi product nahi hai. Pehle Products page me items add karein.");
+          setIsListeningVoice(false);
+          return;
+        }
+
+        const scored = products.map((p) => {
+          const pName = (p.name || "").toLowerCase();
+          const pCat = (p.category || "").toLowerCase();
+          let score = 0;
+
+          // Direct phrase containment
+          if (cleanText && (pName.includes(cleanText) || cleanText.includes(pName))) {
+            score += 50;
+          }
+
+          // Exact or substring match for tokens
+          for (const tok of uniqueTokens) {
+            if (!tok) continue;
+            if (pName === tok) {
+              score += 40;
+            } else if (new RegExp(`(^|\\s|[^a-zA-Z0-9])${tok}($|\\s|[^a-zA-Z0-9])`, "i").test(pName)) {
+              score += 25;
+            } else if (pName.includes(tok)) {
+              score += 15;
             }
-            return [
-              ...prev,
-              {
-                productId: matchedProduct!.id,
-                name: matchedProduct!.name,
-                price: Number(matchedProduct!.price) || 0,
-                quantity: parsedQty,
-                unit: matchedProduct!.unit || "pcs",
-              },
-            ];
+            if (pCat && pCat.includes(tok)) {
+              score += 10;
+            }
+          }
+
+          return { product: p, score };
+        });
+
+        scored.sort((a, b) => b.score - a.score);
+        const bestCandidate = scored[0];
+
+        if (bestCandidate && bestCandidate.score >= 15) {
+          const matchedProduct = bestCandidate.product;
+          setLineItems((prev) => {
+            const exists = prev.find((item) => item.productId === matchedProduct.id);
+            const next = exists
+              ? prev.map((item) =>
+                  item.productId === matchedProduct.id
+                    ? { ...item, quantity: item.quantity + parsedQty }
+                    : item
+                )
+              : [
+                  ...prev,
+                  {
+                    productId: matchedProduct.id,
+                    name: matchedProduct.name,
+                    price: Number(matchedProduct.price) || 0,
+                    quantity: parsedQty,
+                    unit: matchedProduct.unit || "pcs",
+                  },
+                ];
+
+            const newTotal = next.reduce((sum, item) => sum + (Number(item.price) || 0) * item.quantity, 0);
+            form.setFieldsValue({ totalAmount: newTotal });
+            return next;
           });
-          message.success(`🎙️ Added: ${parsedQty} × ${matchedProduct.name}`);
+
+          setPickerProductId(matchedProduct.id);
+          setPickerQty(parsedQty);
+
+          const totalCost = (Number(matchedProduct.price) || 0) * parsedQty;
+          message.success(`🎙️ जोड़ा गया: ${parsedQty} × ${matchedProduct.name} (₹${totalCost.toLocaleString("en-IN")})`);
+        } else if (bestCandidate && bestCandidate.score > 0) {
+          setPickerProductId(bestCandidate.product.id);
+          setPickerQty(parsedQty);
+          message.info(`सुना: "${transcript}". संभावित: "${bestCandidate.product.name}" चुना गया है। "Add" दबाएं.`);
         } else {
-          message.info(`सुना: "${transcript}". कृपया ड्रॉपडाउन से चुनें।`);
+          message.warning(`सुना: "${transcript}". कैटलॉग में कोई मेल नहीं मिला। कृपया उत्पाद चुनें।`);
         }
 
         setIsListeningVoice(false);
       };
 
-      recognition.onerror = () => {
+      recognition.onerror = (event: any) => {
         setIsListeningVoice(false);
+        const err = event?.error;
+        if (err === "not-allowed" || err === "service-not-allowed") {
+          message.error("माइक्रोफोन की अनुमति (Permission) ब्लॉक है। ब्राउज़र एड्रेस बार में 🔒 या 🎙️ पर क्लिक कर Allow करें।");
+        } else if (err === "no-speech") {
+          message.warning("कोई आवाज़ नहीं सुनाई दी। कृपया दोबारा माइक दबाकर स्पष्ट बोलें।");
+        } else if (err === "network") {
+          message.error("इंटरनेट कनेक्शन धीमा है। वॉयस रिकॉग्निशन के लिए इंटरनेट आवश्यक है।");
+        }
       };
 
       recognition.onend = () => {
@@ -510,9 +696,7 @@ export default function OrdersPage() {
     setLineItems((prev) => {
       const next = prev.filter((i) => i.productId !== productId);
       const sum = next.reduce((acc, item) => acc + item.price * item.quantity, 0);
-      if (next.length > 0) {
-        form.setFieldsValue({ totalAmount: sum });
-      }
+      form.setFieldsValue({ totalAmount: sum });
       return next;
     });
   };
@@ -1232,26 +1416,64 @@ export default function OrdersPage() {
             <Text strong style={{ fontSize: 13 }}>
               <ShoppingCartOutlined /> Add Catalog Items
             </Text>
-            <Button
-              size="small"
-              icon={<AudioOutlined style={{ color: isListeningVoice ? "#ef4444" : "#059669" }} />}
-              onClick={handleVoiceBilling}
-              style={{
-                borderRadius: 16,
-                fontWeight: 600,
-                fontSize: 12,
-                borderColor: isListeningVoice ? "#ef4444" : "#10b981",
-                background: isListeningVoice ? "#fef2f2" : "#f0fdf4",
-                color: isListeningVoice ? "#b91c1c" : "#15803d",
-              }}
-            >
-              {isListeningVoice ? "🎙️ बोल रहे हैं... (Listening)" : "🎙️ आवाज़ से जोड़ें (Voice Add)"}
-            </Button>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <Segmented
+                size="small"
+                value={voiceLang}
+                onChange={(v) => setVoiceLang(v as "hi-IN" | "en-IN")}
+                options={[
+                  { label: "🇮🇳 हिन्दी", value: "hi-IN" },
+                  { label: "🌐 English", value: "en-IN" },
+                ]}
+              />
+              <Button
+                size="small"
+                icon={<AudioOutlined style={{ color: isListeningVoice ? "#ef4444" : "#059669" }} />}
+                onClick={handleVoiceBilling}
+                style={{
+                  borderRadius: 16,
+                  fontWeight: 600,
+                  fontSize: 12,
+                  borderColor: isListeningVoice ? "#ef4444" : "#10b981",
+                  background: isListeningVoice ? "#fef2f2" : "#f0fdf4",
+                  color: isListeningVoice ? "#b91c1c" : "#15803d",
+                  boxShadow: isListeningVoice ? "0 0 0 2px rgba(239, 68, 68, 0.25)" : "none",
+                  transition: "all 0.2s ease",
+                }}
+              >
+                {isListeningVoice ? "🎙️ बोलिए... (Stop)" : "🎙️ आवाज़ से जोड़ें (Voice Add)"}
+              </Button>
+            </div>
           </div>
 
           {isListeningVoice && (
-            <div style={{ marginBottom: 10, padding: "6px 10px", background: "#fef2f2", border: "1px dashed #ef4444", borderRadius: 6, fontSize: 12, color: "#991b1b" }}>
-              🎙️ <strong>माइक्रोफोन चालू है:</strong> {voiceTranscript || "जैसे बोलें: '2 किलो चावल' या '5 पैकेट दूध'"}
+            <div
+              style={{
+                marginBottom: 10,
+                padding: "8px 12px",
+                background: "#fef2f2",
+                border: "1px dashed #ef4444",
+                borderRadius: 6,
+                fontSize: 12,
+                color: "#991b1b",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              <span
+                style={{
+                  display: "inline-block",
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  background: "#ef4444",
+                }}
+              />
+              <div style={{ flex: 1 }}>
+                <strong>माइक चालू है ({voiceLang === "hi-IN" ? "हिन्दी" : "English"}):</strong>{" "}
+                {voiceTranscript || (voiceLang === "hi-IN" ? "जैसे बोलें: '2 किलो चावल' या '5 पैकेट दूध'" : "Speak now: '2 kg rice' or '5 packet milk'")}
+              </div>
             </div>
           )}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
