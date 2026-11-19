@@ -32,9 +32,11 @@ import {
   Grid,
   Segmented,
   Avatar,
+  Rate,
 } from "antd";
 import {
   UserOutlined,
+  SaveOutlined,
   ShopOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
@@ -67,6 +69,8 @@ import {
   LineChartOutlined,
   GlobalOutlined,
   RocketOutlined,
+  CompassOutlined,
+  UserAddOutlined,
   RiseOutlined,
   SettingOutlined,
   PictureOutlined,
@@ -146,6 +150,29 @@ const getPhone10 = (raw: string): string => {
   const d = getPhoneDigits(raw);
   return d.length >= 10 ? d.slice(-10) : d;
 };
+
+const ADMIN_PITCH_TEMPLATES = [
+  {
+    key: "free-store",
+    label: "🏪 0% Commission WhatsApp Store Pitch",
+    text: "Namaste {name} ji! 🙏\n\nKya aap {city} me apni dukaan ko online le jana chahte hain?\n\n*GinieSpace* par apni dukaan ka official digital catalog aur WhatsApp store sirf 30 seconds me live karein:\n\n✅ 0% Payment Gateway Fee (100% paise direct aapke UPI account me)\n✅ Direct WhatsApp Order Placement & Automatic Receipts\n✅ Customers ke liye interactive digital catalog\n\nLive Demo Dekhein: {demo_url}\nFree Store Banayein: {signup_url}\n\nKisi bhi jaankari ya demo ke liye is number par reply karein!",
+  },
+  {
+    key: "qr-standee",
+    label: "🪧 Free Counter QR Standee & UPI Billing",
+    text: "Namaste {name} ji! 🏪\n\nApni dukaan counter par lagayein *GinieSpace Smart UPI Standee*:\n\n🔹 Customer QR scan karke direct aapke bank me pay karega\n🔹 Payment aate hi customer ke WhatsApp par instant invoice bill chala jayega\n🔹 Daily Khata & Sales Report aapke mobile par automatically track hogi\n\nApni dukaan register karein: {signup_url}\nSample Store: {demo_url}",
+  },
+  {
+    key: "wholesale-catalog",
+    label: "📦 Wholesale & B2B Stock Order Automation",
+    text: "Namaste {name} ji! 📦\n\nApne B2B retailers aur clients ko baar-baar PDF rate card bhejna band karein!\n\n*GinieSpace B2B Catalog Software* ke fayde:\n• Minimum Order Quantity (MOQ) & Wholesale tier pricing\n• Retailer WhatsApp par direct bulk order place kar sakta hai\n• Real-time stock availability & PDF Invoice generation\n\nDemo dekhein: {demo_url}\nFree account banayein: {signup_url}",
+  },
+  {
+    key: "demo-showcase",
+    label: "🚀 Quick Live Demo Showcase & Free Trial",
+    text: "Namaste {name} ji! ✨\n\nHumne aapke business ({category}) ke liye ek live interactive sample store create kiya hai:\n👉 {demo_url}\n\nAap bhi apni dukaan ka aisa hi online store bilkul FREE me shuru kar sakte hain:\n👉 {signup_url}\n\nKya aapke paas 2 minute hain ek quick walkthrough ke liye?",
+  },
+];
 
 export default function AdminPage() {
   const { user } = useAuth();
@@ -256,6 +283,43 @@ export default function AdminPage() {
   const [loadingWebAnalytics, setLoadingWebAnalytics] = useState(false);
   const [savingSeo, setSavingSeo] = useState(false);
   const [seoForm] = Form.useForm();
+
+  // Admin Merchant Lead Acquisition & CRM State
+  const [leadSubView, setLeadSubView] = useState<"discover" | "crm" | "pitch-center">("discover");
+  const [adminSearchingLeads, setAdminSearchingLeads] = useState(false);
+  const [discoveredMerchantLeads, setDiscoveredMerchantLeads] = useState<any[]>([]);
+  const [leadsNextPageToken, setLeadsNextPageToken] = useState<string | null>(null);
+  const [selectedLeadKeys, setSelectedLeadKeys] = useState<React.Key[]>([]);
+  const [leadSearchQuery, setLeadSearchQuery] = useState("Kirana Store");
+  const [leadSearchCity, setLeadSearchCity] = useState("Patna");
+  const [leadSearchArea, setLeadSearchArea] = useState("");
+  const [leadSearchPincode, setLeadSearchPincode] = useState("");
+
+  const [adminSavedLeads, setAdminSavedLeads] = useState<any[]>([]);
+  const [loadingAdminLeads, setLoadingAdminLeads] = useState(false);
+  const [leadStatusFilter, setLeadStatusFilter] = useState<string>("all");
+  const [leadCrmSearch, setLeadCrmSearch] = useState("");
+  const [adminLeadStats, setAdminLeadStats] = useState({
+    totalSaved: 0,
+    newCount: 0,
+    contactedCount: 0,
+    convertedCount: 0,
+    archivedCount: 0,
+    signedUpCount: 0,
+    proCount: 0,
+  });
+
+  const [savingLeadId, setSavingLeadId] = useState<string | null>(null);
+  const [onboardingLead, setOnboardingLead] = useState<any | null>(null);
+  const [onboardingSubmitting, setOnboardingSubmitting] = useState(false);
+  const [onboardedResultModal, setOnboardedResultModal] = useState<any | null>(null);
+
+  const [pitchModalOpen, setPitchModalOpen] = useState(false);
+  const [pitchTargets, setPitchTargets] = useState<any[]>([]);
+  const [selectedTemplateKey, setSelectedTemplateKey] = useState<string>("free-store");
+  const [pitchMessageText, setPitchMessageText] = useState(ADMIN_PITCH_TEMPLATES[0].text);
+  const [pitchImageUrl, setPitchImageUrl] = useState("");
+  const [sendingPitchCampaign, setSendingPitchCampaign] = useState(false);
 
   // Load All Data
   const loadAnalytics = async () => {
@@ -386,6 +450,184 @@ export default function AdminPage() {
     }
   };
 
+  const loadAdminLeads = async () => {
+    try {
+      setLoadingAdminLeads(true);
+      const res = await api.get("/api/admin/leads");
+      setAdminSavedLeads(res.data.leads || []);
+      if (res.data.stats) {
+        setAdminLeadStats(res.data.stats);
+      }
+    } catch (err: any) {
+      console.error("Failed to load admin leads:", err);
+    } finally {
+      setLoadingAdminLeads(false);
+    }
+  };
+
+  const handleSearchAdminLeads = async (isNextPage = false) => {
+    try {
+      setAdminSearchingLeads(true);
+      const res = await api.post("/api/admin/leads/discover", {
+        query: leadSearchQuery,
+        city: leadSearchCity,
+        area: leadSearchArea,
+        pincode: leadSearchPincode,
+        pageToken: isNextPage ? leadsNextPageToken : undefined,
+      });
+      if (isNextPage) {
+        setDiscoveredMerchantLeads((prev) => [...prev, ...(res.data.leads || [])]);
+      } else {
+        setDiscoveredMerchantLeads(res.data.leads || []);
+        setSelectedLeadKeys([]);
+      }
+      setLeadsNextPageToken(res.data.nextPageToken || null);
+      message.success(`Found ${res.data.leads?.length || 0} business leads in ${leadSearchCity || "area"}`);
+    } catch (err: any) {
+      message.error(err.response?.data?.error || err.message || "Failed to discover leads");
+    } finally {
+      setAdminSearchingLeads(false);
+    }
+  };
+
+  const handleSaveLeadToCrm = async (lead: any) => {
+    try {
+      setSavingLeadId(lead.id || lead.placeId);
+      const res = await api.post("/api/admin/leads/save", {
+        placeId: lead.id || lead.placeId,
+        name: lead.name,
+        phone: lead.phone,
+        address: lead.address,
+        website: lead.website,
+        rating: lead.rating,
+        ratingCount: lead.ratingCount,
+        category: lead.category || leadSearchQuery || "Retail Store",
+      });
+      message.success(res.data.message || "Saved to Merchant Pipeline!");
+      loadAdminLeads();
+      setDiscoveredMerchantLeads((prev) =>
+        prev.map((l) => (l.id === lead.id ? { ...l, savedInfo: { id: res.data.lead.id, status: "new" } } : l))
+      );
+    } catch (err: any) {
+      message.error(err.response?.data?.error || "Failed to save lead");
+    } finally {
+      setSavingLeadId(null);
+    }
+  };
+
+  const handleBatchSaveToCrm = async () => {
+    const selected = discoveredMerchantLeads.filter((l) => selectedLeadKeys.includes(l.id));
+    if (selected.length === 0) {
+      message.warning("Please select at least one lead to save");
+      return;
+    }
+    try {
+      const res = await api.post("/api/admin/leads/batch-save", { leads: selected });
+      message.success(res.data.message || `Saved ${res.data.savedCount} leads to pipeline!`);
+      loadAdminLeads();
+    } catch (err: any) {
+      message.error(err.response?.data?.error || "Failed to batch save leads");
+    }
+  };
+
+  const handleOpenPitchModal = (leadsToPitch: any[]) => {
+    const valid = leadsToPitch.filter((l) => l.phone);
+    if (valid.length === 0) {
+      message.warning("Selected lead does not have a phone number for WhatsApp");
+      return;
+    }
+    setPitchTargets(valid);
+    const defaultTpl = ADMIN_PITCH_TEMPLATES.find((t) => t.key === selectedTemplateKey) || ADMIN_PITCH_TEMPLATES[0];
+    setPitchMessageText(defaultTpl.text);
+    setPitchModalOpen(true);
+  };
+
+  const handleSendPitchCampaign = async () => {
+    try {
+      setSendingPitchCampaign(true);
+      const res = await api.post("/api/admin/leads/whatsapp-pitch", {
+        leads: pitchTargets.map((l) => ({
+          id: l.savedInfo?.id || l.id,
+          name: l.name,
+          phone: l.phone,
+          category: l.category || leadSearchQuery,
+          city: leadSearchCity,
+        })),
+        templateText: pitchMessageText,
+        imageUrl: pitchImageUrl.trim() || undefined,
+      });
+      message.success(res.data.message);
+      setPitchModalOpen(false);
+      loadAdminLeads();
+      loadAuditLogs();
+    } catch (err: any) {
+      message.error(err.response?.data?.error || "Failed to deliver WhatsApp pitch");
+    } finally {
+      setSendingPitchCampaign(false);
+    }
+  };
+
+  const handleInstantOnboardMerchant = async (lead: any) => {
+    try {
+      setOnboardingSubmitting(true);
+      const targetId = lead.savedInfo?.id || lead.id;
+      const res = await api.post(`/api/admin/leads/${targetId}/onboard-merchant`, {
+        sendWelcomeWA: true,
+      });
+      message.success(res.data.message);
+      setOnboardedResultModal(res.data);
+      loadAdminLeads();
+      loadMerchants();
+      loadAuditLogs();
+    } catch (err: any) {
+      message.error(err.response?.data?.error || "Failed to onboard merchant");
+    } finally {
+      setOnboardingSubmitting(false);
+      setOnboardingLead(null);
+    }
+  };
+
+  const handleDeleteLead = async (leadId: string) => {
+    try {
+      await api.delete(`/api/admin/leads/${leadId}`);
+      message.success("Lead removed from pipeline");
+      loadAdminLeads();
+    } catch (err: any) {
+      message.error(err.response?.data?.error || "Failed to delete lead");
+    }
+  };
+
+  const handleUpdateLeadStatus = async (leadId: string, newStatus: string) => {
+    try {
+      await api.put(`/api/admin/leads/${leadId}`, { status: newStatus });
+      message.success(`Status updated to ${newStatus}`);
+      loadAdminLeads();
+    } catch (err: any) {
+      message.error(err.response?.data?.error || "Failed to update lead");
+    }
+  };
+
+  const exportLeadsToCsv = (leadsToExport: any[], filename = "giniespace-merchant-leads.csv") => {
+    if (!leadsToExport || leadsToExport.length === 0) {
+      message.warning("No leads to export");
+      return;
+    }
+    const headers = ["Name", "Phone", "Category", "Address", "Rating", "Pipeline Status", "Registered on GinieSpace", "Store Slug", "Plan"];
+    const rows = leadsToExport.map((l) => [
+      l.name || "",
+      l.phone || "",
+      l.category || "",
+      l.address || "",
+      l.rating ? String(l.rating) : "N/A",
+      l.status || l.savedInfo?.status || "Unsaved",
+      l.registeredMerchant ? "Yes" : "No",
+      l.registeredMerchant?.slug || "",
+      l.registeredMerchant?.plan || "N/A",
+    ]);
+    downloadCsv(filename, headers, rows);
+    message.success(`Exported ${rows.length} leads to CSV`);
+  };
+
   useEffect(() => {
     if (user && user.role !== "admin") {
       router.replace("/inbox");
@@ -399,6 +641,7 @@ export default function AdminPage() {
     loadAnnouncement();
     loadAuditLogs();
     loadWebAnalytics();
+    loadAdminLeads();
 
     // Load Support WA Status
     api.get("/api/admin/whatsapp/status")
@@ -1988,7 +2231,752 @@ export default function AdminPage() {
           },
 
           // ==========================================
-          // MODULE 3: WHATSAPP COMMAND CENTER
+          // MODULE 3: MERCHANT LEADS & ACQUISITION SUITE
+          // ==========================================
+          {
+            key: "leads-acquisition",
+            label: (
+              <span>
+                <RocketOutlined style={{ color: "#3b82f6" }} /> {isMobile ? "Leads CRM" : "Merchant Acquisition & Leads CRM"}
+                {adminLeadStats.totalSaved > 0 && (
+                  <Badge
+                    count={adminLeadStats.totalSaved}
+                    style={{ marginLeft: 6, backgroundColor: "#10b981" }}
+                  />
+                )}
+              </span>
+            ),
+            children: (
+              <div>
+                {/* Funnel KPI Cards */}
+                <Row gutter={isMobile ? [10, 10] : [16, 16]} style={{ marginBottom: 20 }}>
+                  <Col xs={12} sm={6}>
+                    <Card styles={{ body: { padding: isMobile ? "12px" : "18px" } }} style={{ borderRadius: 12, background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", color: "#fff" }}>
+                      <Statistic
+                        title={<span style={{ color: "rgba(255,255,255,0.85)", fontSize: isMobile ? 11 : 13 }}>Saved in Pipeline</span>}
+                        value={adminLeadStats.totalSaved}
+                        prefix={<CompassOutlined style={{ color: "#fff", fontSize: isMobile ? 14 : 18 }} />}
+                        valueStyle={{ color: "#fff", fontWeight: 700, fontSize: isMobile ? 18 : 24 }}
+                      />
+                      <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: 11 }}>Active Merchant Leads</Text>
+                    </Card>
+                  </Col>
+                  <Col xs={12} sm={6}>
+                    <Card styles={{ body: { padding: isMobile ? "12px" : "18px" } }} style={{ borderRadius: 12, background: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)", color: "#fff" }}>
+                      <Statistic
+                        title={<span style={{ color: "rgba(255,255,255,0.85)", fontSize: isMobile ? 11 : 13 }}>Pitches Delivered</span>}
+                        value={adminLeadStats.contactedCount}
+                        prefix={<WhatsAppOutlined style={{ color: "#fff", fontSize: isMobile ? 14 : 18 }} />}
+                        valueStyle={{ color: "#fff", fontWeight: 700, fontSize: isMobile ? 18 : 24 }}
+                      />
+                      <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: 11 }}>Via +91 92792 59690</Text>
+                    </Card>
+                  </Col>
+                  <Col xs={12} sm={6}>
+                    <Card styles={{ body: { padding: isMobile ? "12px" : "18px" } }} style={{ borderRadius: 12, background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)", color: "#fff" }}>
+                      <Statistic
+                        title={<span style={{ color: "rgba(255,255,255,0.85)", fontSize: isMobile ? 11 : 13 }}>Registered Stores</span>}
+                        value={adminLeadStats.signedUpCount}
+                        prefix={<ShopOutlined style={{ color: "#fff", fontSize: isMobile ? 14 : 18 }} />}
+                        valueStyle={{ color: "#fff", fontWeight: 700, fontSize: isMobile ? 18 : 24 }}
+                      />
+                      <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: 11 }}>
+                        {adminLeadStats.totalSaved > 0 ? `${Math.round((adminLeadStats.signedUpCount / adminLeadStats.totalSaved) * 100)}% Conversion Rate` : "Live on platform"}
+                      </Text>
+                    </Card>
+                  </Col>
+                  <Col xs={12} sm={6}>
+                    <Card styles={{ body: { padding: isMobile ? "12px" : "18px" } }} style={{ borderRadius: 12, background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", color: "#fff" }}>
+                      <Statistic
+                        title={<span style={{ color: "rgba(255,255,255,0.85)", fontSize: isMobile ? 11 : 13 }}>PRO Subscriptions</span>}
+                        value={adminLeadStats.proCount}
+                        prefix={<CrownOutlined style={{ color: "#fff", fontSize: isMobile ? 14 : 18 }} />}
+                        valueStyle={{ color: "#fff", fontWeight: 700, fontSize: isMobile ? 18 : 24 }}
+                      />
+                      <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: 11 }}>Paid SaaS Merchants</Text>
+                    </Card>
+                  </Col>
+                </Row>
+
+                {/* Sub-view Segmented */}
+                <div style={{ marginBottom: 18, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+                  <Segmented
+                    value={leadSubView}
+                    onChange={(val) => setLeadSubView(val as "discover" | "crm" | "pitch-center")}
+                    options={[
+                      { label: "🔍 Discover Potential Merchants", value: "discover" },
+                      { label: `📋 Merchant Pipeline CRM (${adminSavedLeads.length})`, value: "crm" },
+                      { label: "📢 WhatsApp Outreach & Templates", value: "pitch-center" },
+                    ]}
+                    size={isMobile ? "small" : "middle"}
+                  />
+                  <Space wrap>
+                    {leadSubView === "crm" && (
+                      <Button icon={<DownloadOutlined />} onClick={() => exportLeadsToCsv(adminSavedLeads, "giniespace-merchant-crm.csv")} size={isMobile ? "small" : "middle"}>
+                        Export CRM
+                      </Button>
+                    )}
+                    <Button icon={<SyncOutlined />} onClick={loadAdminLeads} loading={loadingAdminLeads} size={isMobile ? "small" : "middle"}>
+                      Refresh
+                    </Button>
+                  </Space>
+                </div>
+
+                {/* ==================== SUB-VIEW 1: DISCOVER LEADS ==================== */}
+                {leadSubView === "discover" && (
+                  <div>
+                    {/* Search Controls Card */}
+                    <Card styles={{ body: { padding: isMobile ? 14 : 20 } }} style={{ borderRadius: 12, marginBottom: 18 }}>
+                      <Row gutter={[12, 12]} align="middle">
+                        <Col xs={24} sm={12} md={6}>
+                          <Text strong style={{ display: "block", marginBottom: 4, fontSize: 12 }}>Business Category</Text>
+                          <Select
+                            value={leadSearchQuery}
+                            onChange={setLeadSearchQuery}
+                            style={{ width: "100%" }}
+                            showSearch
+                            options={[
+                              { label: "🛒 Kirana & Grocery Stores", value: "Kirana Store Grocery" },
+                              { label: "👗 Garments, Clothing & Boutiques", value: "Garment Shop Clothing Boutique" },
+                              { label: "🍽️ Restaurants, Cafes & Bakeries", value: "Restaurant Cafe Bakery" },
+                              { label: "📦 Wholesalers & Distributors", value: "Wholesaler Wholesale Distributor" },
+                              { label: "📱 Electronics & Mobile Shops", value: "Electronics Mobile Store" },
+                              { label: "🔧 Hardware & Sanitary Ware", value: "Hardware Electrical Sanitary" },
+                              { label: "💇 Beauty Salons & Spa", value: "Salon Beauty Parlour" },
+                              { label: "💊 Chemists & Medical Stores", value: "Medical Store Chemist Pharmacy" },
+                              { label: "🎁 Gift & General Store", value: "General Store Gift Shop" },
+                              { label: "🏨 Hotels & Guest Houses", value: "Hotel Guest House" },
+                            ]}
+                          />
+                        </Col>
+                        <Col xs={24} sm={12} md={5}>
+                          <Text strong style={{ display: "block", marginBottom: 4, fontSize: 12 }}>Target City</Text>
+                          <Select
+                            value={leadSearchCity}
+                            onChange={setLeadSearchCity}
+                            style={{ width: "100%" }}
+                            showSearch
+                            options={[
+                              { label: "Patna, Bihar", value: "Patna" },
+                              { label: "Delhi NCR", value: "Delhi" },
+                              { label: "Mumbai, Maharashtra", value: "Mumbai" },
+                              { label: "Bengaluru, Karnataka", value: "Bengaluru" },
+                              { label: "Kolkata, West Bengal", value: "Kolkata" },
+                              { label: "Lucknow, UP", value: "Lucknow" },
+                              { label: "Jaipur, Rajasthan", value: "Jaipur" },
+                              { label: "Ahmedabad, Gujarat", value: "Ahmedabad" },
+                              { label: "Pune, Maharashtra", value: "Pune" },
+                              { label: "Surat, Gujarat", value: "Surat" },
+                              { label: "Indore, MP", value: "Indore" },
+                              { label: "Bhopal, MP", value: "Bhopal" },
+                              { label: "Varanasi, UP", value: "Varanasi" },
+                              { label: "Ranchi, Jharkhand", value: "Ranchi" },
+                              { label: "Muzaffarpur, Bihar", value: "Muzaffarpur" },
+                              { label: "Gaya, Bihar", value: "Gaya" },
+                              { label: "Bhagalpur, Bihar", value: "Bhagalpur" },
+                            ]}
+                          />
+                        </Col>
+                        <Col xs={24} sm={12} md={5}>
+                          <Text strong style={{ display: "block", marginBottom: 4, fontSize: 12 }}>Area / Locality (Optional)</Text>
+                          <Input
+                            placeholder="e.g. Kankarbagh, Boring Road"
+                            value={leadSearchArea}
+                            onChange={(e) => setLeadSearchArea(e.target.value)}
+                            onPressEnter={() => handleSearchAdminLeads(false)}
+                          />
+                        </Col>
+                        <Col xs={24} sm={12} md={4}>
+                          <Text strong style={{ display: "block", marginBottom: 4, fontSize: 12 }}>Pincode (Optional)</Text>
+                          <Input
+                            placeholder="e.g. 800020"
+                            value={leadSearchPincode}
+                            onChange={(e) => setLeadSearchPincode(e.target.value)}
+                            onPressEnter={() => handleSearchAdminLeads(false)}
+                          />
+                        </Col>
+                        <Col xs={24} sm={24} md={4}>
+                          <Button
+                            type="primary"
+                            icon={<SearchOutlined />}
+                            onClick={() => handleSearchAdminLeads(false)}
+                            loading={adminSearchingLeads}
+                            style={{ width: "100%", height: 38, marginTop: isMobile ? 0 : 20, background: "#10b981", borderColor: "#10b981" }}
+                          >
+                            Find Leads
+                          </Button>
+                        </Col>
+                      </Row>
+                    </Card>
+
+                    {/* Batch Actions Bar */}
+                    {selectedLeadKeys.length > 0 && (
+                      <Alert
+                        type="info"
+                        style={{ marginBottom: 16, borderRadius: 8 }}
+                        message={
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+                            <Text strong>Selected {selectedLeadKeys.length} businesses for outreach / pipeline</Text>
+                            <Space wrap>
+                              <Button
+                                type="primary"
+                                icon={<SaveOutlined />}
+                                onClick={handleBatchSaveToCrm}
+                                size="small"
+                              >
+                                Save Selected to CRM ({selectedLeadKeys.length})
+                              </Button>
+                              <Button
+                                icon={<WhatsAppOutlined />}
+                                style={{ backgroundColor: "#25D366", borderColor: "#25D366", color: "#fff" }}
+                                size="small"
+                                onClick={() => {
+                                  const sel = discoveredMerchantLeads.filter((l) => selectedLeadKeys.includes(l.id));
+                                  handleOpenPitchModal(sel);
+                                }}
+                              >
+                                Pitch Selected on WA ({selectedLeadKeys.length})
+                              </Button>
+                              <Button
+                                icon={<DownloadOutlined />}
+                                size="small"
+                                onClick={() => {
+                                  const sel = discoveredMerchantLeads.filter((l) => selectedLeadKeys.includes(l.id));
+                                  exportLeadsToCsv(sel, `discovered-leads-${leadSearchCity}.csv`);
+                                }}
+                              >
+                                Export Selected
+                              </Button>
+                            </Space>
+                          </div>
+                        }
+                      />
+                    )}
+
+                    {/* Discovered Leads Table */}
+                    <Card
+                      title={
+                        <Space>
+                          <CompassOutlined style={{ color: "#10b981" }} />
+                          <span>Discovered Business Leads ({discoveredMerchantLeads.length})</span>
+                          <Tag color="cyan">Unlimited Admin Discovery</Tag>
+                        </Space>
+                      }
+                      extra={
+                        discoveredMerchantLeads.length > 0 && (
+                          <Button
+                            icon={<DownloadOutlined />}
+                            size="small"
+                            onClick={() => exportLeadsToCsv(discoveredMerchantLeads, `discovered-${leadSearchCity}.csv`)}
+                          >
+                            Export All ({discoveredMerchantLeads.length})
+                          </Button>
+                        )
+                      }
+                      styles={{ body: { padding: isMobile ? 10 : 18 } }}
+                      style={{ borderRadius: 12 }}
+                    >
+                      <Table
+                        dataSource={discoveredMerchantLeads}
+                        rowKey="id"
+                        loading={adminSearchingLeads}
+                        scroll={{ x: 850 }}
+                        pagination={{ pageSize: 10, size: "small" }}
+                        rowSelection={{
+                          selectedRowKeys: selectedLeadKeys,
+                          onChange: setSelectedLeadKeys,
+                        }}
+                        locale={{ emptyText: "Select category & city and click 'Find Leads' to discover merchants across India." }}
+                        columns={[
+                          {
+                            title: "Business & Rating",
+                            key: "business",
+                            render: (_, record: any) => (
+                              <div>
+                                <Text strong style={{ fontSize: 14, display: "block" }}>{record.name}</Text>
+                                <Space size={6} style={{ marginTop: 2 }}>
+                                  {record.rating ? (
+                                    <>
+                                      <Rate disabled defaultValue={record.rating} allowHalf style={{ fontSize: 12, color: "#f59e0b" }} />
+                                      <Text style={{ fontSize: 11, color: "#64748b" }}>
+                                        {record.rating.toFixed(1)} ({record.ratingCount || 0})
+                                      </Text>
+                                    </>
+                                  ) : (
+                                    <Text type="secondary" style={{ fontSize: 11 }}>No rating</Text>
+                                  )}
+                                  {record.googleMapsUri && (
+                                    <a href={record.googleMapsUri} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "#2563eb", marginLeft: 4 }}>
+                                      <GlobalOutlined /> Maps
+                                    </a>
+                                  )}
+                                </Space>
+                              </div>
+                            ),
+                          },
+                          {
+                            title: "Category & Address",
+                            key: "details",
+                            render: (_, record: any) => (
+                              <div>
+                                <Tag color="blue">{record.category || leadSearchQuery || "Retail"}</Tag>
+                                <div style={{ fontSize: 11, color: "#64748b", marginTop: 4, maxWidth: 220, whiteSpace: "normal" }}>
+                                  {record.address || "Address not provided"}
+                                </div>
+                              </div>
+                            ),
+                          },
+                          {
+                            title: "WhatsApp Contact",
+                            dataIndex: "phone",
+                            key: "phone",
+                            render: (phone: string) => (
+                              phone ? (
+                                <Text strong style={{ color: "#0f172a", fontSize: 13 }}>
+                                  {formatDisplayPhone(phone)}
+                                </Text>
+                              ) : (
+                                <Text type="secondary" style={{ fontSize: 12 }}>No phone listed</Text>
+                              )
+                            ),
+                          },
+                          {
+                            title: "GinieSpace Status",
+                            key: "ginieStatus",
+                            render: (_, record: any) => {
+                              if (record.registeredMerchant) {
+                                return (
+                                  <div>
+                                    <Tag color="purple">
+                                      <ShopOutlined /> Registered Merchant
+                                    </Tag>
+                                    {record.registeredMerchant.plan === "pro" ? (
+                                      <Tag color="gold" style={{ marginTop: 4 }}><CrownOutlined /> PRO</Tag>
+                                    ) : (
+                                      <Tag color="default" style={{ marginTop: 4 }}>Free Tier</Tag>
+                                    )}
+                                    {record.registeredMerchant.slug && (
+                                      <div style={{ marginTop: 3 }}>
+                                        <a href={`/shop/${record.registeredMerchant.slug}`} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: "#059669" }}>
+                                          View Store ↗
+                                        </a>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              }
+                              if (record.savedInfo) {
+                                const st = record.savedInfo.status;
+                                const color = st === "converted" ? "green" : st === "contacted" ? "blue" : "orange";
+                                return <Tag color={color}>In Pipeline ({st})</Tag>;
+                              }
+                              return <Tag color="default">🆕 Unregistered</Tag>;
+                            },
+                          },
+                          {
+                            title: "Actions",
+                            key: "actions",
+                            width: 220,
+                            render: (_, record: any) => {
+                              const isSaved = Boolean(record.savedInfo);
+                              return (
+                                <Space wrap size={4}>
+                                  <Button
+                                    size="small"
+                                    icon={<WhatsAppOutlined />}
+                                    style={{ backgroundColor: "#25D366", borderColor: "#25D366", color: "#fff" }}
+                                    disabled={!record.phone}
+                                    onClick={() => handleOpenPitchModal([record])}
+                                  >
+                                    Pitch
+                                  </Button>
+                                  <Button
+                                    size="small"
+                                    icon={<SaveOutlined />}
+                                    loading={savingLeadId === record.id}
+                                    disabled={isSaved}
+                                    onClick={() => handleSaveLeadToCrm(record)}
+                                  >
+                                    {isSaved ? "Saved" : "Save"}
+                                  </Button>
+                                  {!record.registeredMerchant && record.phone && (
+                                    <Button
+                                      size="small"
+                                      type="dashed"
+                                      icon={<UserAddOutlined />}
+                                      onClick={() => setOnboardingLead(record)}
+                                    >
+                                      Onboard
+                                    </Button>
+                                  )}
+                                </Space>
+                              );
+                            },
+                          },
+                        ]}
+                      />
+
+                      {leadsNextPageToken && (
+                        <div style={{ textAlign: "center", marginTop: 18 }}>
+                          <Button
+                            type="primary"
+                            icon={<SearchOutlined />}
+                            onClick={() => handleSearchAdminLeads(true)}
+                            loading={adminSearchingLeads}
+                          >
+                            Load Next 20 Leads
+                          </Button>
+                        </div>
+                      )}
+                    </Card>
+                  </div>
+                )}
+
+                {/* ==================== SUB-VIEW 2: MERCHANT PIPELINE CRM ==================== */}
+                {leadSubView === "crm" && (
+                  <div>
+                    {/* CRM Filters & Search Bar */}
+                    <Card styles={{ body: { padding: isMobile ? 12 : 18 } }} style={{ borderRadius: 12, marginBottom: 18 }}>
+                      <Row gutter={[12, 12]} align="middle" justify="space-between">
+                        <Col xs={24} md={12}>
+                          <Radio.Group
+                            value={leadStatusFilter}
+                            onChange={(e) => setLeadStatusFilter(e.target.value)}
+                            size={isMobile ? "small" : "middle"}
+                          >
+                            <Radio.Button value="all">All ({adminSavedLeads.length})</Radio.Button>
+                            <Radio.Button value="new">🆕 New ({adminLeadStats.newCount})</Radio.Button>
+                            <Radio.Button value="contacted">💬 Pitched ({adminLeadStats.contactedCount})</Radio.Button>
+                            <Radio.Button value="converted">✅ Converted ({adminLeadStats.convertedCount})</Radio.Button>
+                            <Radio.Button value="archived">📁 Archived ({adminLeadStats.archivedCount})</Radio.Button>
+                          </Radio.Group>
+                        </Col>
+                        <Col xs={24} md={10}>
+                          <Input
+                            prefix={<SearchOutlined style={{ color: "#94a3b8" }} />}
+                            placeholder="Search by business name, phone, or category..."
+                            value={leadCrmSearch}
+                            onChange={(e) => setLeadCrmSearch(e.target.value)}
+                            allowClear
+                          />
+                        </Col>
+                      </Row>
+                    </Card>
+
+                    {/* CRM Leads Table */}
+                    <Card
+                      title={
+                        <Space>
+                          <TeamOutlined style={{ color: "#2563eb" }} />
+                          <span>Merchant Leads CRM ({adminSavedLeads.length})</span>
+                        </Space>
+                      }
+                      extra={
+                        <Space>
+                          <Button
+                            type="primary"
+                            icon={<WhatsAppOutlined />}
+                            style={{ backgroundColor: "#25D366", borderColor: "#25D366" }}
+                            size={isMobile ? "small" : "middle"}
+                            onClick={() => {
+                              const withPhone = adminSavedLeads.filter((l) => l.phone && l.status !== "converted");
+                              handleOpenPitchModal(withPhone);
+                            }}
+                          >
+                            Broadcast Pitch to Leads
+                          </Button>
+                        </Space>
+                      }
+                      styles={{ body: { padding: isMobile ? 10 : 18 } }}
+                      style={{ borderRadius: 12 }}
+                    >
+                      <Table
+                        dataSource={adminSavedLeads.filter((l) => {
+                          if (leadStatusFilter !== "all" && l.status !== leadStatusFilter) return false;
+                          if (leadCrmSearch) {
+                            const q = leadCrmSearch.toLowerCase();
+                            const matchesName = (l.name || "").toLowerCase().includes(q);
+                            const matchesPhone = (l.phone || "").includes(q);
+                            const matchesCat = (l.category || "").toLowerCase().includes(q);
+                            if (!matchesName && !matchesPhone && !matchesCat) return false;
+                          }
+                          return true;
+                        })}
+                        rowKey="id"
+                        loading={loadingAdminLeads}
+                        scroll={{ x: 950 }}
+                        pagination={{ pageSize: 10, size: "small" }}
+                        columns={[
+                          {
+                            title: "Business & Phone",
+                            key: "lead",
+                            render: (_, record: any) => (
+                              <div>
+                                <Text strong style={{ fontSize: 14, display: "block" }}>{record.name}</Text>
+                                <div style={{ fontSize: 12, color: "#059669", marginTop: 2 }}>
+                                  <PhoneOutlined /> {record.phone ? formatDisplayPhone(record.phone) : "No phone"}
+                                </div>
+                                <Text type="secondary" style={{ fontSize: 11, display: "block", marginTop: 2 }}>
+                                  {record.address || "Address not provided"}
+                                </Text>
+                              </div>
+                            ),
+                          },
+                          {
+                            title: "Category",
+                            dataIndex: "category",
+                            key: "category",
+                            render: (cat: string) => <Tag color="blue">{cat || "General"}</Tag>,
+                          },
+                          {
+                            title: "Pipeline Status",
+                            key: "status",
+                            width: 140,
+                            render: (_, record: any) => (
+                              <Select
+                                value={record.status}
+                                size="small"
+                                style={{ width: 125 }}
+                                onChange={(val) => handleUpdateLeadStatus(record.id, val)}
+                                options={[
+                                  { label: "🆕 New", value: "new" },
+                                  { label: "💬 Pitched", value: "contacted" },
+                                  { label: "✅ Converted", value: "converted" },
+                                  { label: "📁 Archived", value: "archived" },
+                                ]}
+                              />
+                            ),
+                          },
+                          {
+                            title: "GinieSpace Merchant Status",
+                            key: "merchantStatus",
+                            render: (_, record: any) => {
+                              if (record.registeredMerchant) {
+                                return (
+                                  <div>
+                                    <Tag color="purple"><ShopOutlined /> Registered</Tag>
+                                    {record.registeredMerchant.plan === "pro" ? (
+                                      <Tag color="gold"><CrownOutlined /> PRO</Tag>
+                                    ) : (
+                                      <Tag color="default">Free</Tag>
+                                    )}
+                                    {record.registeredMerchant.slug && (
+                                      <div style={{ marginTop: 2 }}>
+                                        <a href={`/shop/${record.registeredMerchant.slug}`} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: "#059669" }}>
+                                          Store Link ↗
+                                        </a>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              }
+                              return <Tag color="default">Not Registered</Tag>;
+                            },
+                          },
+                          {
+                            title: "Notes & Follow-up",
+                            key: "notes",
+                            render: (_, record: any) => (
+                              <div style={{ fontSize: 11, color: "#64748b", maxWidth: 200 }}>
+                                {record.followUpDate && (
+                                  <div style={{ color: "#2563eb", fontWeight: 600, marginBottom: 2 }}>
+                                    📅 {record.followUpDate}
+                                  </div>
+                                )}
+                                <div style={{ whiteSpace: "pre-line" }}>
+                                  {record.notes || <Text type="secondary" italic>No notes added</Text>}
+                                </div>
+                              </div>
+                            ),
+                          },
+                          {
+                            title: "Actions",
+                            key: "actions",
+                            width: 220,
+                            render: (_, record: any) => (
+                              <Space wrap size={4}>
+                                <Button
+                                  size="small"
+                                  icon={<WhatsAppOutlined />}
+                                  style={{ backgroundColor: "#25D366", borderColor: "#25D366", color: "#fff" }}
+                                  disabled={!record.phone}
+                                  onClick={() => handleOpenPitchModal([record])}
+                                >
+                                  Pitch
+                                </Button>
+                                {!record.registeredMerchant && record.phone && (
+                                  <Button
+                                    size="small"
+                                    type="primary"
+                                    icon={<UserAddOutlined />}
+                                    onClick={() => setOnboardingLead(record)}
+                                  >
+                                    Onboard
+                                  </Button>
+                                )}
+                                <Popconfirm
+                                  title="Delete Lead"
+                                  description="Are you sure you want to remove this lead from pipeline?"
+                                  onConfirm={() => handleDeleteLead(record.id)}
+                                  okText="Delete"
+                                  cancelText="Cancel"
+                                  okButtonProps={{ danger: true }}
+                                >
+                                  <Button size="small" danger icon={<DeleteOutlined />} />
+                                </Popconfirm>
+                              </Space>
+                            ),
+                          },
+                        ]}
+                      />
+                    </Card>
+                  </div>
+                )}
+
+                {/* ==================== SUB-VIEW 3: WHATSAPP OUTREACH & TEMPLATES ==================== */}
+                {leadSubView === "pitch-center" && (
+                  <div>
+                    <Row gutter={[16, 16]}>
+                      {/* Left: Template Selector & Customizer */}
+                      <Col xs={24} lg={14}>
+                        <Card
+                          title={
+                            <Space>
+                              <WhatsAppOutlined style={{ color: "#25D366", fontSize: 18 }} />
+                              <span>Official B2B Merchant Outreach Pitcher</span>
+                            </Space>
+                          }
+                          styles={{ body: { padding: isMobile ? 14 : 20 } }}
+                          style={{ borderRadius: 12 }}
+                        >
+                          <div style={{ marginBottom: 16 }}>
+                            <Text strong style={{ display: "block", marginBottom: 6 }}>
+                              Select Conversion Pitch Template:
+                            </Text>
+                            <Select
+                              value={selectedTemplateKey}
+                              onChange={(val) => {
+                                setSelectedTemplateKey(val);
+                                const tpl = ADMIN_PITCH_TEMPLATES.find((t) => t.key === val);
+                                if (tpl) setPitchMessageText(tpl.text);
+                              }}
+                              style={{ width: "100%" }}
+                              options={ADMIN_PITCH_TEMPLATES.map((t) => ({ label: t.label, value: t.key }))}
+                            />
+                          </div>
+
+                          <div style={{ marginBottom: 16 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                              <Text strong>Pitch Message Text:</Text>
+                              <Text type="secondary" style={{ fontSize: 12 }}>
+                                Placeholders: <code>{"{name}"}</code>, <code>{"{city}"}</code>, <code>{"{category}"}</code>, <code>{"{demo_url}"}</code>, <code>{"{signup_url}"}</code>
+                              </Text>
+                            </div>
+                            <Input.TextArea
+                              rows={10}
+                              value={pitchMessageText}
+                              onChange={(e) => setPitchMessageText(e.target.value)}
+                              style={{ fontFamily: "monospace", fontSize: 13, borderRadius: 8 }}
+                            />
+                          </div>
+
+                          <div style={{ marginBottom: 20 }}>
+                            <Text strong style={{ display: "block", marginBottom: 6 }}>
+                              Optional Banner Image URL (WhatsApp Media):
+                            </Text>
+                            <Input
+                              placeholder="e.g. https://app.ginie.space/og-catalog.jpg"
+                              value={pitchImageUrl}
+                              onChange={(e) => setPitchImageUrl(e.target.value)}
+                              prefix={<PictureOutlined style={{ color: "#94a3b8" }} />}
+                            />
+                          </div>
+
+                          <Divider />
+
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+                            <div>
+                              <Text strong style={{ color: "#059669" }}>
+                                🛡️ Baileys Anti-Spam Active:
+                              </Text>
+                              <div style={{ fontSize: 12, color: "#64748b" }}>
+                                Automatic 1.5s - 2.5s randomized human delay & typing simulation.
+                              </div>
+                            </div>
+                            <Button
+                              type="primary"
+                              icon={<SendOutlined />}
+                              size="large"
+                              style={{ backgroundColor: "#25D366", borderColor: "#25D366" }}
+                              onClick={() => {
+                                const leadsWithPhone = adminSavedLeads.filter((l) => l.phone && l.status !== "converted");
+                                if (leadsWithPhone.length === 0) {
+                                  message.warning("No unconverted leads with phone numbers in pipeline. Discover and save leads first!");
+                                  return;
+                                }
+                                handleOpenPitchModal(leadsWithPhone);
+                              }}
+                            >
+                              Launch Outreach to Pipeline ({adminSavedLeads.filter((l) => l.phone && l.status !== "converted").length} Leads)
+                            </Button>
+                          </div>
+                        </Card>
+                      </Col>
+
+                      {/* Right: Live WhatsApp Mobile Simulator Preview */}
+                      <Col xs={24} lg={10}>
+                        <Card
+                          title={
+                            <Space>
+                              <PhoneOutlined style={{ color: "#25D366" }} />
+                              <span>Live WhatsApp Message Preview</span>
+                            </Space>
+                          }
+                          styles={{ body: { padding: 18, background: "#efeae2" } }}
+                          style={{ borderRadius: 12, border: "1px solid #cbd5e1" }}
+                        >
+                          <div style={{ background: "#075e54", color: "#fff", padding: "10px 14px", borderRadius: "8px 8px 0 0", display: "flex", alignItems: "center", gap: 10 }}>
+                            <Avatar icon={<ShopOutlined />} style={{ background: "#25D366" }} />
+                            <div>
+                              <div style={{ fontWeight: 600, fontSize: 13 }}>GinieSpace Official (+91 92792 59690)</div>
+                              <div style={{ fontSize: 11, opacity: 0.85 }}>Official WhatsApp Business Bot</div>
+                            </div>
+                          </div>
+
+                          <div style={{ padding: "16px 10px", minHeight: 320, background: "#e5ddd5" }}>
+                            {pitchImageUrl && (
+                              <div style={{ marginBottom: 8, textAlign: "right" }}>
+                                <div style={{ display: "inline-block", background: "#dcf8c6", padding: 6, borderRadius: 8, maxWidth: "85%" }}>
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img src={pitchImageUrl} alt="Pitch Banner" style={{ width: "100%", borderRadius: 6, maxHeight: 180, objectFit: "cover" }} />
+                                </div>
+                              </div>
+                            )}
+                            <div style={{ textAlign: "right" }}>
+                              <div style={{ display: "inline-block", background: "#dcf8c6", padding: "10px 14px", borderRadius: "10px 0 10px 10px", maxWidth: "90%", textAlign: "left", boxShadow: "0 1px 2px rgba(0,0,0,0.15)", fontSize: 13, lineHeight: 1.5, whiteSpace: "pre-wrap", color: "#111827" }}>
+                                {pitchMessageText
+                                  .replace(/{name}|{business_name}/gi, "Gupta General Store")
+                                  .replace(/{city}/gi, leadSearchCity || "Patna")
+                                  .replace(/{category}/gi, "Retail Grocery")
+                                  .replace(/{demo_url}/gi, "https://app.ginie.space/shop/demo")
+                                  .replace(/{signup_url}/gi, "https://app.ginie.space/signup?ref=admin")}
+                                <div style={{ fontSize: 10, color: "#6b7280", textAlign: "right", marginTop: 4 }}>
+                                  {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} ✓✓
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </Card>
+                      </Col>
+                    </Row>
+                  </div>
+                )}
+              </div>
+            ),
+          },
+
+          // ==========================================
+          // MODULE 4: WHATSAPP COMMAND CENTER
           // ==========================================
           {
             key: "whatsapp-hub",
@@ -3137,6 +4125,198 @@ export default function AdminPage() {
             </Button>
           </div>
         </div>
+      </Modal>
+
+      {/* WhatsApp Pitch Campaign Execution Modal */}
+      <Modal
+        title={
+          <Space>
+            <WhatsAppOutlined style={{ color: "#25D366", fontSize: 18 }} />
+            <span>Deliver WhatsApp Onboarding Pitch ({pitchTargets.length} Leads)</span>
+          </Space>
+        }
+        open={pitchModalOpen}
+        onCancel={() => !sendingPitchCampaign && setPitchModalOpen(false)}
+        footer={[
+          <Button key="cancel" disabled={sendingPitchCampaign} onClick={() => setPitchModalOpen(false)}>
+            Cancel
+          </Button>,
+          <Button
+            key="send"
+            type="primary"
+            icon={<SendOutlined />}
+            loading={sendingPitchCampaign}
+            style={{ backgroundColor: "#25D366", borderColor: "#25D366" }}
+            onClick={handleSendPitchCampaign}
+          >
+            Send WhatsApp Pitch to {pitchTargets.length} Leads
+          </Button>,
+        ]}
+        width={isMobile ? "94%" : 650}
+        centered
+      >
+        <div style={{ padding: "8px 0" }}>
+          <Alert
+            type="info"
+            showIcon
+            style={{ marginBottom: 14 }}
+            message={`Sending from Official Support WhatsApp (+${supportPhone || "919279259690"})`}
+            description="Har recipient ke message me automatically unka Shop Name, City, category aur demo link replace ho jayega."
+          />
+
+          <div style={{ maxHeight: 160, overflowY: "auto", border: "1px solid #e2e8f0", borderRadius: 8, padding: 10, marginBottom: 14, background: "#f8fafc" }}>
+            <Text strong style={{ fontSize: 12, display: "block", marginBottom: 6 }}>Recipients List ({pitchTargets.length}):</Text>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {pitchTargets.map((t, idx) => (
+                <Tag key={idx} color="green">
+                  {t.name} ({formatDisplayPhone(t.phone)})
+                </Tag>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 12 }}>
+            <Text strong style={{ display: "block", marginBottom: 4 }}>Pitch Message Template:</Text>
+            <Input.TextArea
+              rows={6}
+              value={pitchMessageText}
+              onChange={(e) => setPitchMessageText(e.target.value)}
+              style={{ fontFamily: "monospace", fontSize: 12 }}
+            />
+          </div>
+
+          <div>
+            <Text strong style={{ display: "block", marginBottom: 4 }}>Banner Image URL (Optional):</Text>
+            <Input
+              placeholder="https://app.ginie.space/og-catalog.jpg"
+              value={pitchImageUrl}
+              onChange={(e) => setPitchImageUrl(e.target.value)}
+            />
+          </div>
+
+          {sendingPitchCampaign && (
+            <div style={{ marginTop: 16, textAlign: "center" }}>
+              <Spin />
+              <div style={{ marginTop: 8, fontSize: 12, color: "#059669" }}>
+                Delivering pitches safely with anti-ban delay... Please wait.
+              </div>
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {/* 1-Click Instant Onboard Merchant Modal */}
+      <Modal
+        title={
+          <Space>
+            <UserAddOutlined style={{ color: "#10b981" }} />
+            <span>1-Click Onboard Merchant Account</span>
+          </Space>
+        }
+        open={Boolean(onboardingLead)}
+        onCancel={() => !onboardingSubmitting && setOnboardingLead(null)}
+        footer={[
+          <Button key="cancel" disabled={onboardingSubmitting} onClick={() => setOnboardingLead(null)}>
+            Cancel
+          </Button>,
+          <Button
+            key="confirm"
+            type="primary"
+            icon={<CheckCircleOutlined />}
+            loading={onboardingSubmitting}
+            onClick={() => handleInstantOnboardMerchant(onboardingLead)}
+            style={{ backgroundColor: "#10b981", borderColor: "#10b981" }}
+          >
+            Create Store & Send WhatsApp Credentials
+          </Button>,
+        ]}
+        centered
+        width={isMobile ? "92%" : 500}
+      >
+        {onboardingLead && (
+          <div style={{ padding: "10px 0" }}>
+            <Alert
+              type="success"
+              showIcon
+              style={{ marginBottom: 16 }}
+              message={`Create GinieSpace Store for "${onboardingLead.name}"`}
+              description="System automatic user profile, store slug, temporary login password generate karega aur unke WhatsApp par credentials & link bhej dega."
+            />
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12 }}>Business Name:</Text>
+                <div style={{ fontWeight: 600, fontSize: 15 }}>{onboardingLead.name}</div>
+              </div>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12 }}>WhatsApp Mobile Number:</Text>
+                <div style={{ fontWeight: 600, fontSize: 14, color: "#059669" }}>
+                  {formatDisplayPhone(onboardingLead.phone)}
+                </div>
+              </div>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12 }}>Category / Business Type:</Text>
+                <div><Tag color="blue">{onboardingLead.category || leadSearchQuery || "Retail"}</Tag></div>
+              </div>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12 }}>Address:</Text>
+                <div style={{ fontSize: 13, color: "#64748b" }}>{onboardingLead.address || "N/A"}</div>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Onboarded Result Success Modal */}
+      <Modal
+        title={
+          <Space>
+            <CheckCircleOutlined style={{ color: "#10b981", fontSize: 20 }} />
+            <span style={{ color: "#059669" }}>Merchant Account Created Successfully!</span>
+          </Space>
+        }
+        open={Boolean(onboardedResultModal)}
+        onCancel={() => setOnboardedResultModal(null)}
+        footer={[
+          <Button key="close" type="primary" onClick={() => setOnboardedResultModal(null)}>
+            Done
+          </Button>,
+        ]}
+        centered
+        width={isMobile ? "92%" : 480}
+      >
+        {onboardedResultModal && (
+          <div style={{ padding: "12px 0" }}>
+            <Card type="inner" style={{ background: "#f0fdf4", borderColor: "#86efac", marginBottom: 14 }}>
+              <div style={{ marginBottom: 8 }}>
+                <Text type="secondary" style={{ fontSize: 12 }}>Store Link:</Text>
+                <div>
+                  <a href={onboardedResultModal.storeUrl} target="_blank" rel="noreferrer" style={{ fontWeight: 700, color: "#059669", fontSize: 14 }}>
+                    {onboardedResultModal.storeUrl} ↗
+                  </a>
+                </div>
+              </div>
+              <div style={{ marginBottom: 8 }}>
+                <Text type="secondary" style={{ fontSize: 12 }}>Login Email:</Text>
+                <div style={{ fontWeight: 600 }}>{onboardedResultModal.user?.email}</div>
+              </div>
+              <div>
+                <Text type="secondary" style={{ fontSize: 12 }}>Temporary Password:</Text>
+                <div style={{ fontWeight: 700, color: "#2563eb" }}>{onboardedResultModal.tempPassword}</div>
+              </div>
+            </Card>
+
+            <Alert
+              type={onboardedResultModal.waNotified ? "success" : "info"}
+              showIcon
+              message={
+                onboardedResultModal.waNotified
+                  ? "Login credentials & Store link sent via WhatsApp!"
+                  : "WhatsApp was offline, credentials generated above."
+              }
+            />
+          </div>
+        )}
       </Modal>
     </AppLayout>
   );

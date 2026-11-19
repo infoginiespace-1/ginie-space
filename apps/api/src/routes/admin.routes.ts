@@ -2,11 +2,19 @@ import { Router, Request, Response } from "express";
 import { Server } from "socket.io";
 import { randomUUID } from "crypto";
 import bcrypt from "bcryptjs";
-import { IDatabase } from "@giniespace/sheets-db";
+import { IDatabase, LeadStatus, BusinessType } from "@giniespace/sheets-db";
 import { WhatsAppSessionManager } from "@giniespace/whatsapp-engine";
+import { GooglePlacesClient } from "@giniespace/places-client";
 import { SYSTEM_SUPPORT_SESSION_ID, SYSTEM_SUPPORT_PHONE, NotificationService } from "../services/notification.service";
 import { AnalyticsService } from "../services/analytics.service";
-import { normalizePhoneDigits } from "../utils/phone";
+import { normalizePhoneDigits, toE164 } from "../utils/phone";
+
+interface CacheEntry {
+  timestamp: number;
+  results: any;
+}
+const leadsSearchCache = new Map<string, CacheEntry>();
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 async function recordAuditLog(
   db: IDatabase,
@@ -49,7 +57,8 @@ export function createAdminRouter(
   waManager: WhatsAppSessionManager,
   notificationService: NotificationService,
   analyticsService?: AnalyticsService,
-  io?: Server
+  io?: Server,
+  placesClient?: GooglePlacesClient
 ): Router {
   const router = Router();
 
@@ -1122,6 +1131,575 @@ export function createAdminRouter(
       res.json({ success: true, message: "SEO & GA4 configuration saved successfully!" });
     } catch (err: any) {
       res.status(500).json({ error: err.message || "Failed to update SEO settings" });
+    }
+  });
+
+  // ==========================================
+  // MODULE 23: ADMIN MERCHANT LEAD ACQUISITION & CONVERSION SUITE
+  // ==========================================
+
+  // 1. Discover Leads via Google Places (No Quota Limits for Platform Admin)
+  router.post("/leads/discover", async (req: Request, res: Response): Promise<void> => {
+    try {
+      if (!placesClient) {
+        res.status(500).json({ error: "Google Places Client is not configured on the server" });
+        return;
+      }
+
+      const { query, area, pincode, city, state, country, pageSize, pageToken } = req.body;
+      if (!query && !area && !pincode && !city) {
+        res.status(400).json({ error: "Please enter at least a business category, city, area, or pincode to search" });
+        return;
+      }
+
+      const cacheKey = [
+        (query || "").trim().toLowerCase(),
+        (area || "").trim().toLowerCase(),
+        (city || "").trim().toLowerCase(),
+        (pincode || "").trim().toLowerCase(),
+        pageToken ? String(pageToken) : "",
+      ].join("::");
+
+      let results: any = null;
+      const cached = leadsSearchCache.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+        results = cached.results;
+      } else {
+        results = await placesClient.searchLeads({
+          query: query || "business store",
+          area,
+          pincode,
+          city,
+          state,
+          country,
+          pageSize: pageSize ? Number(pageSize) : 20,
+          pageToken: pageToken ? String(pageToken) : undefined,
+        });
+        leadsSearchCache.set(cacheKey, { timestamp: Date.now(), results });
+        if (leadsSearchCache.size > 2000) {
+          const oldest = leadsSearchCache.keys().next().value;
+          if (oldest) leadsSearchCache.delete(oldest);
+        }
+      }
+
+      // Cross-reference with live GinieSpace database to enrich leads with merchant registration & saved status
+      const [allUsers, allBusinesses, adminSavedLeads] = await Promise.all([
+        db.users.findMany().catch(() => []),
+        db.businesses.findMany().catch(() => []),
+        db.leads.findMany({ userId: req.user!.id }).catch(() => []),
+      ]);
+
+      const enrichedLeads = (results.leads || []).map((lead: any) => {
+        const leadDigits = normalizePhoneDigits(lead.phone || "");
+        const last10 = leadDigits.slice(-10);
+
+        let registeredMerchant: any = null;
+        if (last10 && last10.length === 10) {
+          const matchingBiz = allBusinesses.find((b) => {
+            const bDigits = normalizePhoneDigits(b.phone || "");
+            return bDigits.slice(-10) === last10;
+          });
+          if (matchingBiz) {
+            const matchingUser = allUsers.find((u) => u.id === matchingBiz.userId);
+            if (matchingUser) {
+              registeredMerchant = {
+                id: matchingUser.id,
+                name: matchingUser.name,
+                email: matchingUser.email,
+                plan: matchingUser.plan || "free",
+                businessName: matchingBiz.name || matchingUser.name,
+                slug: matchingBiz.slug || "",
+                createdAt: matchingUser.createdAt,
+              };
+            }
+          }
+        }
+
+        const savedMatch = adminSavedLeads.find((sl) => {
+          if (sl.placeId && lead.id && sl.placeId === lead.id) return true;
+          if (last10 && last10.length === 10) {
+            const slDigits = normalizePhoneDigits(sl.phone || "");
+            return slDigits.slice(-10) === last10;
+          }
+          return false;
+        });
+
+        return {
+          ...lead,
+          registeredMerchant,
+          savedInfo: savedMatch
+            ? {
+                id: savedMatch.id,
+                status: savedMatch.status,
+                notes: savedMatch.notes,
+                followUpDate: savedMatch.followUpDate,
+              }
+            : null,
+        };
+      });
+
+      res.json({
+        leads: enrichedLeads,
+        nextPageToken: results.nextPageToken,
+        totalFound: enrichedLeads.length,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Failed to discover leads" });
+    }
+  });
+
+  // 2. Get All Admin Saved Leads with Live Merchant Status & Stats
+  router.get("/leads", async (req: Request, res: Response): Promise<void> => {
+    try {
+      const [leads, allUsers, allBusinesses] = await Promise.all([
+        db.leads.findMany({ userId: req.user!.id }).catch(() => []),
+        db.users.findMany().catch(() => []),
+        db.businesses.findMany().catch(() => []),
+      ]);
+
+      let signedUpCount = 0;
+      let proCount = 0;
+      let newCount = 0;
+      let contactedCount = 0;
+      let convertedCount = 0;
+      let archivedCount = 0;
+
+      const enriched = leads.map((lead) => {
+        const leadDigits = normalizePhoneDigits(lead.phone || "");
+        const last10 = leadDigits.slice(-10);
+
+        let registeredMerchant: any = null;
+        if (last10 && last10.length === 10) {
+          const matchingBiz = allBusinesses.find((b) => {
+            const bDigits = normalizePhoneDigits(b.phone || "");
+            return bDigits.slice(-10) === last10;
+          });
+          if (matchingBiz) {
+            const matchingUser = allUsers.find((u) => u.id === matchingBiz.userId);
+            if (matchingUser) {
+              registeredMerchant = {
+                id: matchingUser.id,
+                name: matchingUser.name,
+                email: matchingUser.email,
+                plan: matchingUser.plan || "free",
+                businessName: matchingBiz.name || matchingUser.name,
+                slug: matchingBiz.slug || "",
+                createdAt: matchingUser.createdAt,
+              };
+              signedUpCount++;
+              if (matchingUser.plan === "pro") proCount++;
+            }
+          }
+        }
+
+        if (lead.status === "new") newCount++;
+        else if (lead.status === "contacted") contactedCount++;
+        else if (lead.status === "converted") convertedCount++;
+        else if (lead.status === "archived") archivedCount++;
+
+        return {
+          ...lead,
+          registeredMerchant,
+        };
+      });
+
+      res.json({
+        leads: enriched,
+        stats: {
+          totalSaved: leads.length,
+          newCount,
+          contactedCount,
+          convertedCount,
+          archivedCount,
+          signedUpCount,
+          proCount,
+        },
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Failed to load admin leads" });
+    }
+  });
+
+  // 3. Save a Lead to Admin CRM
+  router.post("/leads/save", async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { placeId, name, phone, address, website, rating, ratingCount, category, notes, followUpDate, status } = req.body;
+      if (!name) {
+        res.status(400).json({ error: "Lead business name is required" });
+        return;
+      }
+
+      const existingLeads = await db.leads.findMany({ userId: req.user!.id }).catch(() => []);
+      const phoneDigits = normalizePhoneDigits(phone || "");
+      const last10 = phoneDigits.slice(-10);
+
+      const existing = existingLeads.find((l) => {
+        if (placeId && l.placeId && l.placeId === placeId) return true;
+        if (last10 && last10.length === 10) {
+          const lDigits = normalizePhoneDigits(l.phone || "");
+          return lDigits.slice(-10) === last10;
+        }
+        return false;
+      });
+
+      let lead: any;
+      if (existing) {
+        lead = await db.leads.update(existing.id, {
+          name: name.trim(),
+          phone: phone ? phone.trim() : existing.phone,
+          address: address !== undefined ? address.trim() : existing.address,
+          website: website !== undefined ? website.trim() : existing.website,
+          rating: rating !== undefined ? Number(rating) : existing.rating,
+          ratingCount: ratingCount !== undefined ? Number(ratingCount) : existing.ratingCount,
+          category: category ? category.trim() : existing.category,
+          status: status || existing.status,
+          notes: notes !== undefined ? notes.trim() : existing.notes,
+          followUpDate: followUpDate !== undefined ? followUpDate : existing.followUpDate,
+        });
+      } else {
+        lead = await db.leads.create({
+          userId: req.user!.id,
+          placeId: placeId || "",
+          name: name.trim(),
+          phone: phone ? phone.trim() : undefined,
+          address: address ? address.trim() : undefined,
+          website: website ? website.trim() : undefined,
+          rating: rating !== undefined ? Number(rating) : undefined,
+          ratingCount: ratingCount !== undefined ? Number(ratingCount) : undefined,
+          category: category ? category.trim() : "Retail Store",
+          status: (status as LeadStatus) || "new",
+          notes: notes ? notes.trim() : undefined,
+          followUpDate: followUpDate ? String(followUpDate).trim() : undefined,
+        });
+      }
+
+      res.status(201).json({ lead, message: "Lead saved to Admin CRM pipeline" });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Failed to save lead" });
+    }
+  });
+
+  // 4. Batch Save Multiple Leads to Admin CRM
+  router.post("/leads/batch-save", async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { leads } = req.body;
+      if (!Array.isArray(leads) || leads.length === 0) {
+        res.status(400).json({ error: "No leads provided for batch save" });
+        return;
+      }
+
+      const existingLeads = await db.leads.findMany({ userId: req.user!.id }).catch(() => []);
+      let savedCount = 0;
+
+      for (const item of leads) {
+        if (!item.name) continue;
+        const itemDigits = normalizePhoneDigits(item.phone || "");
+        const last10 = itemDigits.slice(-10);
+
+        const exists = existingLeads.find((l) => {
+          if (item.id && l.placeId && l.placeId === item.id) return true;
+          if (last10 && last10.length === 10) {
+            const lDigits = normalizePhoneDigits(l.phone || "");
+            return lDigits.slice(-10) === last10;
+          }
+          return false;
+        });
+
+        if (!exists) {
+          await db.leads.create({
+            userId: req.user!.id,
+            placeId: item.id || "",
+            name: item.name.trim(),
+            phone: item.phone ? item.phone.trim() : undefined,
+            address: item.address ? item.address.trim() : undefined,
+            website: item.website ? item.website.trim() : undefined,
+            rating: item.rating !== undefined ? Number(item.rating) : undefined,
+            ratingCount: item.ratingCount !== undefined ? Number(item.ratingCount) : undefined,
+            category: item.category ? item.category.trim() : "Retail Store",
+            status: "new",
+          }).catch(() => {});
+          savedCount++;
+        }
+      }
+
+      res.json({ savedCount, message: `Successfully added ${savedCount} new leads to pipeline` });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Failed to batch save leads" });
+    }
+  });
+
+  // 5. Update Lead Details / Status
+  router.put("/leads/:id", async (req: Request, res: Response): Promise<void> => {
+    try {
+      const existing = await db.leads.findById(req.params.id as string);
+      if (!existing) {
+        res.status(404).json({ error: "Lead not found" });
+        return;
+      }
+
+      const { name, phone, address, status, notes, followUpDate, category } = req.body;
+      const updated = await db.leads.update(existing.id, {
+        name: name !== undefined ? name.trim() : existing.name,
+        phone: phone !== undefined ? phone.trim() : existing.phone,
+        address: address !== undefined ? address.trim() : existing.address,
+        status: status !== undefined ? (status as LeadStatus) : existing.status,
+        notes: notes !== undefined ? notes.trim() : existing.notes,
+        followUpDate: followUpDate !== undefined ? followUpDate : existing.followUpDate,
+        category: category !== undefined ? category.trim() : existing.category,
+      });
+
+      res.json({ lead: updated, message: "Lead updated successfully" });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Failed to update lead" });
+    }
+  });
+
+  // 6. Delete Lead from Admin CRM
+  router.delete("/leads/:id", async (req: Request, res: Response): Promise<void> => {
+    try {
+      await db.leads.delete(req.params.id as string);
+      res.json({ success: true, message: "Lead removed from pipeline" });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Failed to delete lead" });
+    }
+  });
+
+  // 7. Send WhatsApp Pitch Campaign (Batch or Single with Safe Throttle)
+  router.post("/leads/whatsapp-pitch", async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { leads, templateText, imageUrl } = req.body;
+      if (!Array.isArray(leads) || leads.length === 0) {
+        res.status(400).json({ error: "Please select at least one lead with a phone number" });
+        return;
+      }
+      if (!templateText || !templateText.trim()) {
+        res.status(400).json({ error: "Pitch message template text is required" });
+        return;
+      }
+
+      const supportState = waManager.getSessionState(SYSTEM_SUPPORT_SESSION_ID);
+      if (supportState.status !== "connected") {
+        res.status(503).json({
+          error: "Official Support WhatsApp (+91 92792 59690) is currently disconnected. Please connect WhatsApp Hub first.",
+        });
+        return;
+      }
+
+      const bannerUrl = (imageUrl || "").trim() || undefined;
+      const media = bannerUrl
+        ? { mediaType: "image" as const, mediaUrl: bannerUrl }
+        : undefined;
+
+      let sentCount = 0;
+      let failedCount = 0;
+      const results: any[] = [];
+      const todayStr = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+
+      for (const lead of leads) {
+        const phone = lead.phone?.trim();
+        if (!phone) {
+          failedCount++;
+          results.push({ name: lead.name, status: "failed", reason: "Missing phone number" });
+          continue;
+        }
+
+        const renderedText = templateText
+          .replace(/{name}|{business_name}/gi, lead.name || "Merchant")
+          .replace(/{city}/gi, lead.city || "your city")
+          .replace(/{category}/gi, lead.category || "business")
+          .replace(/{signup_url}/gi, "https://app.ginie.space/signup?ref=admin")
+          .replace(/{demo_url}/gi, "https://app.ginie.space/shop/demo");
+
+        try {
+          const ok = await notificationService.sendSupportNotification(
+            phone,
+            renderedText,
+            { simulateTyping: true, randomizeHash: true },
+            media
+          );
+
+          if (ok) {
+            sentCount++;
+            results.push({ name: lead.name, phone, status: "sent" });
+
+            // If lead has a DB id, update status to contacted & append note
+            if (lead.id) {
+              const currentLead = await db.leads.findById(lead.id).catch(() => null);
+              if (currentLead) {
+                const updatedNotes = currentLead.notes
+                  ? `${currentLead.notes}\n[WA Pitch Sent on ${todayStr}]`
+                  : `[WA Pitch Sent on ${todayStr}]`;
+                await db.leads.update(currentLead.id, {
+                  status: currentLead.status === "new" ? "contacted" : currentLead.status,
+                  notes: updatedNotes,
+                }).catch(() => {});
+              }
+            }
+          } else {
+            failedCount++;
+            results.push({ name: lead.name, phone, status: "failed", reason: "Delivery failed" });
+          }
+
+          // Anti-spam humanized pause between multiple messages (1.5s - 2.5s)
+          if (leads.length > 1) {
+            await new Promise((resolve) => setTimeout(resolve, 1500 + Math.random() * 1000));
+          }
+        } catch (sendErr: any) {
+          failedCount++;
+          results.push({ name: lead.name, phone, status: "failed", reason: sendErr.message });
+        }
+      }
+
+      await recordAuditLog(
+        db,
+        req.user?.email || "admin",
+        "WHATSAPP_LEAD_PITCH",
+        `Sent B2B onboarding pitch to ${sentCount} leads (failed: ${failedCount})`
+      );
+
+      res.json({
+        success: true,
+        sentCount,
+        failedCount,
+        total: leads.length,
+        results,
+        message: `Successfully delivered pitch to ${sentCount} of ${leads.length} leads!`,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Failed to execute WhatsApp pitch campaign" });
+    }
+  });
+
+  // 8. One-Click Instant Onboard as GinieSpace Merchant
+  router.post("/leads/:id/onboard-merchant", async (req: Request, res: Response): Promise<void> => {
+    try {
+      const lead = await db.leads.findById(req.params.id as string);
+      if (!lead) {
+        res.status(404).json({ error: "Lead not found" });
+        return;
+      }
+
+      if (!lead.phone) {
+        res.status(400).json({ error: "This lead does not have a phone number to create an account" });
+        return;
+      }
+
+      const phoneDigits = normalizePhoneDigits(lead.phone);
+      const last10 = phoneDigits.slice(-10);
+      if (last10.length !== 10) {
+        res.status(400).json({ error: "Lead phone number is not a valid 10-digit mobile number" });
+        return;
+      }
+
+      // Check if already registered
+      const allBusinesses = await db.businesses.findMany().catch(() => []);
+      const existingBiz = allBusinesses.find((b) => normalizePhoneDigits(b.phone || "").slice(-10) === last10);
+      if (existingBiz) {
+        res.status(400).json({ error: "An account with this mobile number already exists on GinieSpace" });
+        return;
+      }
+
+      const categoryLower = (lead.category || "").toLowerCase();
+      let businessType: BusinessType = "retail";
+      if (categoryLower.includes("restaurant") || categoryLower.includes("food") || categoryLower.includes("cafe")) {
+        businessType = "restaurant";
+      } else if (categoryLower.includes("garment") || categoryLower.includes("cloth") || categoryLower.includes("boutique")) {
+        businessType = "garments";
+      } else if (categoryLower.includes("wholesale") || categoryLower.includes("distributor")) {
+        businessType = "wholesale";
+      } else if (categoryLower.includes("hotel") || categoryLower.includes("lodge") || categoryLower.includes("resort")) {
+        businessType = "hotel";
+      } else if (categoryLower.includes("service") || categoryLower.includes("salon") || categoryLower.includes("clinic") || categoryLower.includes("repair")) {
+        businessType = "services";
+      }
+
+      // Generate credentials
+      const cleanEmail = `merchant${last10}@ginie.space`;
+      const tempPassword = `Ginie@${last10.slice(-4)}`;
+      const passwordHash = await bcrypt.hash(tempPassword, 10);
+
+      // Store slug
+      const baseSlug = lead.name
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "-")
+        .replace(/-+/g, "-")
+        .slice(0, 25);
+      const cleanSlug = `${baseSlug}-${last10.slice(-4)}`;
+
+      const newUser = await db.users.create({
+        email: cleanEmail,
+        passwordHash,
+        name: lead.name.trim(),
+        role: "user",
+        businessType,
+        status: "active",
+        plan: "free",
+      });
+
+      const newBiz = await db.businesses.create({
+        userId: newUser.id,
+        name: lead.name.trim(),
+        phone: toE164(lead.phone),
+        address: lead.address || "",
+        slug: cleanSlug,
+        settingsJson: JSON.stringify({
+          autoReply: true,
+          welcomeMessage: `Namaste! Welcome to ${lead.name.trim()} on WhatsApp. Check our digital catalog and order easily!`,
+        }),
+      });
+
+      // Update lead status
+      await db.leads.update(lead.id, {
+        status: "converted",
+        notes: lead.notes
+          ? `${lead.notes}\n[Onboarded as Merchant: ${cleanEmail} | Store: /shop/${cleanSlug}]`
+          : `[Onboarded as Merchant: ${cleanEmail} | Store: /shop/${cleanSlug}]`,
+      });
+
+      // Send WhatsApp credentials & Store link if WhatsApp is connected
+      const supportState = waManager.getSessionState(SYSTEM_SUPPORT_SESSION_ID);
+      let waNotified = false;
+      if (supportState.status === "connected") {
+        const welcomeMsg =
+          `🎉 *Badhai ho ${lead.name.trim()} ji!*\n\n` +
+          `Aapki dukaan ka official digital storefront GinieSpace par live ho gaya hai:\n\n` +
+          `🌐 *Live Store Link:* https://app.ginie.space/shop/${cleanSlug}\n` +
+          `🔑 *Merchant Login:* https://app.ginie.space/login\n` +
+          `• *Username:* ${cleanEmail}\n` +
+          `• *Temp Password:* ${tempPassword}\n\n` +
+          `Aap abhi login karke apne products aur UPI QR set kar sakte hain. Kisi bhi sahayata ke liye is number par message karein!`;
+
+        await notificationService
+          .sendSupportNotification(lead.phone, welcomeMsg, { simulateTyping: true, randomizeHash: true })
+          .then(() => {
+            waNotified = true;
+          })
+          .catch(() => {});
+      }
+
+      await recordAuditLog(
+        db,
+        req.user?.email || "admin",
+        "INSTANT_ONBOARD_MERCHANT",
+        `Created merchant account for ${lead.name} (${cleanEmail}, store: ${cleanSlug})`
+      );
+
+      res.status(201).json({
+        success: true,
+        user: {
+          id: newUser.id,
+          name: newUser.name,
+          email: newUser.email,
+          businessType: newUser.businessType,
+          slug: newBiz.slug,
+        },
+        storeUrl: `https://app.ginie.space/shop/${cleanSlug}`,
+        tempPassword,
+        waNotified,
+        message: `Account created for ${lead.name}! Credentials ${waNotified ? "sent via WhatsApp" : "generated"}.`,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Failed to onboard merchant" });
     }
   });
 
