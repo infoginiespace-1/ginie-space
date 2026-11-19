@@ -72,9 +72,9 @@ export default function MarketingFooter({ lang = "en" }: MarketingFooterProps) {
                   lineHeight: 1.5,
                 }}
               >
-                <div>👨‍💻 <strong>Homa Monawwar</strong> • Founder &amp; CTO</div>
+                <div>🏢 <strong>GinieSpace Technologies</strong></div>
                 <div style={{ color: "#64748b", fontSize: 11 }}>
-                  B.Tech ECE (Maryland Institute of Technology and Management, Jamshedpur)
+                  Enterprise Cloud Commerce &amp; Direct UPI Billing for Bharat&apos;s MSMEs
                 </div>
               </div>
             </div>
@@ -117,7 +117,7 @@ export default function MarketingFooter({ lang = "en" }: MarketingFooterProps) {
                 {lang === "hi" ? "प्लान्स व प्राइसिंग (₹199)" : "Pricing Plans (₹199)"}
               </Link>
               <Link href={`${prefix}/about`} style={{ color: "#94a3b8", textDecoration: "none" }}>
-                {lang === "hi" ? "संस्थापक व विज़न (About Us)" : "About Founder & Vision"}
+                {lang === "hi" ? "हमारे बारे में (About GinieSpace)" : "About GinieSpace"}
               </Link>
               <Link href="/login" style={{ color: "#94a3b8", textDecoration: "none" }}>
                 {lang === "hi" ? "व्यापारी लॉगिन" : "Merchant Sign In"}

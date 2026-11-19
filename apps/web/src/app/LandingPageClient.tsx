@@ -2103,42 +2103,46 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
                   boxShadow: "0 8px 24px rgba(15, 23, 42, 0.15)",
                 }}
               >
-                {/* Modern Avatar with Monogram & Verified Badge */}
+                {/* Modern Brand Logo & Verified Badge */}
                 <div style={{ position: "relative", display: "inline-block", marginBottom: 16 }}>
                   <div
                     style={{
                       width: 96,
                       height: 96,
-                      borderRadius: "50%",
+                      borderRadius: "20px",
                       background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      fontSize: 34,
-                      fontWeight: 800,
-                      color: "#fff",
                       boxShadow: "0 6px 20px rgba(16, 185, 129, 0.35)",
                       border: "4px solid rgba(255, 255, 255, 0.15)",
                       margin: "0 auto",
                     }}
                   >
-                    HM
+                    <img
+                      src="/logo-sm.webp"
+                      alt="GinieSpace"
+                      width={56}
+                      height={56}
+                      style={{ width: 56, height: 56, borderRadius: 12, objectFit: "contain" }}
+                    />
                   </div>
                   <Tag
                     color="success"
                     style={{
                       position: "absolute",
-                      bottom: -2,
+                      bottom: -4,
                       right: "50%",
                       transform: "translateX(50%)",
                       borderRadius: 999,
                       fontSize: 11,
                       fontWeight: 700,
-                      padding: "1px 8px",
+                      padding: "2px 10px",
                       border: "none",
+                      whiteSpace: "nowrap",
                     }}
                   >
-                    ✓ Verified Founder
+                    ✓ Verified Platform
                   </Tag>
                 </div>
 
@@ -2160,18 +2164,18 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
                   }}
                 >
                   <div style={{ fontSize: 11, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>
-                    Academic Background
+                    Registered Hub &amp; Reach
                   </div>
                   <div style={{ fontSize: 13, color: "#f8fafc", fontWeight: 700, marginTop: 4 }}>
-                    🎓 {t.founder.education}
+                    📍 {t.founder.education}
                   </div>
                   <div style={{ fontSize: 12, color: "#cbd5e1", marginTop: 2 }}>
-                    🏛️ {t.founder.college}
+                    🇮🇳 {t.founder.college}
                   </div>
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 12, color: "#94a3b8" }}>
-                  <div>📍 Jamshedpur / Patna • Bharat</div>
+                  <div>📍 Patna • Bharat (Pan-India)</div>
                   <div>✉️ <a href={`mailto:${t.founder.connectEmail}`} style={{ color: "#38bdf8", textDecoration: "none" }}>{t.founder.connectEmail}</a></div>
                 </div>
               </div>
@@ -2182,7 +2186,7 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
               <div>
                 <div style={{ display: "inline-flex", alignItems: "center", gap: 8, color: "#059669", fontWeight: 700, fontSize: 13, marginBottom: 12 }}>
                   <SafetyCertificateOutlined style={{ fontSize: 18 }} />
-                  <span>FOUNDER&apos;S MISSION &amp; COMMITMENT</span>
+                  <span>OUR MISSION &amp; COMMITMENT</span>
                 </div>
 
                 {/* Pull Quote */}
@@ -2253,7 +2257,7 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
                     }}
                     onClick={() => router.push(locale === "hi" ? "/hi/about" : "/about")}
                   >
-                    Read Full Story &amp; Vision →
+                    {locale === "hi" ? "गिन्नीस्पेस के बारे में जानें →" : "About GinieSpace Mission →"}
                   </Button>
                   <Button
                     icon={<WhatsAppOutlined style={{ color: "#25D366" }} />}
@@ -2545,9 +2549,9 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
                   lineHeight: 1.5,
                 }}
               >
-                <div>👨‍💻 <strong>{t.founder.name}</strong> • {t.founder.role}</div>
+                <div>🏢 <strong>GinieSpace Technologies</strong> • Enterprise MSME Commerce</div>
                 <div style={{ color: "#64748b", fontSize: 11, marginTop: 2 }}>
-                  {t.founder.education} — {t.founder.college}
+                  Registered Hub: Boring Road, Patna, Bihar 800001, India
                 </div>
               </div>
             </Col>
@@ -2581,7 +2585,7 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
                   📜 {t.footer.terms}
                 </Link>
                 <Link href={locale === "hi" ? "/hi/about" : "/about"} style={{ color: "#cbd5e1", textDecoration: "none" }}>
-                  👥 {t.footer.about}
+                  🏢 {t.footer.about}
                 </Link>
                 <Link href="/privacy" style={{ color: "#cbd5e1", textDecoration: "none" }}>
                   🔒 {t.footer.privacy}

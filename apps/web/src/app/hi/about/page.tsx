@@ -17,9 +17,9 @@ import {
 } from "@ant-design/icons";
 
 export const metadata: Metadata = {
-  title: "संस्थापक होमा मुनव्वर और गिन्नीस्पेस का परिचय | GinieSpace",
+  title: "गिन्नीस्पेस का परिचय — भारत का 0% कमीशन व्हाट्सएप कॉमर्स इंजन | GinieSpace",
   description:
-    "मिलिए होमा मुनव्वर (संस्थापक व सीटीओ, गिन्नीस्पेस - बी.टेक इलेक्ट्रॉनिक्स एंड कम्युनिकेशन, मैरीलैंड इंस्टीट्यूट ऑफ टेक्नोलॉजी एंड मैनेजमेंट, जमशेदपुर)। जानिए कैसे गिन्नीस्पेस 0% कमीशन पर भारत के एमएसएमई को सशक्त बना रहा है।",
+    "जानिए गिन्नीस्पेस के बारे में — भारत का अग्रणी 0% कमीशन व्हाट्सएप क्लाउड कॉमर्स और डायरेक्ट बैंक UPI बिलिंग सॉफ्टवेयर। खुदरा दुकानों और थोक व्यापारियों को आत्मनिर्भर बनाने का डिजिटल मंच।",
   alternates: {
     canonical: "https://app.ginie.space/hi/about",
     languages: {
@@ -29,9 +29,9 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: "संस्थापक होमा मुनव्वर और गिन्नीस्पेस का परिचय | GinieSpace",
+    title: "गिन्नीस्पेस का परिचय — भारत का 0% कमीशन व्हाट्सएप कॉमर्स इंजन | GinieSpace",
     description:
-      "मिलिए गिन्नीस्पेस के संस्थापक होमा मुनव्वर से (B.Tech ECE, Maryland Institute of Technology and Management, Jamshedpur). भारत के खुदरा व किराना व्यापारियों के लिए 0% कमीशन व्हाट्सएप कॉमर्स।",
+      "गिन्नीस्पेस भारत के खुदरा व किराना व्यापारियों को 0% कमीशन व्हाट्सएप कॉमर्स और डायरेक्ट बैंक UPI सेटलमेंट से सशक्त बनाता है।",
     url: "https://app.ginie.space/hi/about",
     siteName: "GinieSpace",
     locale: "hi_IN",
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "GinieSpace संस्थापक होमा मुनव्वर (B.Tech ECE, MITM Jamshedpur)",
+    title: "GinieSpace - भारत का 0% कमीशन व्हाट्सएप कॉमर्स सॉफ्टवेयर",
     description:
       "भारतीय खुदरा और थोक व्यापारियों के लिए 0% कमीशन व्हाट्सएप कॉमर्स और डायरेक्ट बैंक UPI बिलिंग इंजन।",
     images: ["https://app.ginie.space/og-catalog.jpg"],
@@ -51,29 +51,31 @@ export default function HindiAboutPage() {
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "AboutPage",
-    "name": "संस्थापक होमा मुनव्वर और गिन्नीस्पेस का परिचय",
+    "name": "गिन्नीस्पेस का परिचय",
     "url": "https://app.ginie.space/hi/about",
     "description":
-      "गिन्नीस्पेस के संस्थापक होमा मुनव्वर (B.Tech ECE, मैरीलैंड इंस्टीट्यूट ऑफ टेक्नोलॉजी एंड मैनेजमेंट, जमशेदपुर) और भारत के छोटे व्यापारियों को सशक्त बनाने के मिशन के बारे में जानें।",
+      "गिन्नीस्पेस के मिशन, 0% कमीशन डायरेक्ट UPI सेटलमेंट और भारत के छोटे व्यापारियों को सशक्त बनाने के बारे में जानें।",
     "mainEntity": {
-      "@type": "Person",
-      "name": "Homa Monawwar",
-      "jobTitle": "Founder & Chief Technology Officer (CTO)",
-      "alumniOf": {
-        "@type": "CollegeOrUniversity",
-        "name": "Maryland Institute of Technology and Management, Jamshedpur, Jharkhand"
+      "@type": "Organization",
+      "name": "GinieSpace",
+      "url": "https://app.ginie.space",
+      "logo": "https://app.ginie.space/logo.png",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "telephone": "+91 92792 59690",
+        "contactType": "customer support",
+        "email": "info.giniespace@gmail.com",
+        "availableLanguage": ["Hindi", "English"],
+        "hoursAvailable": "Mo-Sa 09:30-19:30"
       },
-      "worksFor": {
-        "@type": "Organization",
-        "name": "GinieSpace",
-        "url": "https://app.ginie.space"
-      },
-      "knowsAbout": [
-        "Electronics & Communication Engineering",
-        "WhatsApp Cloud Commerce",
-        "Direct Bank UPI Architecture",
-        "SaaS Engineering"
-      ]
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Boring Road",
+        "addressLocality": "Patna",
+        "addressRegion": "Bihar",
+        "postalCode": "800001",
+        "addressCountry": "IN"
+      }
     }
   };
 
@@ -100,7 +102,7 @@ export default function HindiAboutPage() {
             marginBottom: 16,
           }}
         >
-          🇮🇳 संस्थापकीय विज़न व नेतृत्व
+          🇮🇳 मिशन व डिजिटल कॉमर्स इंफ्रास्ट्रक्चर
         </span>
         <h1
           style={{
@@ -116,11 +118,11 @@ export default function HindiAboutPage() {
           <span style={{ color: "#059669" }}>0% कमीशन डायरेक्ट UPI</span> की नई शुरुआत
         </h1>
         <p style={{ fontSize: "clamp(1rem, 2vw, 1.15rem)", color: "#64748b", maxWidth: 760, margin: "0 auto", lineHeight: 1.7 }}>
-          एक इंजीनियर के ज़मीनी समर्पण और भारत के 1 करोड़+ किराना, कपड़ा, और होलसेल व्यापारियों को बिना किसी बिचौलिए के डिजिटल रूप से सक्षम बनाने का संकल्प।
+          भारतीय खुदरा व किराना दुकानदारों, कपड़ा व्यापारियों और थोक वितरकों को 2% से 3% पेमेंट गेटवे कमीशन, जटिल POS मशीनों और बिचौलियों से मुक्त करने का डिजिटल संकल्प।
         </p>
       </section>
 
-      {/* Founder Spotlight Card */}
+      {/* Platform Spotlight Card */}
       <section style={{ maxWidth: 1140, margin: "32px auto 64px", padding: "0 20px" }}>
         <div
           style={{
@@ -135,7 +137,7 @@ export default function HindiAboutPage() {
             alignItems: "center",
           }}
         >
-          {/* Founder Bio Column */}
+          {/* Company Column */}
           <div
             style={{
               background: "linear-gradient(145deg, #0f172a 0%, #1e293b 100%)",
@@ -146,31 +148,34 @@ export default function HindiAboutPage() {
               boxShadow: "0 10px 30px rgba(15, 23, 42, 0.2)",
             }}
           >
-            {/* Avatar with Monogram */}
+            {/* Brand Logo & Verified Badge */}
             <div style={{ position: "relative", display: "inline-block", marginBottom: 18 }}>
               <div
                 style={{
-                  width: 110,
-                  height: 110,
-                  borderRadius: "50%",
+                  width: 104,
+                  height: 104,
+                  borderRadius: "22px",
                   background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  fontSize: 40,
-                  fontWeight: 900,
-                  color: "#fff",
                   boxShadow: "0 8px 24px rgba(16, 185, 129, 0.4)",
-                  border: "4px solid rgba(255, 255, 255, 0.2)",
+                  border: "4px solid rgba(255, 255, 255, 0.15)",
                   margin: "0 auto",
                 }}
               >
-                HM
+                <img
+                  src="/logo-sm.webp"
+                  alt="GinieSpace"
+                  width={64}
+                  height={64}
+                  style={{ width: 64, height: 64, borderRadius: 12, objectFit: "contain" }}
+                />
               </div>
               <span
                 style={{
                   position: "absolute",
-                  bottom: -4,
+                  bottom: -6,
                   right: "50%",
                   transform: "translateX(50%)",
                   background: "#10b981",
@@ -178,22 +183,22 @@ export default function HindiAboutPage() {
                   borderRadius: 999,
                   fontSize: 11,
                   fontWeight: 700,
-                  padding: "2px 10px",
+                  padding: "2px 12px",
                   whiteSpace: "nowrap",
                 }}
               >
-                ✓ सत्यापित संस्थापक (Verified Founder)
+                ✓ सत्यापित क्लाउड प्लेटफॉर्म
               </span>
             </div>
 
             <h2 style={{ color: "#fff", margin: "14px 0 4px", fontSize: 24, fontWeight: 800 }}>
-              Homa Monawwar (होमा मुनव्वर)
+              GinieSpace Technologies
             </h2>
             <div style={{ color: "#34d399", fontSize: 14, fontWeight: 700, marginBottom: 20 }}>
-              Founder &amp; Chief Technology Officer (CTO)
+              Enterprise Cloud Commerce Platform
             </div>
 
-            {/* Academic Credentials Box */}
+            {/* Operating Hub & Trust Box */}
             <div
               style={{
                 background: "rgba(255, 255, 255, 0.06)",
@@ -205,13 +210,13 @@ export default function HindiAboutPage() {
               }}
             >
               <div style={{ fontSize: 11, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>
-                शैक्षणिक योग्यता (Academic Credentials)
+                रजिस्टर्ड ऑपरेटिंग हब
               </div>
               <div style={{ fontSize: 14, color: "#f8fafc", fontWeight: 700, marginTop: 6 }}>
-                🎓 B.Tech in Electronics &amp; Communication Engineering (ECE)
+                🏢 बोरिंग रोड, पटना, बिहार 800001, भारत
               </div>
               <div style={{ fontSize: 13, color: "#cbd5e1", marginTop: 4, lineHeight: 1.5 }}>
-                🏛️ Maryland Institute of Technology and Management (जमशेदपुर, झारखंड)
+                🇮🇳 संपूर्ण भारत में किराना, रिटेल व होलसेल व्यापारियों की सेवा में
               </div>
             </div>
 
@@ -219,7 +224,7 @@ export default function HindiAboutPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 13, color: "#cbd5e1", textAlign: "left" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <EnvironmentOutlined style={{ color: "#f59e0b" }} />
-                <span>जमशेदपुर / पटना • भारत</span>
+                <span>पटना / संपूर्ण भारत</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <MailOutlined style={{ color: "#38bdf8" }} />
@@ -229,7 +234,7 @@ export default function HindiAboutPage() {
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <PhoneOutlined style={{ color: "#25D366" }} />
-                <span>हेल्पलाइन: +91 92792 59690</span>
+                <span>आधिकारिक हेल्पलाइन: +91 92792 59690</span>
               </div>
             </div>
           </div>
@@ -248,7 +253,7 @@ export default function HindiAboutPage() {
               }}
             >
               <SafetyCertificateFilled style={{ fontSize: 18 }} />
-              <span>संस्थापकीय संदेश व दृष्टिकोण</span>
+              <span>हमारा मुख्य संकल्प व प्रतिबद्धता</span>
             </div>
 
             {/* Pull Quote */}
@@ -276,25 +281,25 @@ export default function HindiAboutPage() {
             </div>
 
             <h3 style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", marginBottom: 12 }}>
-              कहानी: इंजीनियरिंग से ज़मीनी बदलाव तक
+              कहानी: व्यापारी के स्वावलंबन और डिजिटल स्वतंत्रता की शुरुआत
             </h3>
             <p style={{ color: "#475569", fontSize: 15, lineHeight: 1.8, marginBottom: 16 }}>
-              मैरीलैंड इंस्टीट्यूट ऑफ टेक्नोलॉजी एंड मैनेजमेंट, जमशेदपुर (झारखंड) से इलेक्ट्रॉनिक्स एंड कम्युनिकेशन में बी.टेक करते हुए होमा मुनव्वर ने नेटवर्क प्रोटोकॉल, हाई-स्पीड सॉकेट और डेटा पाइपलाइन्स की गहन समझ हासिल की।
+              गिन्नीस्पेस की नींव इस मूलभूत सिद्धांत पर रखी गई है: <strong>तकनीक को व्यापारी की ताक़त बनना चाहिए, उस पर कर नहीं।</strong> वर्षों से भारतीय व्यापारियों के सामने केवल दो ही रास्ते थे: या तो बही-खातों में उलझे रहें, या फिर बड़े एग्रीगेटर ऐप्स को 2–3% का भारी कमीशन और अपने ग्राहकों का डेटा सौंप दें।
             </p>
             <p style={{ color: "#475569", fontSize: 15, lineHeight: 1.8, marginBottom: 24 }}>
-              झारखंड, बिहार और उत्तर प्रदेश के स्थानीय बाज़ारों में जब उन्होंने देखा कि दुकानदार बड़े ऐप्स के भारी कमीशन और जटिल बिलिंग सिस्टम से परेशान हैं, तब उन्होंने गिन्नीस्पेस की नींव रखी: <strong>तकनीक को व्यापारी की ताक़त बनना चाहिए, उस पर कर नहीं।</strong>
+              मल्टी-डिवाइस व्हाट्सएप ऑटोमेशन और 100% डायरेक्ट भारत UPI QR सेटलमेंट के साथ, गिन्नीस्पेस हर व्यापारी को एक ऐसा आधुनिक डिजिटल स्टोर प्रदान करता है जिसमें न कोई कमीशन कटता है और न ही किसी अतिरिक्त मशीन या कंप्यूटर की ज़रूरत पड़ती है।
             </p>
 
             {/* Badges Grid */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginBottom: 28 }}>
               <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", padding: "12px 16px", borderRadius: 10, fontSize: 13, fontWeight: 600, color: "#334155" }}>
-                🎓 B.Tech ECE (MITM जमशेदपुर)
+                ⚡ 60-सेकंड इंस्टेंट सेटअप
               </div>
               <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", padding: "12px 16px", borderRadius: 10, fontSize: 13, fontWeight: 600, color: "#334155" }}>
                 ⚡ रियल-टाइम सॉकेट आर्किटेक्चर
               </div>
               <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", padding: "12px 16px", borderRadius: 10, fontSize: 13, fontWeight: 600, color: "#334155" }}>
-                🇮🇳 भारत के एमएसएमई के लिए निर्मित
+                🇮🇳 100% भारत के एमएसएमई के लिए निर्मित
               </div>
               <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", padding: "12px 16px", borderRadius: 10, fontSize: 13, fontWeight: 600, color: "#334155" }}>
                 🛡️ 0% कमीशन व DPDP सुरक्षित
@@ -338,7 +343,7 @@ export default function HindiAboutPage() {
                   fontSize: 15,
                 }}
               >
-                व्हाट्सएप पर संस्थापक से जुड़ें
+                व्हाट्सएप हेल्पलाइन से जुड़ें
               </a>
             </div>
           </div>

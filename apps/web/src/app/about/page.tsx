@@ -17,9 +17,9 @@ import {
 } from "@ant-design/icons";
 
 export const metadata: Metadata = {
-  title: "About Us & Founder Homa Monawwar | GinieSpace",
+  title: "About GinieSpace | India's 0% Commission WhatsApp Commerce Platform",
   description:
-    "Meet Homa Monawwar, Founder & CTO of GinieSpace (B.Tech in Electronics & Communication Engineering from Maryland Institute of Technology and Management, Jamshedpur). Learn how GinieSpace empowers Bharat's MSMEs with 0% commission WhatsApp commerce.",
+    "Learn about GinieSpace, India's leading zero-commission WhatsApp business commerce platform. Empowering retail stores, wholesale traders, and services with direct bank UPI billing and hyperlocal B2B leads.",
   alternates: {
     canonical: "https://app.ginie.space/about",
     languages: {
@@ -29,9 +29,9 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: "About Us & Founder Homa Monawwar | GinieSpace",
+    title: "About GinieSpace | India's 0% Commission WhatsApp Commerce Platform",
     description:
-      "Meet Homa Monawwar, Founder & CTO of GinieSpace. Engineering graduate in Electronics & Communication from Maryland Institute of Technology and Management (Jamshedpur).",
+      "GinieSpace empowers Indian retailers, Kiranas, and wholesalers with 0% commission WhatsApp commerce and direct UPI bank settlements.",
     url: "https://app.ginie.space/about",
     siteName: "GinieSpace",
     locale: "en_IN",
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "About GinieSpace & Founder Homa Monawwar",
+    title: "About GinieSpace - WhatsApp Commerce Engine",
     description:
       "Engineered from the ground up to empower Indian retailers, Kiranas, and wholesalers with 0% commission WhatsApp commerce.",
     images: ["https://app.ginie.space/og-catalog.jpg"],
@@ -51,29 +51,31 @@ export default function AboutPage() {
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "AboutPage",
-    "name": "About GinieSpace & Founder Homa Monawwar",
+    "name": "About GinieSpace",
     "url": "https://app.ginie.space/about",
     "description":
-      "Learn about GinieSpace, India's leading zero-commission WhatsApp business commerce platform, and founder Homa Monawwar (B.Tech ECE, Maryland Institute of Technology and Management, Jamshedpur).",
+      "Learn about GinieSpace, India's leading zero-commission WhatsApp business commerce platform empowering MSMEs with direct UPI settlements.",
     "mainEntity": {
-      "@type": "Person",
-      "name": "Homa Monawwar",
-      "jobTitle": "Founder & Chief Technology Officer (CTO)",
-      "alumniOf": {
-        "@type": "CollegeOrUniversity",
-        "name": "Maryland Institute of Technology and Management, Jamshedpur, Jharkhand"
+      "@type": "Organization",
+      "name": "GinieSpace",
+      "url": "https://app.ginie.space",
+      "logo": "https://app.ginie.space/logo.png",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "telephone": "+91 92792 59690",
+        "contactType": "customer support",
+        "email": "info.giniespace@gmail.com",
+        "availableLanguage": ["Hindi", "English"],
+        "hoursAvailable": "Mo-Sa 09:30-19:30"
       },
-      "worksFor": {
-        "@type": "Organization",
-        "name": "GinieSpace",
-        "url": "https://app.ginie.space"
-      },
-      "knowsAbout": [
-        "Electronics & Communication Engineering",
-        "WhatsApp Automation",
-        "Direct UPI Bank Settlement",
-        "SaaS Architecture"
-      ]
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Boring Road",
+        "addressLocality": "Patna",
+        "addressRegion": "Bihar",
+        "postalCode": "800001",
+        "addressCountry": "IN"
+      }
     }
   };
 
@@ -100,7 +102,7 @@ export default function AboutPage() {
             marginBottom: 16,
           }}
         >
-          🇮🇳 LEADERSHIP &amp; MISSION
+          🇮🇳 MISSION &amp; COMMERCE INFRASTRUCTURE
         </span>
         <h1
           style={{
@@ -116,11 +118,11 @@ export default function AboutPage() {
           <span style={{ color: "#059669" }}>Bharat&apos;s MSMEs</span>
         </h1>
         <p style={{ fontSize: "clamp(1rem, 2vw, 1.15rem)", color: "#64748b", maxWidth: 740, margin: "0 auto", lineHeight: 1.6 }}>
-          Founded by an engineer with a passion for grassroots technology, zero-commission economics, and high-performance cloud infrastructure. Built to help local Indian retailers and distributors thrive in the digital era.
+          Engineered to liberate local Indian retailers, Kirana store owners, and wholesale distributors from predatory 2% to 3% payment gateway cuts, expensive POS hardware, and technical friction.
         </p>
       </section>
 
-      {/* Founder Spotlight Card */}
+      {/* Platform Spotlight Card */}
       <section style={{ maxWidth: 1140, margin: "32px auto 64px", padding: "0 20px" }}>
         <div
           style={{
@@ -135,7 +137,7 @@ export default function AboutPage() {
             alignItems: "center",
           }}
         >
-          {/* Founder Bio Column */}
+          {/* Company Column */}
           <div
             style={{
               background: "linear-gradient(145deg, #0f172a 0%, #1e293b 100%)",
@@ -146,31 +148,34 @@ export default function AboutPage() {
               boxShadow: "0 10px 30px rgba(15, 23, 42, 0.2)",
             }}
           >
-            {/* Avatar with Monogram */}
+            {/* Brand Logo & Verified Badge */}
             <div style={{ position: "relative", display: "inline-block", marginBottom: 18 }}>
               <div
                 style={{
-                  width: 110,
-                  height: 110,
-                  borderRadius: "50%",
+                  width: 104,
+                  height: 104,
+                  borderRadius: "22px",
                   background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  fontSize: 40,
-                  fontWeight: 900,
-                  color: "#fff",
                   boxShadow: "0 8px 24px rgba(16, 185, 129, 0.4)",
-                  border: "4px solid rgba(255, 255, 255, 0.2)",
+                  border: "4px solid rgba(255, 255, 255, 0.15)",
                   margin: "0 auto",
                 }}
               >
-                HM
+                <img
+                  src="/logo-sm.webp"
+                  alt="GinieSpace"
+                  width={64}
+                  height={64}
+                  style={{ width: 64, height: 64, borderRadius: 12, objectFit: "contain" }}
+                />
               </div>
               <span
                 style={{
                   position: "absolute",
-                  bottom: -4,
+                  bottom: -6,
                   right: "50%",
                   transform: "translateX(50%)",
                   background: "#10b981",
@@ -178,22 +183,22 @@ export default function AboutPage() {
                   borderRadius: 999,
                   fontSize: 11,
                   fontWeight: 700,
-                  padding: "2px 10px",
+                  padding: "2px 12px",
                   whiteSpace: "nowrap",
                 }}
               >
-                ✓ Verified Founder
+                ✓ Verified SaaS Platform
               </span>
             </div>
 
             <h2 style={{ color: "#fff", margin: "14px 0 4px", fontSize: 24, fontWeight: 800 }}>
-              Homa Monawwar
+              GinieSpace Technologies
             </h2>
             <div style={{ color: "#34d399", fontSize: 14, fontWeight: 700, marginBottom: 20 }}>
-              Founder &amp; Chief Technology Officer (CTO)
+              Enterprise Cloud Commerce Platform
             </div>
 
-            {/* Academic Credentials Box */}
+            {/* Operating Hub & Trust Box */}
             <div
               style={{
                 background: "rgba(255, 255, 255, 0.06)",
@@ -205,13 +210,13 @@ export default function AboutPage() {
               }}
             >
               <div style={{ fontSize: 11, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>
-                Academic Credentials
+                Registered Operating Hub
               </div>
               <div style={{ fontSize: 14, color: "#f8fafc", fontWeight: 700, marginTop: 6 }}>
-                🎓 B.Tech in Electronics &amp; Communication Engineering (ECE)
+                🏢 Boring Road, Patna, Bihar 800001, India
               </div>
               <div style={{ fontSize: 13, color: "#cbd5e1", marginTop: 4, lineHeight: 1.5 }}>
-                🏛️ Maryland Institute of Technology and Management (Jamshedpur, Jharkhand)
+                🇮🇳 Serving Retailers, Wholesalers &amp; MSMEs Across Bharat
               </div>
             </div>
 
@@ -219,7 +224,7 @@ export default function AboutPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 13, color: "#cbd5e1", textAlign: "left" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <EnvironmentOutlined style={{ color: "#f59e0b" }} />
-                <span>Jamshedpur / Patna • Bharat</span>
+                <span>Patna / Pan-India • Bharat</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <MailOutlined style={{ color: "#38bdf8" }} />
@@ -248,7 +253,7 @@ export default function AboutPage() {
               }}
             >
               <SafetyCertificateFilled style={{ fontSize: 18 }} />
-              <span>FOUNDER&apos;S VISION NOTE</span>
+              <span>OUR FOUNDATIONAL COMMITMENT</span>
             </div>
 
             {/* Pull Quote */}
@@ -276,22 +281,22 @@ export default function AboutPage() {
             </div>
 
             <h3 style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", marginBottom: 12 }}>
-              The Story: From Engineering to Grassroots Impact
+              The Story: Engineering for Merchant Sovereignty
             </h3>
             <p style={{ color: "#475569", fontSize: 15, lineHeight: 1.8, marginBottom: 16 }}>
-              During his engineering studies in Electronics &amp; Communication Engineering at Maryland Institute of Technology and Management, Jamshedpur, Homa Monawwar developed a deep appreciation for systems architecture, hardware-level socket communications, and low-latency data pipelines.
+              GinieSpace was designed around one fundamental principle: <strong>Technology should serve the merchant, not tax them.</strong> For years, Indian business operators have faced a frustrating trade-off: either remain manual with slow pen-and-paper registers, or surrender their customer relationships and 2–3% transaction fees to intermediary platforms.
             </p>
             <p style={{ color: "#475569", fontSize: 15, lineHeight: 1.8, marginBottom: 24 }}>
-              Observing small shopkeepers across eastern India struggle with complex inventory software, customer ordering chaos, and gatekeeper fees, Homa designed GinieSpace around one foundational principle: <strong>Technology should serve the merchant, not tax them.</strong> By pairing persistent multi-device WhatsApp sessions with 100% direct Bharat UPI QR settlement, GinieSpace delivers an enterprise-grade digital storefront with zero commission and zero barriers.
+              By combining persistent multi-device WhatsApp automation with 100% direct Bharat UPI QR settlement, GinieSpace delivers an enterprise-grade digital storefront with zero commission, zero intermediary escrow, and zero hardware requirements. Every rupee paid by your customers settles directly into your own bank account instantly.
             </p>
 
             {/* Badges Grid */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginBottom: 28 }}>
               <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", padding: "12px 16px", borderRadius: 10, fontSize: 13, fontWeight: 600, color: "#334155" }}>
-                🎓 B.Tech ECE (MITM Jamshedpur)
+                ⚡ 60-Sec Instant Setup
               </div>
               <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", padding: "12px 16px", borderRadius: 10, fontSize: 13, fontWeight: 600, color: "#334155" }}>
-                ⚡ Real-Time Socket Architect
+                ⚡ Real-Time Socket Architecture
               </div>
               <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", padding: "12px 16px", borderRadius: 10, fontSize: 13, fontWeight: 600, color: "#334155" }}>
                 🇮🇳 100% Built for Bharat&apos;s MSMEs
@@ -338,7 +343,7 @@ export default function AboutPage() {
                   fontSize: 15,
                 }}
               >
-                Talk to Founder on WhatsApp
+                Connect on WhatsApp Helpline
               </a>
             </div>
           </div>
@@ -388,7 +393,7 @@ export default function AboutPage() {
             <TeamOutlined style={{ fontSize: 32, color: "#7c3aed", marginBottom: 16 }} />
             <h3 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 8px" }}>Direct Human Support</h3>
             <p style={{ color: "#64748b", fontSize: 14, lineHeight: 1.6, margin: 0 }}>
-              Merchants get direct access to dedicated onboarding engineers via WhatsApp and call (+91 92792 59690) six days a week, speaking their language.
+              Merchants get direct access to dedicated support engineers via WhatsApp and phone (+91 92792 59690) six days a week, speaking their preferred language.
             </p>
           </div>
         </div>
