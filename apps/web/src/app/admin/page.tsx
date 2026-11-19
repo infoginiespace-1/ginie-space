@@ -175,6 +175,57 @@ const ADMIN_PITCH_TEMPLATES = [
   },
 ];
 
+const ADMIN_MARKETING_PRESETS = [
+  {
+    id: "diwali",
+    title: "🪔 Diwali & Dhanteras",
+    tag: "Festive Sale",
+    segment: "all" as const,
+    imageUrl: "https://app.ginie.space/marketing/diwali-dhanteras.png",
+    text: `🪔 *शुभ दीपावली एवं धनतेरस की हार्दिक शुभकामनाएं!* ✨\n\nनमस्ते {{name}},\n\nत्योहारों के इस सीजन में ग्राहकों की भारी भीड़ में ना बिलिंग रुकेगी, ना पेमेंट!\n\nGinieSpace के साथ अपनी दुकान को बनाएं *Super-Fast Digital Dukan*:\n🛍️ *WhatsApp Catalog*: 2 मिनट में अपने प्रोडक्ट्स का डिजिटल स्टोर बनाएं\n⚡ *0% UPI Billing*: ग्राहक QR स्कैन करेगा, 100% पैसा सीधा आपके बैंक खाते में\n📈 *Automatic Khata*: उधारी का हिसाब और WhatsApp पेमेंट रिमाइंडर\n\n🎁 *Diwali Special Offer*:\nPro Plan sirf ₹199/month me — Unlimited Catalog aur 50 Free Monthly Leads!\n\n👉 *Abhi Free Dukan Shuru Karein:*\nhttps://app.ginie.space\n\n💬 WhatsApp Help: +91 92792 59690\n_(Type STOP to unsubscribe)_`,
+  },
+  {
+    id: "eid",
+    title: "🌙 Eid Mubarak",
+    tag: "Festive Barkat",
+    segment: "all" as const,
+    imageUrl: "https://app.ginie.space/marketing/eid-mubarak.png",
+    text: `🌙 *Eid Mubarak! खुशियों का त्योहार, व्यापार में बरकत!* 🌟\n\nअस्सलाम वालेकुम {{name}},\n\nईद के खास मौके पर अपने ग्राहकों तक पहुंचिए सबसे पहले और सबसे तेज़ी से:\n\n✨ *Share Festive Stock on WhatsApp*: नए कपड़े, सेवइयां और गिफ्ट्स का कैटलॉग 1-क्लिक में शेयर करें\n⚡ *0% Fee Instant Billing*: बिना POS मशीन के फोन से 5 सेकंड में पक्का बिल और UPI पेमेंट\n📦 *Wholesale & Retail Network*: थोक व्यापारियों के लिए कार्टन प्राइसिंग और डिस्पैच ट्रैकिंग\n\n🎁 *Mubarak Offer:*\nConnect your WhatsApp & Go Live in just 2 minutes!\n\n👉 *Free Me Digital Store Banayein:*\nhttps://app.ginie.space\n\n💬 Helpline: +91 92792 59690\n_(Type STOP to unsubscribe)_`,
+  },
+  {
+    id: "holi",
+    title: "🎨 Holi Festival",
+    tag: "Rang Bharo",
+    segment: "all" as const,
+    imageUrl: "https://app.ginie.space/marketing/holi-festival.png",
+    text: `🎨 *Happy Holi! रंगों का त्योहार, व्यापार में खुशियां!* 🌈\n\nनमस्ते {{name}},\n\nइस होली पुराने बही-खाते और कागज़ी पर्चियों के झंझट से आज़ादी पाइए!\n\nGinieSpace Digital Dukan ke sath:\n📱 *Digital WhatsApp Catalog*: अपने ग्राहकों को घर बैठे ऑर्डर करने की सुविधा दें\n⚡ *Instant 0% UPI Payments*: बिना किसी कमीशन कटौती के सीधा बैंक सेटलमेंट\n🤝 *Smart Customer Khata*: उधारी का ऑटोमैटिक हिसाब और WhatsApp पेमेंट लिंक\n\n🎉 *Holi Special:* Lifetime Free Basic Plan for all Kirana & Retail Dukans!\n\n👉 *Aaj Hi Dukan Ko Smart Banayein:*\nhttps://app.ginie.space\n\n💬 WhatsApp Helpline: +91 92792 59690\n_(Type STOP to unsubscribe)_`,
+  },
+  {
+    id: "new_year",
+    title: "🎉 New Year 2026",
+    tag: "Upgrade Pro",
+    segment: "free" as const,
+    imageUrl: "https://app.ginie.space/marketing/new-year-growth.png",
+    text: `🎉 *Naya Saal, Naya Khata, Naya Record!* 📈\n\nनमस्ते {{name}},\n\nनए साल में अपनी दुकान को दीजिए एक आधुनिक डिजिटल पहचान! पुराने रजिस्टर छोड़कर अपनाइए GinieSpace Smart Billing:\n\n⚡ *5-Second Mobile Invoicing*: फोन से ही तुरंत पक्का GST/Non-GST बिल बनाएं\n📱 *24x7 WhatsApp Orders*: दुकान बंद होने के बाद भी ग्राहक आपके WhatsApp कैटलॉग से ऑर्डर कर सकते हैं\n🎯 *50 B2B Leads Monthly*: अपने शहर और पिनकोड के नए रीटेलर्स खोजें और व्यापार बढ़ाएं\n\n🚀 *New Year Growth Offer*:\nPro Annual Plan at just ₹1799/Year (मात्र ₹150/महीना)!\n\n👉 *Upgrade Your Business Today:*\nhttps://app.ginie.space/pricing\n\n💬 WhatsApp Support: +91 92792 59690\n_(Type STOP to unsubscribe)_`,
+  },
+  {
+    id: "aatmanirbhar",
+    title: "🇮🇳 Aatmanirbhar",
+    tag: "Swadeshi",
+    segment: "all" as const,
+    imageUrl: "https://app.ginie.space/marketing/independence-aatmanirbhar.png",
+    text: `🇮🇳 *आत्मनिर्भर भारत, आत्मनिर्भर दुकानदार!* 🇮🇳\n\nनमस्ते {{name}},\n\nविदेशी ऐप्स को हर महीने भारी कमीशन और गेटवे फीस देना बंद करें!\n\nGinieSpace है भारत का 100% स्वदेशी डिजिटल दुकान ऐप:\n🇮🇳 *Made in India*: भारतीय किराना, गारमेंट्स और होलसेल व्यापारियों के लिए खास तौर पर निर्मित\n⚡ *Zero Brokerage*: ग्राहक का 100% पैसा सीधे आपके UPI बैंक खाते में, कोई बिचौलिया नहीं\n🤝 *Local Retailer Network*: अपने क्षेत्र के अन्य व्यापारियों से जुड़ें और सप्लाई चेन मजबूत करें\n\nVocal for Local बनिए और अपनी दुकान को आज ही डिजिटल बनाइए!\n\n👉 *Free Sign Up:*\nhttps://app.ginie.space\n\n💬 Helpline: +91 92792 59690\n_(Type STOP to unsubscribe)_`,
+  },
+  {
+    id: "catalog",
+    title: "⚡ WhatsApp Dukan",
+    tag: "0% UPI",
+    segment: "all" as const,
+    imageUrl: "https://app.ginie.space/marketing/product-catalog-pos.png",
+    text: `⚡ *अब अपनी दुकान का WhatsApp Catalog बनाएं सिर्फ 2 मिनट में!* 🛍️\n\nनमस्ते {{name}},\n\nक्या आप जानते हैं कि 70% ग्राहक अब दुकान आने से पहले WhatsApp पर सामान और रेट देखना पसंद करते हैं?\n\nGinieSpace से अपनी डिजिटल दुकान शुरू करें:\n✅ Unlimited Products & Photos WhatsApp Store\n✅ 0% UPI Commission Invoicing & QR\n✅ Automatic Khata & Payment Reminders\n✅ Verified Local B2B Buyer Leads\n\n💰 *No Setup Fee • No Credit Card Required*\n\n👉 *2 Minute Me Apni Online Dukan Shuru Karein:*\nhttps://app.ginie.space\n\n💬 Direct WhatsApp Help: +91 92792 59690\n_(Type STOP to unsubscribe)_`,
+  },
+];
+
 export default function AdminPage() {
   const { user } = useAuth();
   const router = useRouter();
@@ -3435,83 +3486,195 @@ export default function AdminPage() {
                       styles={{ body: { padding: isMobile ? 14 : 24 } }}
                       style={{ borderRadius: 12 }}
                     >
-                      <Paragraph type="secondary" style={{ fontSize: 13 }}>
-                        Official GinieSpace bot (+91 9279259690) se sabhi merchants ko ek saath message, offers ya banner image bhejein. Message me <code>{"{{name}}"}</code> merchant ke real name se replace ho jayega.
+                      <Paragraph type="secondary" style={{ fontSize: 13, marginBottom: 16 }}>
+                        Official GinieSpace bot (+91 9279259690) se sabhi merchants ko ek saath personalized message, festive offers ya branded banner image bhejein. Message me <code>{"{{name}}"}</code> merchant ke real name se replace ho jayega.
                       </Paragraph>
 
-                      <Form layout="vertical">
-                        <Form.Item label="Target Audience Segment">
-                          <Select
-                            value={broadcastSegment}
-                            onChange={setBroadcastSegment}
-                            options={[
-                              { value: "all", label: `All Active Businesses (${merchants.filter((m) => m.role !== "staff" && m.status !== "suspended").length} users)` },
-                              { value: "free", label: `Free Plan Users Only (${merchants.filter((m) => m.role !== "staff" && m.status !== "suspended" && m.plan === "free").length} users)` },
-                              { value: "pro", label: `Pro Subscribers Only (${merchants.filter((m) => m.role !== "staff" && m.status !== "suspended" && m.plan === "pro").length} users)` },
-                              { value: "retail", label: "Retail Stores" },
-                              { value: "wholesale", label: "Wholesale Businesses" },
-                              { value: "services", label: "Service Providers" },
-                            ]}
-                          />
-                        </Form.Item>
-
-                        <div style={{ marginBottom: 16 }}>
-                          <Tag color="cyan">Estimated WhatsApp Recipients: {broadcastTargetCount} businesses</Tag>
-                          {supportStatus !== "connected" && (
-                            <Tag color="error">Support Bot is Disconnected</Tag>
-                          )}
+                      {/* 1-CLICK CAMPAIGN PRESET CARDS */}
+                      <div style={{ marginBottom: 20, background: "#f8fafc", padding: "16px 14px", borderRadius: 10, border: "1px solid #e2e8f0" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                          <Text strong style={{ fontSize: 13, color: "#065f46" }}>
+                            ⚡ 1-Click Festive & Marketing Presets (त्योहार व ऑफर्स):
+                          </Text>
+                          <Text type="secondary" style={{ fontSize: 11 }}>
+                            Tap any preset to auto-fill banner, copy & segment
+                          </Text>
                         </div>
+                        <Row gutter={[10, 10]}>
+                          {ADMIN_MARKETING_PRESETS.map((p) => {
+                            const isSelected = broadcastImageUrl === p.imageUrl;
+                            return (
+                              <Col xs={12} sm={8} md={4} key={p.id}>
+                                <div
+                                  onClick={() => {
+                                    setBroadcastImageUrl(p.imageUrl);
+                                    setBroadcastText(p.text);
+                                    setBroadcastSegment(p.segment);
+                                    message.success(`${p.title} template loaded!`);
+                                  }}
+                                  style={{
+                                    cursor: "pointer",
+                                    borderRadius: 8,
+                                    border: isSelected ? "2px solid #25D366" : "1px solid #cbd5e1",
+                                    background: isSelected ? "#f0fdf4" : "#ffffff",
+                                    padding: "8px 6px",
+                                    textAlign: "center",
+                                    transition: "all 0.15s ease",
+                                    boxShadow: isSelected ? "0 2px 8px rgba(37, 211, 102, 0.25)" : "none",
+                                  }}
+                                >
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img
+                                    src={p.imageUrl}
+                                    alt={p.title}
+                                    style={{ width: "100%", height: 58, objectFit: "cover", borderRadius: 4, marginBottom: 6 }}
+                                  />
+                                  <div style={{ fontSize: 11, fontWeight: 700, color: isSelected ? "#15803d" : "#1e293b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                    {p.title}
+                                  </div>
+                                  <Tag color={isSelected ? "green" : "default"} style={{ fontSize: 10, marginTop: 4, marginInlineEnd: 0 }}>
+                                    {p.tag}
+                                  </Tag>
+                                </div>
+                              </Col>
+                            );
+                          })}
+                        </Row>
+                      </div>
 
-                        <Form.Item
-                          label="Promotional Banner Image URL (Optional)"
-                          extra="Enter a publicly accessible image URL (e.g. Cloudinary, Imgur, or Ginie CDN). Bot will send this image along with your campaign text."
-                        >
-                          <Input
-                            placeholder="https://example.com/banner.jpg"
-                            prefix={<PictureOutlined style={{ color: "#25D366" }} />}
-                            value={broadcastImageUrl}
-                            onChange={(e) => setBroadcastImageUrl(e.target.value)}
-                            allowClear
-                          />
-                        </Form.Item>
+                      <Row gutter={[24, 24]}>
+                        <Col xs={24} lg={14}>
+                          <Form layout="vertical">
+                            <Form.Item label="Target Audience Segment">
+                              <Select
+                                value={broadcastSegment}
+                                onChange={setBroadcastSegment}
+                                options={[
+                                  { value: "all", label: `All Active Businesses (${merchants.filter((m) => m.role !== "staff" && m.status !== "suspended").length} users)` },
+                                  { value: "free", label: `Free Plan Users Only (${merchants.filter((m) => m.role !== "staff" && m.status !== "suspended" && m.plan === "free").length} users)` },
+                                  { value: "pro", label: `Pro Subscribers Only (${merchants.filter((m) => m.role !== "staff" && m.status !== "suspended" && m.plan === "pro").length} users)` },
+                                  { value: "retail", label: "Retail Stores" },
+                                  { value: "wholesale", label: "Wholesale Businesses" },
+                                  { value: "services", label: "Service Providers" },
+                                ]}
+                              />
+                            </Form.Item>
 
-                        {broadcastImageUrl && (
-                          <div style={{ marginBottom: 16, background: "#f8fafc", padding: 12, borderRadius: 8, display: "flex", gap: 14, alignItems: "center" }}>
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={broadcastImageUrl} alt="Banner Preview" style={{ width: 100, height: 60, objectFit: "cover", borderRadius: 6 }} />
-                            <div>
-                              <Text strong style={{ fontSize: 13, color: "#065f46" }}>Banner Image Preview</Text>
-                              <div style={{ fontSize: 11, color: "#64748b" }}>This image will be delivered directly inside WhatsApp.</div>
+                            <div style={{ marginBottom: 16 }}>
+                              <Tag color="cyan">Estimated WhatsApp Recipients: {broadcastTargetCount} businesses</Tag>
+                              {supportStatus !== "connected" && (
+                                <Tag color="error">Support Bot is Disconnected</Tag>
+                              )}
+                            </div>
+
+                            <Form.Item
+                              label="Promotional Banner Image URL (Optional)"
+                              extra="Enter a publicly accessible image URL. Select a preset above or enter custom image URL."
+                            >
+                              <Input
+                                placeholder="https://app.ginie.space/marketing/diwali-dhanteras.png"
+                                prefix={<PictureOutlined style={{ color: "#25D366" }} />}
+                                value={broadcastImageUrl}
+                                onChange={(e) => setBroadcastImageUrl(e.target.value)}
+                                allowClear
+                              />
+                            </Form.Item>
+
+                            <Form.Item label="Campaign Message Content">
+                              <Input.TextArea
+                                rows={6}
+                                placeholder="Namaste {{name}}, GinieSpace par aapke business ke liye naye features live ho gaye hain..."
+                                value={broadcastText}
+                                onChange={(e) => setBroadcastText(e.target.value)}
+                              />
+                            </Form.Item>
+
+                            <Button
+                              block={isMobile}
+                              type="primary"
+                              icon={<SendOutlined />}
+                              loading={sendingBroadcast}
+                              disabled={supportStatus !== "connected" || !broadcastText.trim()}
+                              onClick={handleSendBroadcast}
+                              style={{
+                                height: 44,
+                                fontWeight: 600,
+                                fontSize: 15,
+                                background: supportStatus === "connected" ? "#25D366" : undefined,
+                                borderColor: supportStatus === "connected" ? "#25D366" : undefined,
+                              }}
+                            >
+                              Send Broadcast to {broadcastTargetCount} Recipients
+                            </Button>
+                          </Form>
+                        </Col>
+
+                        {/* LIVE WHATSAPP PREVIEW */}
+                        <Col xs={24} lg={10}>
+                          <div
+                            style={{
+                              background: "#efeae2",
+                              borderRadius: 14,
+                              border: "1px solid #dcd7ce",
+                              overflow: "hidden",
+                              boxShadow: "0 4px 14px rgba(0,0,0,0.06)",
+                            }}
+                          >
+                            {/* WhatsApp Header */}
+                            <div
+                              style={{
+                                background: "#075e54",
+                                color: "#fff",
+                                padding: "10px 14px",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 10,
+                              }}
+                            >
+                              <Avatar size="small" style={{ background: "#25D366" }} icon={<WhatsAppOutlined />} />
+                              <div style={{ flex: 1, overflow: "hidden" }}>
+                                <div style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.2 }}>GinieSpace Official</div>
+                                <div style={{ fontSize: 10, color: "#a7f3d0" }}>+91 92792 59690 • Verified Bot</div>
+                              </div>
+                              <Tag color="green" style={{ margin: 0, fontSize: 10 }}>PREVIEW</Tag>
+                            </div>
+
+                            {/* Chat Area */}
+                            <div style={{ padding: 14, minHeight: 280, display: "flex", flexDirection: "column", gap: 10 }}>
+                              <div
+                                style={{
+                                  background: "#ffffff",
+                                  borderRadius: "0px 10px 10px 10px",
+                                  padding: 8,
+                                  maxWidth: "92%",
+                                  boxShadow: "0 1px 2px rgba(0,0,0,0.12)",
+                                  fontSize: 12,
+                                  lineHeight: 1.45,
+                                }}
+                              >
+                                {broadcastImageUrl && (
+                                  <div style={{ marginBottom: 8, borderRadius: 6, overflow: "hidden" }}>
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                      src={broadcastImageUrl}
+                                      alt="Broadcast Preview"
+                                      style={{ width: "100%", maxHeight: 200, objectFit: "cover" }}
+                                    />
+                                  </div>
+                                )}
+                                <div style={{ whiteSpace: "pre-wrap", color: "#111827" }}>
+                                  {broadcastText.trim()
+                                    ? broadcastText.replace(/\{\{name\}\}/gi, "Sharma General Store")
+                                    : "Select a preset above or type your campaign message to see the live WhatsApp delivery preview here..."}
+                                </div>
+                                <div style={{ textAlign: "right", marginTop: 4, fontSize: 10, color: "#64748b" }}>
+                                  Just now • ✓✓
+                                </div>
+                              </div>
                             </div>
                           </div>
-                        )}
-
-                        <Form.Item label="Campaign Message Content">
-                          <Input.TextArea
-                            rows={4}
-                            placeholder="Namaste {{name}}, GinieSpace par aapke business ke liye naye features live ho gaye hain..."
-                            value={broadcastText}
-                            onChange={(e) => setBroadcastText(e.target.value)}
-                          />
-                        </Form.Item>
-
-                        <Button
-                          block={isMobile}
-                          type="primary"
-                          icon={<SendOutlined />}
-                          loading={sendingBroadcast}
-                          disabled={supportStatus !== "connected" || !broadcastText.trim()}
-                          onClick={handleSendBroadcast}
-                          style={{
-                            height: 42,
-                            fontWeight: 600,
-                            background: supportStatus === "connected" ? "#25D366" : undefined,
-                            borderColor: supportStatus === "connected" ? "#25D366" : undefined,
-                          }}
-                        >
-                          Send Broadcast to {broadcastTargetCount} Recipients
-                        </Button>
-                      </Form>
+                        </Col>
+                      </Row>
                     </Card>
                   </div>
                 ) : (

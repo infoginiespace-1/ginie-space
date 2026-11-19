@@ -845,6 +845,64 @@ export default function CustomersPage() {
         ]}
       >
         <Space direction="vertical" style={{ width: "100%" }} size={12}>
+          <div>
+            <Text style={{ fontSize: 12, color: "#065f46", fontWeight: 600, display: "block", marginBottom: 6 }}>
+              ⚡ Quick Festive & Offer Presets (1-क्लिक में ग्रीटिंग लोड करें):
+            </Text>
+            <Space wrap size={[6, 6]}>
+              <Button
+                size="small"
+                onClick={() =>
+                  setBroadcastTemplate(
+                    "🪔 Namaste {name} ji! Hamari dukaan ki taraf se aapko Diwali & Dhanteras ki hardik shubhkamnayein! Naye festive stock aur offers dekhne ke liye reply karein!"
+                  )
+                }
+              >
+                🪔 Diwali
+              </Button>
+              <Button
+                size="small"
+                onClick={() =>
+                  setBroadcastTemplate(
+                    "🌙 Eid Mubarak {name} ji! Hamare store par Eid ke naye collection aur fresh stock aa chuke hain. Order karne ke liye reply karein!"
+                  )
+                }
+              >
+                🌙 Eid
+              </Button>
+              <Button
+                size="small"
+                onClick={() =>
+                  setBroadcastTemplate(
+                    "🎨 Happy Holi {name} ji! Is holi par hamari dukaan se special festive offers aur fast delivery payein. Order ke liye reply karein!"
+                  )
+                }
+              >
+                🎨 Holi
+              </Button>
+              <Button
+                size="small"
+                onClick={() =>
+                  setBroadcastTemplate(
+                    "🎉 Happy New Year {name} ji! Naye saal me hamare store par exclusive discounts available hain. Ghar baithe order ke liye reply karein!"
+                  )
+                }
+              >
+                🎉 New Year
+              </Button>
+              <Button
+                size="small"
+                onClick={() =>
+                  setBroadcastTemplate(
+                    "🛍️ Namaste {name} ji! Hamare store par aaj fresh stock aur special discounts available hain. Direct WhatsApp par order karne ke liye reply karein!"
+                  )
+                }
+              >
+                🛍️ Fresh Stock
+              </Button>
+            </Space>
+          </div>
+
           <Text type="secondary">
             Use <Text code>{"{name}"}</Text> to automatically insert customer names in your WhatsApp broadcast:
           </Text>

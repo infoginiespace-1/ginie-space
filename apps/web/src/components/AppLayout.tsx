@@ -20,6 +20,7 @@ import {
   WhatsAppOutlined,
   BellOutlined,
   CrownOutlined,
+  PictureOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "../context/AuthContext";
 import { usePathname, useRouter } from "next/navigation";
@@ -181,6 +182,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     },
     { key: "/leads", area: "leads", icon: <SearchOutlined />, label: "Find New Leads" },
     { key: "/customers", area: "customers", icon: <TeamOutlined />, label: "Customers" },
+    { key: "/marketing", area: "marketing", icon: <PictureOutlined />, label: "Marketing Kit" },
     { key: "/products", area: "products", icon: <AppstoreOutlined />, label: isServiceBiz ? "Services & Catalog" : "Catalog & Items" },
     { key: "/settings", area: "settings", icon: <SettingOutlined />, label: "Settings" },
   ];
@@ -188,7 +190,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const menuItems = allMenuItems
     .filter((item) => {
       if (user?.role !== "staff") return true;
-      if (item.area === "dashboard") return true;
+      if (item.area === "dashboard" || item.area === "marketing") return true;
       if (item.area === "settings") return false;
       return (user.staffPermissions || []).includes(item.area);
     })
