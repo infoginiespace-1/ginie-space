@@ -166,10 +166,32 @@ export default function LeadsPage() {
   }, []);
 
   const handleSearch = async (values: any) => {
+    const cleanQuery = (values.query || "").trim();
+    const cleanCity = (values.city || "").trim();
+    const cleanArea = (values.area || "").trim();
+    const cleanPincode = (values.pincode || "").trim();
+
+    if (!cleanQuery || !cleanCity || !cleanArea || !cleanPincode) {
+      message.error("Kripya Category, City, Area aur 6-digit Pincode charon fields bharein.");
+      return;
+    }
+    if (!/^[1-9][0-9]{5}$/.test(cleanPincode)) {
+      message.error("Kripya valid 6-digit Indian Pincode enter karein (e.g. 800020, 110001).");
+      return;
+    }
+
     try {
       setSearching(true);
-      setLastCriteria(values);
-      const res = await api.post("/api/leads/discover", values);
+      const searchPayload = {
+        ...values,
+        query: cleanQuery,
+        city: cleanCity,
+        area: cleanArea,
+        pincode: cleanPincode,
+        country: "India",
+      };
+      setLastCriteria(searchPayload);
+      const res = await api.post("/api/leads/discover", searchPayload);
       setDiscoveredLeads(res.data.leads || []);
       setNextPageToken(res.data.nextPageToken || null);
       loadQuota();
@@ -498,26 +520,37 @@ export default function LeadsPage() {
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
                       <Form.Item
                         name="query"
-                        label="Business Category or Keywords"
-                        rules={[{ required: true, message: "Enter business category" }]}
+                        label="* Business Category or Keywords"
+                        rules={[{ required: true, message: "Please enter business category (e.g. Kirana, Garments, Restaurant)" }]}
                       >
-                        <Input placeholder="e.g. textile manufacturer, bakery, hardware store" />
+                        <Input placeholder="e.g. Kirana store, bakery, garment manufacturer" />
                       </Form.Item>
 
-                      <Form.Item name="area" label="Locality / Area">
-                        <Input placeholder="e.g. Karol Bagh, Andheri East" />
+                      <Form.Item
+                        name="city"
+                        label="* Target City"
+                        rules={[{ required: true, message: "Please enter city (e.g. Patna, Mumbai, Delhi, Darbhanga)" }]}
+                      >
+                        <Input placeholder="e.g. Patna, Mumbai, New Delhi, Bengaluru" />
                       </Form.Item>
 
-                      <Form.Item name="city" label="City">
-                        <Input placeholder="e.g. Mumbai, New Delhi, Bengaluru" />
+                      <Form.Item
+                        name="area"
+                        label="* Locality / Area"
+                        rules={[{ required: true, message: "Please enter locality / area (e.g. Kankarbagh, Boring Road, Karol Bagh)" }]}
+                      >
+                        <Input placeholder="e.g. Kankarbagh, Boring Road, Andheri East" />
                       </Form.Item>
 
-                      <Form.Item name="pincode" label="Pincode / Postal Code">
-                        <Input placeholder="e.g. 110005, 400069" />
-                      </Form.Item>
-
-                      <Form.Item name="country" label="Country" initialValue="India">
-                        <Input placeholder="India" />
+                      <Form.Item
+                        name="pincode"
+                        label="* 6-Digit Pincode"
+                        rules={[
+                          { required: true, message: "Please enter 6-digit postal pincode" },
+                          { pattern: /^[1-9][0-9]{5}$/, message: "Please enter a valid 6-digit Indian Pincode (e.g. 800020, 110001)" },
+                        ]}
+                      >
+                        <Input placeholder="e.g. 800020, 110005, 400069" maxLength={6} />
                       </Form.Item>
                     </div>
 

@@ -1147,16 +1147,31 @@ export function createAdminRouter(
       }
 
       const { query, area, pincode, city, state, country, pageSize, pageToken } = req.body;
-      if (!query && !area && !pincode && !city) {
-        res.status(400).json({ error: "Please enter at least a business category, city, area, or pincode to search" });
+
+      const cleanQuery = (query || "").trim();
+      const cleanCity = (city || "").trim();
+      const cleanArea = (area || "").trim();
+      const cleanPincode = (pincode || "").trim();
+
+      if (!cleanQuery || !cleanCity || !cleanArea || !cleanPincode) {
+        res.status(400).json({
+          error: "All 4 search parameters (Business Category, City, Area/Locality, and 6-digit Pincode) are required for accurate local discovery.",
+        });
+        return;
+      }
+
+      if (!/^[1-9][0-9]{5}$/.test(cleanPincode)) {
+        res.status(400).json({
+          error: "Please enter a valid 6-digit Indian postal Pincode (e.g. 800020, 110001).",
+        });
         return;
       }
 
       const cacheKey = [
-        (query || "").trim().toLowerCase(),
-        (area || "").trim().toLowerCase(),
-        (city || "").trim().toLowerCase(),
-        (pincode || "").trim().toLowerCase(),
+        cleanQuery.toLowerCase(),
+        cleanArea.toLowerCase(),
+        cleanCity.toLowerCase(),
+        cleanPincode,
         pageToken ? String(pageToken) : "",
       ].join("::");
 
@@ -1166,12 +1181,12 @@ export function createAdminRouter(
         results = cached.results;
       } else {
         results = await placesClient.searchLeads({
-          query: query || "business store",
-          area,
-          pincode,
-          city,
+          query: cleanQuery,
+          area: cleanArea,
+          pincode: cleanPincode,
+          city: cleanCity,
           state,
-          country,
+          country: country || "India",
           pageSize: pageSize ? Number(pageSize) : 20,
           pageToken: pageToken ? String(pageToken) : undefined,
         });

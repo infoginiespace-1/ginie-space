@@ -33,6 +33,7 @@ import {
   Segmented,
   Avatar,
   Rate,
+  AutoComplete,
 } from "antd";
 import {
   UserOutlined,
@@ -466,13 +467,36 @@ export default function AdminPage() {
   };
 
   const handleSearchAdminLeads = async (isNextPage = false) => {
+    const cleanQuery = (leadSearchQuery || "").trim();
+    const cleanCity = (leadSearchCity || "").trim();
+    const cleanArea = (leadSearchArea || "").trim();
+    const cleanPincode = (leadSearchPincode || "").trim();
+
+    if (!cleanQuery) {
+      message.error("Kripya Business Category select ya enter karein.");
+      return;
+    }
+    if (!cleanCity) {
+      message.error("Kripya Target City enter karein (e.g. Patna, Darbhanga, Mumbai).");
+      return;
+    }
+    if (!cleanArea) {
+      message.error("Kripya Area / Locality enter karein (e.g. Kankarbagh, Boring Road).");
+      return;
+    }
+    if (!cleanPincode || !/^[1-9][0-9]{5}$/.test(cleanPincode)) {
+      message.error("Kripya 6-digit valid Indian Pincode enter karein (e.g. 800020, 110001).");
+      return;
+    }
+
     try {
       setAdminSearchingLeads(true);
       const res = await api.post("/api/admin/leads/discover", {
-        query: leadSearchQuery,
-        city: leadSearchCity,
-        area: leadSearchArea,
-        pincode: leadSearchPincode,
+        query: cleanQuery,
+        city: cleanCity,
+        area: cleanArea,
+        pincode: cleanPincode,
+        country: "India",
         pageToken: isNextPage ? leadsNextPageToken : undefined,
       });
       if (isNextPage) {
@@ -482,7 +506,7 @@ export default function AdminPage() {
         setSelectedLeadKeys([]);
       }
       setLeadsNextPageToken(res.data.nextPageToken || null);
-      message.success(`Found ${res.data.leads?.length || 0} business leads in ${leadSearchCity || "area"}`);
+      message.success(`Found ${res.data.leads?.length || 0} business leads in ${cleanArea}, ${cleanCity} (${cleanPincode})`);
     } catch (err: any) {
       message.error(err.response?.data?.error || err.message || "Failed to discover leads");
     } finally {
@@ -2329,12 +2353,12 @@ export default function AdminPage() {
                     <Card styles={{ body: { padding: isMobile ? 14 : 20 } }} style={{ borderRadius: 12, marginBottom: 18 }}>
                       <Row gutter={[12, 12]} align="middle">
                         <Col xs={24} sm={12} md={6}>
-                          <Text strong style={{ display: "block", marginBottom: 4, fontSize: 12 }}>Business Category</Text>
-                          <Select
+                          <Text strong style={{ display: "block", marginBottom: 4, fontSize: 12 }}>* Business Category</Text>
+                          <AutoComplete
                             value={leadSearchQuery}
                             onChange={setLeadSearchQuery}
                             style={{ width: "100%" }}
-                            showSearch
+                            placeholder="e.g. Kirana Store, Restaurant, Garments"
                             options={[
                               { label: "🛒 Kirana & Grocery Stores", value: "Kirana Store Grocery" },
                               { label: "👗 Garments, Clothing & Boutiques", value: "Garment Shop Clothing Boutique" },
@@ -2346,39 +2370,56 @@ export default function AdminPage() {
                               { label: "💊 Chemists & Medical Stores", value: "Medical Store Chemist Pharmacy" },
                               { label: "🎁 Gift & General Store", value: "General Store Gift Shop" },
                               { label: "🏨 Hotels & Guest Houses", value: "Hotel Guest House" },
+                              { label: "🚗 Automobile & Two-Wheeler Service", value: "Automobile Two Wheeler Repair Service" },
+                              { label: "📚 Stationary & Book Shops", value: "Book Shop Stationery Store" },
                             ]}
+                            filterOption={(inputValue, option) =>
+                              String(option?.label || "").toLowerCase().includes(inputValue.toLowerCase()) ||
+                              String(option?.value || "").toLowerCase().includes(inputValue.toLowerCase())
+                            }
                           />
                         </Col>
                         <Col xs={24} sm={12} md={5}>
-                          <Text strong style={{ display: "block", marginBottom: 4, fontSize: 12 }}>Target City</Text>
-                          <Select
+                          <Text strong style={{ display: "block", marginBottom: 4, fontSize: 12 }}>* Target City</Text>
+                          <AutoComplete
                             value={leadSearchCity}
                             onChange={setLeadSearchCity}
                             style={{ width: "100%" }}
-                            showSearch
+                            placeholder="Type any city (e.g. Patna, Darbhanga, Mumbai)"
                             options={[
-                              { label: "Patna, Bihar", value: "Patna" },
-                              { label: "Delhi NCR", value: "Delhi" },
-                              { label: "Mumbai, Maharashtra", value: "Mumbai" },
-                              { label: "Bengaluru, Karnataka", value: "Bengaluru" },
-                              { label: "Kolkata, West Bengal", value: "Kolkata" },
-                              { label: "Lucknow, UP", value: "Lucknow" },
-                              { label: "Jaipur, Rajasthan", value: "Jaipur" },
-                              { label: "Ahmedabad, Gujarat", value: "Ahmedabad" },
-                              { label: "Pune, Maharashtra", value: "Pune" },
-                              { label: "Surat, Gujarat", value: "Surat" },
-                              { label: "Indore, MP", value: "Indore" },
-                              { label: "Bhopal, MP", value: "Bhopal" },
-                              { label: "Varanasi, UP", value: "Varanasi" },
-                              { label: "Ranchi, Jharkhand", value: "Ranchi" },
-                              { label: "Muzaffarpur, Bihar", value: "Muzaffarpur" },
-                              { label: "Gaya, Bihar", value: "Gaya" },
-                              { label: "Bhagalpur, Bihar", value: "Bhagalpur" },
+                              { value: "Patna", label: "Patna, Bihar" },
+                              { value: "Delhi", label: "Delhi NCR" },
+                              { value: "Mumbai", label: "Mumbai, Maharashtra" },
+                              { value: "Bengaluru", label: "Bengaluru, Karnataka" },
+                              { value: "Kolkata", label: "Kolkata, West Bengal" },
+                              { value: "Lucknow", label: "Lucknow, Uttar Pradesh" },
+                              { value: "Jaipur", label: "Jaipur, Rajasthan" },
+                              { value: "Ahmedabad", label: "Ahmedabad, Gujarat" },
+                              { value: "Pune", label: "Pune, Maharashtra" },
+                              { value: "Surat", label: "Surat, Gujarat" },
+                              { value: "Indore", label: "Indore, Madhya Pradesh" },
+                              { value: "Bhopal", label: "Bhopal, Madhya Pradesh" },
+                              { value: "Varanasi", label: "Varanasi, Uttar Pradesh" },
+                              { value: "Ranchi", label: "Ranchi, Jharkhand" },
+                              { value: "Muzaffarpur", label: "Muzaffarpur, Bihar" },
+                              { value: "Gaya", label: "Gaya, Bihar" },
+                              { value: "Bhagalpur", label: "Bhagalpur, Bihar" },
+                              { value: "Darbhanga", label: "Darbhanga, Bihar" },
+                              { value: "Purnia", label: "Purnia, Bihar" },
+                              { value: "Kanpur", label: "Kanpur, Uttar Pradesh" },
+                              { value: "Agra", label: "Agra, Uttar Pradesh" },
+                              { value: "Chandigarh", label: "Chandigarh" },
+                              { value: "Hyderabad", label: "Hyderabad, Telangana" },
+                              { value: "Chennai", label: "Chennai, Tamil Nadu" },
                             ]}
+                            filterOption={(inputValue, option) =>
+                              String(option?.label || "").toLowerCase().includes(inputValue.toLowerCase()) ||
+                              String(option?.value || "").toLowerCase().includes(inputValue.toLowerCase())
+                            }
                           />
                         </Col>
                         <Col xs={24} sm={12} md={5}>
-                          <Text strong style={{ display: "block", marginBottom: 4, fontSize: 12 }}>Area / Locality (Optional)</Text>
+                          <Text strong style={{ display: "block", marginBottom: 4, fontSize: 12 }}>* Area / Locality</Text>
                           <Input
                             placeholder="e.g. Kankarbagh, Boring Road"
                             value={leadSearchArea}
@@ -2387,11 +2428,12 @@ export default function AdminPage() {
                           />
                         </Col>
                         <Col xs={24} sm={12} md={4}>
-                          <Text strong style={{ display: "block", marginBottom: 4, fontSize: 12 }}>Pincode (Optional)</Text>
+                          <Text strong style={{ display: "block", marginBottom: 4, fontSize: 12 }}>* 6-Digit Pincode</Text>
                           <Input
                             placeholder="e.g. 800020"
                             value={leadSearchPincode}
-                            onChange={(e) => setLeadSearchPincode(e.target.value)}
+                            maxLength={6}
+                            onChange={(e) => setLeadSearchPincode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                             onPressEnter={() => handleSearchAdminLeads(false)}
                           />
                         </Col>
