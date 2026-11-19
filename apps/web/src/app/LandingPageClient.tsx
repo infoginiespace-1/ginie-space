@@ -631,59 +631,13 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
           {t.hero.subtitle}
         </Paragraph>
 
-        {/* Hero CTAs */}
-        <div className="show-on-mobile hero-cta-mobile">
+        {/* Hero CTAs - Single Responsive Container to Prevent Layout Shift */}
+        <div className="hero-cta-group">
           <Button
             type="primary"
             size="large"
-            block
+            className="hero-cta-primary-btn"
             icon={<ArrowRightOutlined />}
-            style={{
-              background: "#25D366",
-              borderColor: "#25D366",
-              height: 48,
-              fontWeight: 700,
-              fontSize: 16,
-              borderRadius: 10,
-              boxShadow: "0 6px 20px rgba(37, 211, 102, 0.4)",
-            }}
-            onClick={() => router.push("/signup")}
-          >
-            {t.hero.ctaPrimary}
-          </Button>
-          <Button
-            size="large"
-            block
-            icon={<PlayCircleOutlined style={{ color: "#059669", fontSize: 18 }} />}
-            style={{
-              height: 48,
-              fontWeight: 600,
-              fontSize: 15,
-              borderRadius: 10,
-              borderColor: "#cbd5e1",
-              background: "#fff",
-            }}
-            onClick={() => setVideoModalOpen(true)}
-          >
-            {t.hero.ctaSecondary}
-          </Button>
-        </div>
-
-        <div className="hide-on-mobile" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, margin: "0 auto 32px", flexWrap: "wrap" }}>
-          <Button
-            type="primary"
-            size="large"
-            icon={<ArrowRightOutlined />}
-            style={{
-              background: "#25D366",
-              borderColor: "#25D366",
-              height: 52,
-              paddingInline: 32,
-              fontWeight: 700,
-              fontSize: 16,
-              borderRadius: 10,
-              boxShadow: "0 8px 24px rgba(37, 211, 102, 0.4)",
-            }}
             onClick={() => router.push("/signup")}
           >
             {t.hero.ctaPrimary}
@@ -691,52 +645,34 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
 
           <Button
             size="large"
+            className="hero-cta-secondary-btn"
             icon={<PlayCircleOutlined style={{ color: "#059669", fontSize: 18 }} />}
-            style={{
-              height: 52,
-              paddingInline: 24,
-              fontWeight: 600,
-              fontSize: 15,
-              borderRadius: 10,
-              borderColor: "#cbd5e1",
-              background: "#fff",
-            }}
             onClick={() => setVideoModalOpen(true)}
           >
             {t.hero.ctaSecondary}
           </Button>
         </div>
 
-        {/* Direct UPI Ecosystem Trust Strip - Zero Layout Shift */}
+        {/* Direct UPI Ecosystem Trust Strip - Zero Layout Shift Pure CSS Badges */}
         <div className="direct-bank-strip">
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div className="direct-bank-title">
             <BankOutlined style={{ color: "#059669", fontSize: 18 }} />
-            <Text strong style={{ fontSize: 13, color: "#334155" }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "#334155" }}>
               100% Direct Bank Settlements:
-            </Text>
+            </span>
           </div>
 
-          <Space size="small" wrap style={{ justifyContent: "center" }}>
-            <Tag color="blue" style={{ fontWeight: 600, padding: "2px 8px", borderRadius: 6 }}>
-              PhonePe
-            </Tag>
-            <Tag color="cyan" style={{ fontWeight: 600, padding: "2px 8px", borderRadius: 6 }}>
-              Google Pay
-            </Tag>
-            <Tag color="geekblue" style={{ fontWeight: 600, padding: "2px 8px", borderRadius: 6 }}>
-              Paytm UPI
-            </Tag>
-            <Tag color="green" style={{ fontWeight: 600, padding: "2px 8px", borderRadius: 6 }}>
-              BHIM UPI
-            </Tag>
-            <Tag color="purple" style={{ fontWeight: 600, padding: "2px 8px", borderRadius: 6 }}>
-              Any Bank Account
-            </Tag>
-          </Space>
+          <div className="direct-bank-tags">
+            <span className="bank-tag tag-phonepe">PhonePe</span>
+            <span className="bank-tag tag-gpay">Google Pay</span>
+            <span className="bank-tag tag-paytm">Paytm UPI</span>
+            <span className="bank-tag tag-bhim">BHIM UPI</span>
+            <span className="bank-tag tag-bank">Any Bank Account</span>
+          </div>
 
-          <Tag color="gold" style={{ fontWeight: 700, padding: "3px 8px" }}>
+          <span className="bank-tag tag-zero-commission">
             0% Gateway Commission
-          </Tag>
+          </span>
         </div>
 
         {/* Real Grounded Trust & Growth Metrics */}
