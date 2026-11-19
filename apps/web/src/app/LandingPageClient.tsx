@@ -25,6 +25,7 @@ import {
   Drawer,
   Grid,
   Segmented,
+  Dropdown,
 } from "antd";
 import {
   WhatsAppOutlined,
@@ -59,6 +60,7 @@ import {
   CloseOutlined,
   UserOutlined,
   MailOutlined,
+  DownOutlined,
 } from "@ant-design/icons";
 
 const { Title, Text, Paragraph } = Typography;
@@ -135,6 +137,82 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
     setTimeout(() => setCopiedLink(false), 2000);
   };
 
+  const solutionsMenuItems = [
+    {
+      key: "whatsapp-catalog",
+      label: (
+        <Link href="/whatsapp-catalog-maker" style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 4px" }}>
+          <div style={{ width: 32, height: 32, borderRadius: 8, background: "#ecfdf5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>
+            📱
+          </div>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 13, color: "#0f172a" }}>WhatsApp Catalog Maker</div>
+            <div style={{ fontSize: 11, color: "#64748b" }}>24/7 Digital store with auto WhatsApp orders</div>
+          </div>
+        </Link>
+      ),
+    },
+    {
+      key: "upi-billing",
+      label: (
+        <Link href="/upi-billing-software" style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 4px" }}>
+          <div style={{ width: 32, height: 32, borderRadius: 8, background: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>
+            ⚡
+          </div>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 13, color: "#0f172a" }}>0% Commission UPI Billing</div>
+            <div style={{ fontSize: 11, color: "#64748b" }}>100% Direct bank settlement, no 2-3% cuts</div>
+          </div>
+        </Link>
+      ),
+    },
+    {
+      key: "b2b-leads",
+      label: (
+        <Link href="/b2b-leads-finder" style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 4px" }}>
+          <div style={{ width: 32, height: 32, borderRadius: 8, background: "#fef3c7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>
+            🔍
+          </div>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 13, color: "#0f172a" }}>B2B Local Leads Discovery</div>
+            <div style={{ fontSize: 11, color: "#64748b" }}>Verified retail buyers &amp; shops from Google Maps</div>
+          </div>
+        </Link>
+      ),
+    },
+    {
+      type: "divider" as const,
+    },
+    {
+      key: "retail-kirana",
+      label: (
+        <Link href="/retail-kirana-store" style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 4px" }}>
+          <div style={{ width: 32, height: 32, borderRadius: 8, background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>
+            🏪
+          </div>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 13, color: "#0f172a" }}>Retail &amp; Kirana Stores</div>
+            <div style={{ fontSize: 11, color: "#64748b" }}>Loose grocery, counter POS &amp; instant receipts</div>
+          </div>
+        </Link>
+      ),
+    },
+    {
+      key: "wholesale-distributors",
+      label: (
+        <Link href="/wholesale-distributors" style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 4px" }}>
+          <div style={{ width: 32, height: 32, borderRadius: 8, background: "#faf5ff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>
+            📦
+          </div>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 13, color: "#0f172a" }}>Wholesale &amp; Bulk Distributors</div>
+            <div style={{ fontSize: 11, color: "#64748b" }}>Bulk pricing tiers, rate lists &amp; auto dispatch</div>
+          </div>
+        </Link>
+      ),
+    },
+  ];
+
   return (
     <div style={{ minHeight: "100vh", background: "#f8fafc", color: "#0f172a", overflowX: "hidden", paddingBottom: isMobile ? 64 : 0 }}>
       {/* Top Banner Notice */}
@@ -163,15 +241,14 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
           background: "rgba(255, 255, 255, 0.95)",
           backdropFilter: "blur(12px)",
           borderBottom: "1px solid #e2e8f0",
-          minHeight: 68,
         }}
       >
         <div
           style={{
             maxWidth: 1200,
             margin: "0 auto",
-            padding: "12px 24px",
-            minHeight: 68,
+            padding: isMobile ? "0 16px" : "0 24px",
+            height: "100%",
             boxSizing: "border-box",
             display: "flex",
             alignItems: "center",
@@ -181,50 +258,46 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
         >
           {/* Logo & Brand */}
           <div
-            style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}
+            style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", flexShrink: 0 }}
             onClick={() => router.push("/")}
           >
             <img
               src="/logo.png"
               alt="GinieSpace Logo"
-              width={isMobile ? 34 : 38}
-              height={isMobile ? 34 : 38}
+              width={isMobile ? 32 : 36}
+              height={isMobile ? 32 : 36}
               style={{
-                width: isMobile ? 34 : 38,
-                height: isMobile ? 34 : 38,
-                borderRadius: 9,
+                width: isMobile ? 32 : 36,
+                height: isMobile ? 32 : 36,
+                borderRadius: 8,
                 objectFit: "contain",
-                boxShadow: "0 4px 12px rgba(37, 211, 102, 0.3)",
+                boxShadow: "0 3px 10px rgba(37, 211, 102, 0.25)",
               }}
             />
             <div>
               <div style={{ fontWeight: 800, fontSize: isMobile ? 18 : 19, color: "#0f172a", lineHeight: 1.1, letterSpacing: "-0.02em" }}>
                 GinieSpace
               </div>
-              <div style={{ fontSize: 10, color: "#64748b", fontWeight: 500 }}>
+              <div className="brand-subtitle-mobile" style={{ fontSize: 10, color: "#64748b", fontWeight: 500 }}>
                 Smart WhatsApp Commerce Hub
               </div>
             </div>
           </div>
 
           {/* Desktop Nav Links */}
-          <div style={{ display: "flex", alignItems: "center", gap: 24 }} className="hide-on-mobile">
-            <Link href="/whatsapp-catalog-maker" style={{ color: "#475569", textDecoration: "none", fontWeight: 500, fontSize: 14 }}>
-              WhatsApp Catalog
-            </Link>
-            <Link href="/upi-billing-software" style={{ color: "#475569", textDecoration: "none", fontWeight: 500, fontSize: 14 }}>
-              UPI Billing (0%)
-            </Link>
-            <Link href="/b2b-leads-finder" style={{ color: "#475569", textDecoration: "none", fontWeight: 500, fontSize: 14 }}>
-              B2B Leads
-            </Link>
-            <Link href="/pricing" style={{ color: "#475569", textDecoration: "none", fontWeight: 500, fontSize: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }} className="hide-on-mobile">
+            <Dropdown menu={{ items: solutionsMenuItems }} placement="bottomLeft">
+              <span className="nav-dropdown-trigger">
+                {t.nav.solutions || "Solutions"} <DownOutlined style={{ fontSize: 10, color: "#94a3b8" }} />
+              </span>
+            </Dropdown>
+            <Link href="/pricing" className="nav-link-pill">
               {t.nav.pricing}
             </Link>
-            <Link href={locale === "hi" ? "/hi/about" : "/about"} style={{ color: "#475569", textDecoration: "none", fontWeight: 500, fontSize: 14 }}>
+            <Link href={locale === "hi" ? "/hi/about" : "/about"} className="nav-link-pill">
               {t.nav.about}
             </Link>
-            <a href="#faqs" style={{ color: "#475569", textDecoration: "none", fontWeight: 500, fontSize: 14 }}>
+            <a href="#faqs" className="nav-link-pill">
               {t.nav.faq}
             </a>
           </div>
@@ -261,22 +334,12 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
             </Button>
           </Space>
 
-          {/* Mobile Right Controls (Lang Toggle + Sign In + Hamburger) */}
+          {/* Mobile Right Controls: Compact Sign In + Hamburger */}
           <div className="show-on-mobile mobile-header-controls">
-            <Segmented
-              size="small"
-              value={locale}
-              onChange={(val: any) => handleLocaleChange(val)}
-              options={[
-                { label: "EN", value: "en" },
-                { label: "HI", value: "hi" },
-              ]}
-              style={{ background: "#f1f5f9", fontWeight: 600 }}
-            />
             <Button
               size="small"
               onClick={() => router.push("/login")}
-              style={{ fontWeight: 600, borderColor: "#cbd5e1", borderRadius: 6, fontSize: 13 }}
+              style={{ fontWeight: 600, borderColor: "#cbd5e1", borderRadius: 6, fontSize: 13, height: 32 }}
             >
               {t.nav.login}
             </Button>
@@ -285,7 +348,7 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
               icon={<MenuOutlined style={{ fontSize: 20, color: "#0f172a" }} />}
               onClick={() => setMobileMenuOpen(true)}
               aria-label="Open navigation menu"
-              style={{ padding: "4px 8px" }}
+              style={{ padding: "4px 8px", height: 32, width: 36, display: "flex", alignItems: "center", justifyContent: "center" }}
             />
           </div>
         </div>
@@ -298,32 +361,32 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
             <img
               src="/logo.png"
               alt="GinieSpace"
-              width={32}
-              height={32}
+              width={30}
+              height={30}
               style={{
-                width: 32,
-                height: 32,
-                borderRadius: 8,
+                width: 30,
+                height: 30,
+                borderRadius: 7,
                 objectFit: "contain",
               }}
             />
             <div>
               <div style={{ fontWeight: 800, fontSize: 16, color: "#0f172a", lineHeight: 1.1 }}>GinieSpace</div>
-              <div style={{ fontSize: 11, color: "#64748b" }}>WhatsApp Commerce Hub</div>
+              <div style={{ fontSize: 10, color: "#64748b" }}>WhatsApp Commerce Hub</div>
             </div>
           </div>
         }
         placement="right"
-        width={300}
+        width={310}
         open={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
-        styles={{ body: { padding: "16px 20px" } }}
+        styles={{ body: { padding: "16px 18px" } }}
       >
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {/* Language Switcher in Mobile Drawer */}
-          <div style={{ paddingBottom: 12, borderBottom: "1px solid #f1f5f9" }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: "#64748b", marginBottom: 6 }}>
-              {locale === "en" ? "Select Language:" : "Bhasha Chunein:"}
+          <div style={{ background: "#f8fafc", padding: "10px 12px", borderRadius: 10, border: "1px solid #e2e8f0" }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>
+              {locale === "en" ? "Language Preference" : "भाषा का चयन"}
             </div>
             <Segmented
               block
@@ -333,98 +396,124 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
                 { label: "🇬🇧 English", value: "en" },
                 { label: "🇮🇳 Hinglish", value: "hi" },
               ]}
-              style={{ background: "#f1f5f9", fontWeight: 600 }}
+              style={{ background: "#fff", fontWeight: 600, border: "1px solid #e2e8f0" }}
             />
           </div>
 
-          <Link
-            href="/whatsapp-catalog-maker"
-            onClick={() => setMobileMenuOpen(false)}
-            style={{ color: "#1e293b", fontWeight: 600, fontSize: 15, textDecoration: "none", padding: "8px 0", borderBottom: "1px solid #f1f5f9" }}
-          >
-            📱 WhatsApp Catalog Maker
-          </Link>
-          <Link
-            href="/upi-billing-software"
-            onClick={() => setMobileMenuOpen(false)}
-            style={{ color: "#1e293b", fontWeight: 600, fontSize: 15, textDecoration: "none", padding: "8px 0", borderBottom: "1px solid #f1f5f9" }}
-          >
-            ⚡ 0% Commission UPI Billing
-          </Link>
-          <Link
-            href="/b2b-leads-finder"
-            onClick={() => setMobileMenuOpen(false)}
-            style={{ color: "#1e293b", fontWeight: 600, fontSize: 15, textDecoration: "none", padding: "8px 0", borderBottom: "1px solid #f1f5f9" }}
-          >
-            🔍 B2B Leads Discovery
-          </Link>
-          <Link
-            href="/retail-kirana-store"
-            onClick={() => setMobileMenuOpen(false)}
-            style={{ color: "#1e293b", fontWeight: 600, fontSize: 15, textDecoration: "none", padding: "8px 0", borderBottom: "1px solid #f1f5f9" }}
-          >
-            🏪 Retail &amp; Kirana
-          </Link>
-          <Link
-            href="/pricing"
-            onClick={() => setMobileMenuOpen(false)}
-            style={{ color: "#1e293b", fontWeight: 600, fontSize: 15, textDecoration: "none", padding: "8px 0", borderBottom: "1px solid #f1f5f9" }}
-          >
-            👑 {t.nav.pricing}
-          </Link>
-          <Link
-            href={locale === "hi" ? "/hi/about" : "/about"}
-            onClick={() => setMobileMenuOpen(false)}
-            style={{ color: "#1e293b", fontWeight: 600, fontSize: 15, textDecoration: "none", padding: "8px 0", borderBottom: "1px solid #f1f5f9" }}
-          >
-            👨‍💻 {t.nav.about}
-          </Link>
-          <a
-            href="#calculator"
-            onClick={() => setMobileMenuOpen(false)}
-            style={{ color: "#1e293b", fontWeight: 600, fontSize: 15, textDecoration: "none", padding: "8px 0", borderBottom: "1px solid #f1f5f9" }}
-          >
-            💰 {locale === "en" ? "UPI Commission Savings" : "Zero Commission Bachaat"}
-          </a>
-          <a
-            href="#faqs"
-            onClick={() => setMobileMenuOpen(false)}
-            style={{ color: "#1e293b", fontWeight: 600, fontSize: 15, textDecoration: "none", padding: "8px 0", borderBottom: "1px solid #f1f5f9" }}
-          >
-            ❓ {t.nav.faq}
-          </a>
+          {/* Group 1: Core Commerce Tools */}
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6, paddingLeft: 4 }}>
+              {locale === "en" ? "Core Tools" : "मुख्य टूल्स"}
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <Link
+                href="/whatsapp-catalog-maker"
+                onClick={() => setMobileMenuOpen(false)}
+                style={{ display: "flex", alignItems: "center", gap: 10, color: "#1e293b", fontWeight: 600, fontSize: 14, textDecoration: "none", padding: "9px 12px", borderRadius: 8, background: "#f8fafc" }}
+              >
+                <span>📱</span> <span>WhatsApp Catalog Maker</span>
+              </Link>
+              <Link
+                href="/upi-billing-software"
+                onClick={() => setMobileMenuOpen(false)}
+                style={{ display: "flex", alignItems: "center", gap: 10, color: "#1e293b", fontWeight: 600, fontSize: 14, textDecoration: "none", padding: "9px 12px", borderRadius: 8, background: "#f8fafc" }}
+              >
+                <span>⚡</span> <span>0% Commission UPI Billing</span>
+              </Link>
+              <Link
+                href="/b2b-leads-finder"
+                onClick={() => setMobileMenuOpen(false)}
+                style={{ display: "flex", alignItems: "center", gap: 10, color: "#1e293b", fontWeight: 600, fontSize: 14, textDecoration: "none", padding: "9px 12px", borderRadius: 8, background: "#f8fafc" }}
+              >
+                <span>🔍</span> <span>B2B Local Leads Discovery</span>
+              </Link>
+            </div>
+          </div>
+
+          {/* Group 2: Industry Solutions */}
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6, paddingLeft: 4 }}>
+              {locale === "en" ? "Industry Solutions" : "उद्योग व समाधान"}
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <Link
+                href="/retail-kirana-store"
+                onClick={() => setMobileMenuOpen(false)}
+                style={{ display: "flex", alignItems: "center", gap: 10, color: "#1e293b", fontWeight: 600, fontSize: 14, textDecoration: "none", padding: "9px 12px", borderRadius: 8, background: "#f8fafc" }}
+              >
+                <span>🏪</span> <span>Retail &amp; Kirana Stores</span>
+              </Link>
+              <Link
+                href="/wholesale-distributors"
+                onClick={() => setMobileMenuOpen(false)}
+                style={{ display: "flex", alignItems: "center", gap: 10, color: "#1e293b", fontWeight: 600, fontSize: 14, textDecoration: "none", padding: "9px 12px", borderRadius: 8, background: "#f8fafc" }}
+              >
+                <span>📦</span> <span>Wholesale &amp; Bulk Distributors</span>
+              </Link>
+            </div>
+          </div>
+
+          {/* Group 3: Company & Pricing */}
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6, paddingLeft: 4 }}>
+              {locale === "en" ? "Pricing & About" : "प्लान्स व कंपनी"}
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <Link
+                href="/pricing"
+                onClick={() => setMobileMenuOpen(false)}
+                style={{ display: "flex", alignItems: "center", gap: 10, color: "#b45309", fontWeight: 700, fontSize: 14, textDecoration: "none", padding: "9px 12px", borderRadius: 8, background: "#fffbeb", border: "1px solid #fde68a" }}
+              >
+                <span>👑</span> <span>{t.nav.pricing}</span>
+              </Link>
+              <Link
+                href={locale === "hi" ? "/hi/about" : "/about"}
+                onClick={() => setMobileMenuOpen(false)}
+                style={{ display: "flex", alignItems: "center", gap: 10, color: "#1e293b", fontWeight: 600, fontSize: 14, textDecoration: "none", padding: "9px 12px", borderRadius: 8, background: "#f8fafc" }}
+              >
+                <span>👨‍💻</span> <span>{t.nav.about}</span>
+              </Link>
+              <a
+                href="#faqs"
+                onClick={() => setMobileMenuOpen(false)}
+                style={{ display: "flex", alignItems: "center", gap: 10, color: "#1e293b", fontWeight: 600, fontSize: 14, textDecoration: "none", padding: "9px 12px", borderRadius: 8, background: "#f8fafc" }}
+              >
+                <span>❓</span> <span>{t.nav.faq}</span>
+              </a>
+            </div>
+          </div>
 
           {/* Legal Pages in Mobile Drawer */}
-          <div style={{ paddingTop: 8, borderBottom: "1px solid #f1f5f9", paddingBottom: 12 }}>
+          <div style={{ paddingTop: 8, borderTop: "1px solid #f1f5f9" }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>
               {t.footer.legalTitle}
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ display: "flex", gap: 16, fontSize: 13 }}>
               <Link
                 href="/terms"
                 onClick={() => setMobileMenuOpen(false)}
-                style={{ color: "#475569", fontWeight: 500, fontSize: 14, textDecoration: "none" }}
+                style={{ color: "#64748b", fontWeight: 500, textDecoration: "none" }}
               >
-                📜 {t.footer.terms}
+                {t.footer.terms}
               </Link>
               <Link
                 href="/privacy"
                 onClick={() => setMobileMenuOpen(false)}
-                style={{ color: "#475569", fontWeight: 500, fontSize: 14, textDecoration: "none" }}
+                style={{ color: "#64748b", fontWeight: 500, textDecoration: "none" }}
               >
-                🔒 {t.footer.privacy}
+                {t.footer.privacy}
               </Link>
               <Link
                 href="/refund"
                 onClick={() => setMobileMenuOpen(false)}
-                style={{ color: "#475569", fontWeight: 500, fontSize: 14, textDecoration: "none" }}
+                style={{ color: "#64748b", fontWeight: 500, textDecoration: "none" }}
               >
-                💳 {t.footer.refund}
+                {t.footer.refund}
               </Link>
             </div>
           </div>
 
-          <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 10 }}>
             <Button
               type="primary"
               block
@@ -433,7 +522,7 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
                 background: "#25D366",
                 borderColor: "#25D366",
                 fontWeight: 700,
-                height: 46,
+                height: 44,
                 borderRadius: 10,
                 boxShadow: "0 4px 14px rgba(37, 211, 102, 0.35)",
               }}
@@ -447,7 +536,7 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
             <Button
               block
               size="large"
-              style={{ fontWeight: 600, height: 46, borderRadius: 10, borderColor: "#cbd5e1" }}
+              style={{ fontWeight: 600, height: 44, borderRadius: 10, borderColor: "#cbd5e1" }}
               onClick={() => {
                 setMobileMenuOpen(false);
                 router.push("/login");
@@ -457,21 +546,21 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
             </Button>
             <Button
               block
-              size="large"
               icon={<WhatsAppOutlined />}
               style={{
                 background: "#f0fdf4",
                 borderColor: "#86efac",
                 color: "#166534",
                 fontWeight: 600,
-                height: 46,
+                height: 40,
                 borderRadius: 10,
+                fontSize: 13,
               }}
               href="https://wa.me/919279259690"
               target="_blank"
               rel="noopener noreferrer"
             >
-              WhatsApp (+91 92792 59690)
+              Helpline: +91 92792 59690
             </Button>
           </div>
         </div>
