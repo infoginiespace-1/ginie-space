@@ -261,19 +261,22 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
             style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", flexShrink: 0 }}
             onClick={() => router.push("/")}
           >
-            <img
-              src="/logo.png"
-              alt="GinieSpace Logo"
-              width={isMobile ? 32 : 36}
-              height={isMobile ? 32 : 36}
-              style={{
-                width: isMobile ? 32 : 36,
-                height: isMobile ? 32 : 36,
-                borderRadius: 8,
-                objectFit: "contain",
-                boxShadow: "0 3px 10px rgba(37, 211, 102, 0.25)",
-              }}
-            />
+            <picture>
+              <source type="image/webp" srcSet="/logo-sm.webp" />
+              <img
+                src="/logo-sm.webp"
+                alt="GinieSpace Logo"
+                width={isMobile ? 32 : 36}
+                height={isMobile ? 32 : 36}
+                style={{
+                  width: isMobile ? 32 : 36,
+                  height: isMobile ? 32 : 36,
+                  borderRadius: 8,
+                  objectFit: "contain",
+                  boxShadow: "0 3px 10px rgba(37, 211, 102, 0.25)",
+                }}
+              />
+            </picture>
             <div>
               <div style={{ fontWeight: 800, fontSize: isMobile ? 18 : 19, color: "#0f172a", lineHeight: 1.1, letterSpacing: "-0.02em" }}>
                 GinieSpace
@@ -356,20 +359,24 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
 
       {/* Mobile Slide-Over Navigation Drawer */}
       <Drawer
+        destroyOnClose
         title={
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <img
-              src="/logo.png"
-              alt="GinieSpace"
-              width={30}
-              height={30}
-              style={{
-                width: 30,
-                height: 30,
-                borderRadius: 7,
-                objectFit: "contain",
-              }}
-            />
+            <picture>
+              <source type="image/webp" srcSet="/logo-sm.webp" />
+              <img
+                src="/logo-sm.webp"
+                alt="GinieSpace"
+                width={30}
+                height={30}
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: 7,
+                  objectFit: "contain",
+                }}
+              />
+            </picture>
             <div>
               <div style={{ fontWeight: 800, fontSize: 16, color: "#0f172a", lineHeight: 1.1 }}>GinieSpace</div>
               <div style={{ fontSize: 10, color: "#64748b" }}>WhatsApp Commerce Hub</div>
@@ -2455,6 +2462,7 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
 
       {/* Video Walkthrough Modal */}
       <Modal
+        destroyOnClose
         title={
           <Space>
             <PlayCircleOutlined style={{ color: "#059669" }} />
@@ -2556,18 +2564,21 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
           <Row gutter={[24, 24]}>
             <Col xs={24} md={7}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                <img
-                  src="/logo.png"
-                  alt="GinieSpace"
-                  width={32}
-                  height={32}
-                  style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: 8,
-                    objectFit: "contain",
-                  }}
-                />
+                <picture>
+                  <source type="image/webp" srcSet="/logo-sm.webp" />
+                  <img
+                    src="/logo-sm.webp"
+                    alt="GinieSpace"
+                    width={32}
+                    height={32}
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 8,
+                      objectFit: "contain",
+                    }}
+                  />
+                </picture>
                 <div style={{ fontWeight: 800, fontSize: 18, color: "#fff" }}>GinieSpace</div>
               </div>
               <Paragraph style={{ color: "#64748b", fontSize: 13, lineHeight: 1.6 }}>

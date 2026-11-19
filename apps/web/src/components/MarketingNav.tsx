@@ -155,7 +155,7 @@ export default function MarketingNav({ currentPath, lang = "en" }: MarketingNavP
         {/* Brand Logo */}
         <Link href={lang === "hi" ? "/hi" : "/"} style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
           <img
-            src="/logo.png"
+            src="/logo-sm.webp"
             alt="GinieSpace Logo"
             width={34}
             height={34}
@@ -298,7 +298,7 @@ export default function MarketingNav({ currentPath, lang = "en" }: MarketingNavP
       <Drawer
         title={
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <img src="/logo.png" alt="GinieSpace" width={30} height={30} style={{ borderRadius: 7, objectFit: "contain" }} />
+            <img src="/logo-sm.webp" alt="GinieSpace" width={30} height={30} style={{ borderRadius: 7, objectFit: "contain" }} />
             <div>
               <div style={{ fontWeight: 800, fontSize: 16, color: "#0f172a", lineHeight: 1.1 }}>GinieSpace</div>
               <div style={{ fontSize: 10, color: "#64748b" }}>WhatsApp Commerce Hub</div>

@@ -7,51 +7,59 @@ export function AnalyticsTracker() {
   const pathname = usePathname();
   const seoFetchedRef = useRef(false);
 
-  // 1. Initial SEO & Google Analytics 4 Script Tag Injection
+  // 1. Initial SEO & Google Analytics 4 Script Tag Injection (Idle / Non-blocking to eliminate forced reflow)
   useEffect(() => {
     if (seoFetchedRef.current || typeof window === "undefined") return;
     seoFetchedRef.current = true;
 
-    const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://api.ginie.space";
+    const run = () => {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://api.ginie.space";
 
-    fetch(`${apiBase}/api/analytics/seo-public`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (!data) return;
+      fetch(`${apiBase}/api/analytics/seo-public`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (!data) return;
 
-        // A. Google Search Console Verification Meta Tag
-        if (data.googleSiteVerification) {
-          let meta = document.querySelector('meta[name="google-site-verification"]');
-          if (!meta) {
-            meta = document.createElement("meta");
-            meta.setAttribute("name", "google-site-verification");
-            document.head.appendChild(meta);
+          // A. Google Search Console Verification Meta Tag
+          if (data.googleSiteVerification) {
+            let meta = document.querySelector('meta[name="google-site-verification"]');
+            if (!meta) {
+              meta = document.createElement("meta");
+              meta.setAttribute("name", "google-site-verification");
+              document.head.appendChild(meta);
+            }
+            meta.setAttribute("content", data.googleSiteVerification);
           }
-          meta.setAttribute("content", data.googleSiteVerification);
-        }
 
-        // B. Google Analytics 4 Injection
-        if (data.ga4MeasurementId && /^G-[A-Za-z0-9]+$/i.test(data.ga4MeasurementId)) {
-          if (!document.getElementById("ga4-script")) {
-            const script = document.createElement("script");
-            script.id = "ga4-script";
-            script.async = true;
-            script.src = `https://www.googletagmanager.com/gtag/js?id=${data.ga4MeasurementId}`;
-            document.head.appendChild(script);
+          // B. Google Analytics 4 Injection
+          if (data.ga4MeasurementId && /^G-[A-Za-z0-9]+$/i.test(data.ga4MeasurementId)) {
+            if (!document.getElementById("ga4-script")) {
+              const script = document.createElement("script");
+              script.id = "ga4-script";
+              script.async = true;
+              script.src = `https://www.googletagmanager.com/gtag/js?id=${data.ga4MeasurementId}`;
+              document.head.appendChild(script);
 
-            const inlineScript = document.createElement("script");
-            inlineScript.id = "ga4-init";
-            inlineScript.innerHTML = `
-              window.dataLayer = window.dataLayer || [];
-              function gtag(){dataLayer.push(arguments);}
-              gtag('js', new Date());
-              gtag('config', '${data.ga4MeasurementId}', { send_page_view: true });
-            `;
-            document.head.appendChild(inlineScript);
+              const inlineScript = document.createElement("script");
+              inlineScript.id = "ga4-init";
+              inlineScript.innerHTML = `
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', '${data.ga4MeasurementId}', { send_page_view: true });
+              `;
+              document.head.appendChild(inlineScript);
+            }
           }
-        }
-      })
-      .catch(() => {});
+        })
+        .catch(() => {});
+    };
+
+    if ("requestIdleCallback" in window) {
+      (window as any).requestIdleCallback(run, { timeout: 3500 });
+    } else {
+      setTimeout(run, 2500);
+    }
   }, []);
 
   // 2. Route Tracking Beacon (Zero Latency / Non-blocking)

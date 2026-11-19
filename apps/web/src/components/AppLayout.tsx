@@ -215,7 +215,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const sidebarHeader = (
     <div style={{ padding: "20px 24px", display: "flex", alignItems: "center", gap: 8 }}>
       <img
-        src="/logo.png"
+        src="/logo-sm.webp"
         alt="GinieSpace"
         width={34}
         height={34}
@@ -308,7 +308,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 />
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <img
-                    src="/logo.png"
+                    src="/logo-sm.webp"
                     alt="GinieSpace"
                     width={26}
                     height={26}

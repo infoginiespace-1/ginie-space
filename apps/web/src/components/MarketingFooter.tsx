@@ -25,7 +25,7 @@ export default function MarketingFooter({ lang = "en" }: MarketingFooterProps) {
           <Col xs={24} md={8}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
               <img
-                src="/logo.png"
+                src="/logo-sm.webp"
                 alt="GinieSpace"
                 width={36}
                 height={36}
