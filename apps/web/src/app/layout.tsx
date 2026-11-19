@@ -82,15 +82,18 @@ export default function RootLayout({
               html, body { margin: 0; padding: 0; box-sizing: border-box; }
               *, *::before, *::after { box-sizing: inherit; }
               .show-on-mobile, .mobile-header-controls, .hero-cta-mobile { display: none !important; }
-              .app-header { min-height: 68px; height: 68px; contain: layout; }
+              .app-header { min-height: 64px; height: 64px; contain: layout; }
               .hero-section { max-width: 1200px; margin: 0 auto; padding: 64px 24px 32px; text-align: center; }
               .trust-stats-card { background: #ffffff; padding: 16px 10px; border-radius: 14px; border: 1px solid #e2e8f0; height: 100%; min-height: 88px; display: flex; flex-direction: column; justify-content: center; }
+              .direct-bank-strip { max-width: 920px; margin: 0 auto 36px; background: #ffffff; border-radius: 14px; padding: 14px 20px; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; flex-direction: row; flex-wrap: wrap; gap: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); contain: layout style; }
               @media(max-width:768px){
                 .hide-on-mobile{display:none!important}
                 .show-on-mobile{display:flex!important}
                 .mobile-header-controls{display:flex!important;align-items:center;gap:8px}
                 .hero-cta-mobile{display:flex!important;flex-direction:column;gap:12px;max-width:340px;margin:0 auto 28px}
                 .hero-section{padding:36px 16px 24px}
+                .direct-bank-strip{padding: 12px 14px !important; justify-content: center !important; flex-direction: column !important; min-height: 112px; margin: 0 16px 32px !important;}
+                .app-header { min-height: 58px !important; height: 58px !important; }
               }
             `,
           }}

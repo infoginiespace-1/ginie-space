@@ -574,7 +574,7 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
             style={{
               padding: "6px 14px",
               borderRadius: 999,
-              fontSize: isMobile ? 12 : 13,
+              fontSize: "clamp(12px, 2.5vw, 13px)",
               fontWeight: 600,
               background: "#ecfdf5",
               borderColor: "#a7f3d0",
@@ -590,7 +590,7 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
         <Title
           level={1}
           style={{
-            fontSize: isMobile ? "1.85rem" : "clamp(2.1rem, 4.8vw, 3.8rem)",
+            fontSize: "clamp(1.85rem, 4.8vw, 3.8rem)",
             fontWeight: 800,
             color: "#0f172a",
             lineHeight: 1.2,
@@ -608,7 +608,7 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
 
         <Paragraph
           style={{
-            fontSize: isMobile ? "1.05rem" : "clamp(1.1rem, 2.2vw, 1.35rem)",
+            fontSize: "clamp(1.05rem, 2.2vw, 1.35rem)",
             fontWeight: 600,
             color: "#1e293b",
             maxWidth: 820,
@@ -621,7 +621,7 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
 
         <Paragraph
           style={{
-            fontSize: isMobile ? "0.95rem" : "clamp(1rem, 2vw, 1.25rem)",
+            fontSize: "clamp(0.95rem, 2vw, 1.25rem)",
             color: "#475569",
             maxWidth: 780,
             margin: "0 auto 28px",
@@ -707,24 +707,8 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
           </Button>
         </div>
 
-        {/* Direct UPI Ecosystem Trust Strip */}
-        <div
-          style={{
-            maxWidth: 920,
-            margin: "0 auto 36px",
-            background: "#ffffff",
-            borderRadius: 14,
-            padding: isMobile ? "12px 14px" : "14px 20px",
-            border: "1px solid #e2e8f0",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: isMobile ? "center" : "space-between",
-            flexDirection: isMobile ? "column" : "row",
-            flexWrap: "wrap",
-            gap: 12,
-            boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
-          }}
-        >
+        {/* Direct UPI Ecosystem Trust Strip - Zero Layout Shift */}
+        <div className="direct-bank-strip">
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <BankOutlined style={{ color: "#059669", fontSize: 18 }} />
             <Text strong style={{ fontSize: 13, color: "#334155" }}>
@@ -774,7 +758,7 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
                   justifyContent: "center",
                 }}
               >
-                <div style={{ fontSize: isMobile ? 19 : 24, fontWeight: 900, color: "#059669" }}>
+                <div style={{ fontSize: "clamp(19px, 3.5vw, 24px)", fontWeight: 900, color: "#059669" }}>
                   {t.trustStats.upiVolume}
                 </div>
                 <div style={{ fontSize: 12, color: "#64748b", marginTop: 4, fontWeight: 500 }}>
@@ -798,7 +782,7 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
                   justifyContent: "center",
                 }}
               >
-                <div style={{ fontSize: isMobile ? 19 : 24, fontWeight: 900, color: "#0f172a" }}>
+                <div style={{ fontSize: "clamp(19px, 3.5vw, 24px)", fontWeight: 900, color: "#0f172a" }}>
                   {t.trustStats.merchantsCount}
                 </div>
                 <div style={{ fontSize: 12, color: "#64748b", marginTop: 4, fontWeight: 500 }}>
@@ -822,7 +806,7 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
                   justifyContent: "center",
                 }}
               >
-                <div style={{ fontSize: isMobile ? 19 : 24, fontWeight: 900, color: "#2563eb" }}>
+                <div style={{ fontSize: "clamp(19px, 3.5vw, 24px)", fontWeight: 900, color: "#2563eb" }}>
                   {t.trustStats.commissionRate}
                 </div>
                 <div style={{ fontSize: 12, color: "#64748b", marginTop: 4, fontWeight: 500 }}>
@@ -846,7 +830,7 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
                   justifyContent: "center",
                 }}
               >
-                <div style={{ fontSize: isMobile ? 19 : 24, fontWeight: 900, color: "#d97706" }}>
+                <div style={{ fontSize: "clamp(19px, 3.5vw, 24px)", fontWeight: 900, color: "#d97706" }}>
                   {t.trustStats.satisfactionRating}
                 </div>
                 <div style={{ fontSize: 12, color: "#64748b", marginTop: 4, fontWeight: 500 }}>
@@ -859,12 +843,12 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
       </section>
 
       {/* TWIN DEVICE SHOWCASE (Desktop Dashboard + Mobile Customer Storefront) */}
-      <section style={{ maxWidth: 1200, margin: "0 auto", padding: isMobile ? "0 16px 48px" : "0 24px 64px" }}>
+      <section style={{ maxWidth: 1200, margin: "0 auto", padding: "0 clamp(16px, 3vw, 24px) clamp(48px, 6vw, 64px)" }}>
         <div style={{ textAlign: "center", marginBottom: 20 }}>
           <Tag color="purple" style={{ padding: "4px 12px", borderRadius: 999, fontWeight: 600 }}>
             {t.twinDevice.tag}
           </Tag>
-          <Title level={2} style={{ marginTop: 8, color: "#0f172a", fontSize: isMobile ? "1.3rem" : undefined }}>
+          <Title level={2} style={{ marginTop: 8, color: "#0f172a", fontSize: "clamp(1.3rem, 3.2vw, 1.85rem)" }}>
             {t.twinDevice.title}
           </Title>
         </div>

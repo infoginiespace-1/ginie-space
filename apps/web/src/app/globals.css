@@ -82,7 +82,32 @@ body {
   justify-content: center;
 }
 
+/* Zero Layout Shift Direct Bank Strip */
+.direct-bank-strip {
+  max-width: 920px;
+  margin: 0 auto 36px;
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 14px 20px;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  contain: layout style;
+}
+
 @media (max-width: 768px) {
+  .direct-bank-strip {
+    padding: 12px 14px !important;
+    justify-content: center !important;
+    flex-direction: column !important;
+    min-height: 112px;
+    margin: 0 16px 32px !important;
+  }
   .app-header {
     min-height: 58px !important;
     height: 58px !important;
