@@ -5,7 +5,7 @@ import LandingPageClient from "../LandingPageClient";
 export const metadata: Metadata = {
   title: "WhatsApp Catalog & UPI Billing Software India | GinieSpace",
   description:
-    "अपना WhatsApp कैटलॉग बनाएं, 0% कमीशन पर डायरेक्ट UPI पेमेंट लें और लोकल B2B लीड्स पाएं। फ्री प्लान, PRO सिर्फ ₹199/महीना।",
+    "अपना WhatsApp कैटलॉग बनाएं, 0% कमीशन पर डायरेक्ट UPI पेमेंट लें और लोकल B2B लीड्स पाएं। 100% फ्री फॉरएवर प्लेटफॉर्म।",
   alternates: {
     canonical: "https://app.ginie.space/hi",
     languages: {
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "WhatsApp Catalog & UPI Billing Software India | GinieSpace",
     description:
-      "अपना WhatsApp कैटलॉग बनाएं, 0% कमीशन पर डायरेक्ट UPI पेमेंट लें और लोकल B2B लीड्स पाएं। फ्री प्लान, PRO सिर्फ ₹199/महीना।",
+      "अपना WhatsApp कैटलॉग बनाएं, 0% कमीशन पर डायरेक्ट UPI पेमेंट लें और लोकल B2B लीड्स पाएं। 100% फ्री फॉरएवर प्लेटफॉर्म।",
     url: "https://app.ginie.space/hi",
     siteName: "GinieSpace",
     locale: "hi_IN",
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "WhatsApp Catalog & UPI Billing Software India | GinieSpace",
     description:
-      "अपना WhatsApp कैटलॉग बनाएं, 0% कमीशन पर डायरेक्ट UPI पेमेंट लें और लोकल B2B लीड्स पाएं। फ्री प्लान, PRO सिर्फ ₹199/महीना।",
+      "अपना WhatsApp कैटलॉग बनाएं, 0% कमीशन पर डायरेक्ट UPI पेमेंट लें और लोकल B2B लीड्स पाएं। 100% फ्री फॉरएवर प्लेटफॉर्म।",
     images: ["https://app.ginie.space/og-catalog.jpg"],
   },
   robots: {
@@ -56,16 +56,9 @@ export default function HindiHomePage() {
         "offers": [
           {
             "@type": "Offer",
-            "name": "फ्री स्टार्टर प्लान",
+            "name": "100% फ्री लाइफटाइम प्लेटफॉर्म",
             "price": "0",
             "priceCurrency": "INR"
-          },
-          {
-            "@type": "Offer",
-            "name": "PRO मासिक प्लान",
-            "price": "199",
-            "priceCurrency": "INR",
-            "billingDuration": "P1M"
           }
         ]
       },

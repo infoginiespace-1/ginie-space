@@ -1,28 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
-import {
-  Modal,
-  Button,
-  Typography,
-  Card,
-  Space,
-  Tag,
-  Radio,
-  Input,
-  message,
-  Divider,
-  Alert,
-} from "antd";
-import {
-  CrownOutlined,
-  CheckCircleOutlined,
-  CopyOutlined,
-  SafetyCertificateOutlined,
-  SendOutlined,
-  QrcodeOutlined,
-} from "@ant-design/icons";
-import { api } from "../lib/api";
+import React from "react";
+import { Modal, Button, Typography, Space, Tag } from "antd";
+import { CheckCircleOutlined, SafetyCertificateOutlined, HeartFilled } from "@ant-design/icons";
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -33,278 +13,59 @@ interface UpgradeModalProps {
   currentPlan?: "free" | "pro";
 }
 
-export function UpgradeModal({ open, onClose, onSuccess, currentPlan = "free" }: UpgradeModalProps) {
-  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
-  const [utrNumber, setUtrNumber] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [submittedUtr, setSubmittedUtr] = useState<string | null>(null);
-
-  const amount = billingCycle === "monthly" ? 199 : 1799;
-  const officialUpi = "paytmqr9tziqdamfo@paytm";
-  const upiLink = `upi://pay?pa=${officialUpi}&pn=GinieSpace&am=${amount}&cu=INR&tn=GinieSpace%20PRO%20Upgrade`;
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(upiLink)}`;
-
-  const handleCopyUpi = () => {
-    navigator.clipboard?.writeText(officialUpi);
-    setCopied(true);
-    message.success("UPI ID copied to clipboard!");
-    setTimeout(() => setCopied(false), 2500);
-  };
-
-  const handleSubmitUpgrade = async () => {
-    const trimmed = utrNumber.trim();
-    if (!trimmed || trimmed.length < 6) {
-      message.error("Please enter a valid 12-digit UPI UTR / Transaction Reference Number.");
-      return;
-    }
-
-    try {
-      setSubmitting(true);
-      const res = await api.post("/api/settings/upgrade-request", {
-        utrNumber: trimmed,
-        billingCycle,
-        amount,
-      });
-
-      setSubmittedUtr(trimmed);
-      message.success(res.data?.message || "Upgrade request submitted successfully!");
-      if (onSuccess) onSuccess();
-    } catch (err: any) {
-      message.error(err.response?.data?.error || err.message || "Failed to submit upgrade request");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleModalClose = () => {
-    setUtrNumber("");
-    setSubmittedUtr(null);
-    onClose();
-  };
-
+export function UpgradeModal({ open, onClose }: UpgradeModalProps) {
   return (
     <Modal
       open={open}
-      onCancel={handleModalClose}
+      onCancel={onClose}
       footer={null}
-      width={640}
+      width={520}
       centered
       title={
         <Space align="center">
-          <CrownOutlined style={{ color: "#f59e0b", fontSize: 22 }} />
+          <SafetyCertificateOutlined style={{ color: "#16a34a", fontSize: 22 }} />
           <span style={{ fontSize: 18, fontWeight: 700 }}>
-            Upgrade to GinieSpace PRO Workspace
+            100% Free Forever for Your Store
           </span>
-          <Tag color="gold" style={{ fontWeight: 600 }}>₹199/mo</Tag>
+          <Tag color="green" style={{ fontWeight: 600 }}>₹0 Subscription</Tag>
         </Space>
       }
     >
-      <div style={{ padding: "4px 0" }}>
-        {submittedUtr ? (
-          <div style={{ textAlign: "center", padding: "24px 12px" }}>
-            <div style={{ fontSize: 52, color: "#10b981", marginBottom: 12 }}>🎉</div>
-            <Title level={4} style={{ color: "#065f46", margin: 0 }}>
-              Payment Verification Request Submitted!
-            </Title>
-            <Paragraph type="secondary" style={{ marginTop: 8, fontSize: 14 }}>
-              Aapka UTR Number <strong>{submittedUtr}</strong> hamare admin team ko bhej diya gaya hai.
-            </Paragraph>
-            <Alert
-              type="success"
-              showIcon
-              message="Quick Activation (Within 15 Minutes)"
-              description="Aapke WhatsApp (+91 92792 59690) par verified PRO Invoice aur congratulatory badge send kar diya jayega. Tab tak aapka account verification queue me hai."
-              style={{ textAlign: "left", margin: "16px 0", borderRadius: 8 }}
-            />
-            <Button type="primary" onClick={handleModalClose} style={{ marginTop: 8 }}>
-              Done & Return to App
-            </Button>
-          </div>
-        ) : (
-          <div>
-            {/* Billing Cycle Switch */}
-            <div style={{ textAlign: "center", marginBottom: 16 }}>
-              <Radio.Group
-                value={billingCycle}
-                onChange={(e) => setBillingCycle(e.target.value)}
-                buttonStyle="solid"
-                size="middle"
-              >
-                <Radio.Button value="monthly">
-                  Monthly Plan — <strong>₹199 / mo</strong>
-                </Radio.Button>
-                <Radio.Button value="yearly">
-                  Yearly Plan — <strong>₹1,799 / yr</strong> <Tag color="green" style={{ marginLeft: 4 }}>Save ₹589 (25% OFF)</Tag>
-                </Radio.Button>
-              </Radio.Group>
+      <div style={{ textAlign: "center", padding: "16px 8px 8px" }}>
+        <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#f0fdf4", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+          <CheckCircleOutlined style={{ fontSize: 36, color: "#16a34a" }} />
+        </div>
+        <Title level={4} style={{ marginBottom: 8, color: "#0f172a" }}>
+          All Features Are Already Fully Unlocked!
+        </Title>
+        <Paragraph type="secondary" style={{ fontSize: 14, lineHeight: 1.6 }}>
+          GinieSpace operates on a mission to empower Bharat's local businesses with <strong>zero platform fees</strong>, <strong>0% payment commission</strong>, and <strong>no monthly subscriptions</strong>.
+        </Paragraph>
+
+        <div style={{ background: "#f8fafc", borderRadius: 12, padding: "16px 20px", textAlign: "left", marginBottom: 24, border: "1px solid #e2e8f0" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <CheckCircleOutlined style={{ color: "#16a34a", fontSize: 16 }} />
+              <span style={{ fontSize: 13, color: "#334155" }}><strong>Unlimited Products:</strong> Add as many items as you want to your catalog</span>
             </div>
-
-            {/* Feature Comparison */}
-            <Card
-              size="small"
-              style={{
-                borderRadius: 10,
-                background: "#fefce8",
-                borderColor: "#fef08a",
-                marginBottom: 16,
-              }}
-            >
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 16px", fontSize: 13 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <CheckCircleOutlined style={{ color: "#16a34a" }} />
-                  <span><strong>50 Lead Searches / mo</strong> (1,000 Verified Leads vs 3/day Free)</span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <CheckCircleOutlined style={{ color: "#16a34a" }} />
-                  <span><strong>10,000 Saved Leads</strong> (vs 10 Free)</span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <CheckCircleOutlined style={{ color: "#16a34a" }} />
-                  <span><strong>Unlimited Catalog</strong> (vs 15 Free)</span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <CheckCircleOutlined style={{ color: "#16a34a" }} />
-                  <span><strong>5 Staff Operator Accounts</strong></span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <CheckCircleOutlined style={{ color: "#16a34a" }} />
-                  <span><strong>Bulk WhatsApp Broadcasts</strong></span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <CheckCircleOutlined style={{ color: "#16a34a" }} />
-                  <span><strong>Nightly 9 PM Sales Report</strong></span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <CheckCircleOutlined style={{ color: "#16a34a" }} />
-                  <span><strong>Verified Storefront Badge</strong></span>
-                </div>
-              </div>
-            </Card>
-
-            {/* UPI QR Payment Step */}
-            <Card
-              size="small"
-              title={
-                <Space>
-                  <QrcodeOutlined style={{ color: "#2563eb" }} />
-                  <span>Step 1: Scan &amp; Pay ₹{amount} via any UPI App</span>
-                </Space>
-              }
-              style={{ borderRadius: 10, marginBottom: 16 }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap", justifyContent: "center" }}>
-                <div style={{ textAlign: "center" }}>
-                  <img
-                    src={qrUrl}
-                    alt="GinieSpace UPI QR Code"
-                    style={{
-                      width: 150,
-                      height: 150,
-                      border: "2px solid #e2e8f0",
-                      borderRadius: 10,
-                      display: "block",
-                      margin: "0 auto",
-                      background: "#fff",
-                      padding: 4,
-                    }}
-                  />
-                  <Text type="secondary" style={{ fontSize: 11, marginTop: 6, display: "block" }}>
-                    Scan with PhonePe, GPay, Paytm, BHIM
-                  </Text>
-                </div>
-
-                <div style={{ flex: 1, minWidth: 240 }}>
-                  <div style={{ marginBottom: 10 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                      <Text type="secondary" style={{ fontSize: 12 }}>Payee / Merchant Name:</Text>
-                      <Tag color="success" style={{ fontWeight: 700, fontSize: 12 }}>
-                        ✅ GinieSpace
-                      </Tag>
-                    </div>
-                    <Text type="secondary" style={{ fontSize: 12, display: "block" }}>
-                      Official UPI ID:
-                    </Text>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
-                      <Tag color="blue" style={{ fontSize: 13, padding: "4px 8px", margin: 0, fontWeight: 600 }}>
-                        {officialUpi}
-                      </Tag>
-                      <Button size="small" icon={<CopyOutlined />} onClick={handleCopyUpi}>
-                        {copied ? "Copied" : "Copy"}
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div style={{ marginBottom: 10 }}>
-                    <Text strong style={{ fontSize: 14, color: "#166534" }}>
-                      💰 Payable Amount: ₹{amount} ({billingCycle})
-                    </Text>
-                  </div>
-
-                  <div style={{ marginBottom: 8 }}>
-                    <a href={upiLink} style={{ display: "inline-block" }}>
-                      <Button
-                        type="primary"
-                        ghost
-                        size="small"
-                        icon={<QrcodeOutlined />}
-                        style={{ fontWeight: 600, borderRadius: 6 }}
-                      >
-                        📱 Tap to Pay in UPI App (Mobile)
-                      </Button>
-                    </a>
-                  </div>
-
-                  <Text type="secondary" style={{ fontSize: 11 }}>
-                    <SafetyCertificateOutlined style={{ color: "#10b981", marginRight: 4 }} />
-                    100% Secure Instant UPI Payment. Zero commission / fee.
-                  </Text>
-                </div>
-              </div>
-            </Card>
-
-            {/* Step 2: UTR Reference Submission */}
-            <Card
-              size="small"
-              title={
-                <Space>
-                  <SendOutlined style={{ color: "#16a34a" }} />
-                  <span>Step 2: Enter 12-Digit UPI Reference / UTR Number</span>
-                </Space>
-              }
-              style={{ borderRadius: 10 }}
-            >
-              <Paragraph type="secondary" style={{ fontSize: 12, marginBottom: 10 }}>
-                Payment karne ke baad apne Google Pay / PhonePe / Paytm ke receipt me se <strong>12-digit UPI Ref / UTR No.</strong> yahan daalein:
-              </Paragraph>
-              <div style={{ display: "flex", gap: 8 }}>
-                <Input
-                  placeholder="e.g. 432198765432 (12-digit UTR)"
-                  value={utrNumber}
-                  onChange={(e) => setUtrNumber(e.target.value)}
-                  maxLength={24}
-                  size="large"
-                  style={{ fontWeight: 600, letterSpacing: "0.5px" }}
-                />
-                <Button
-                  type="primary"
-                  size="large"
-                  icon={<CrownOutlined />}
-                  loading={submitting}
-                  onClick={handleSubmitUpgrade}
-                  style={{
-                    background: "#f59e0b",
-                    borderColor: "#f59e0b",
-                    fontWeight: 700,
-                    minWidth: 160,
-                  }}
-                >
-                  Activate PRO
-                </Button>
-              </div>
-            </Card>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <CheckCircleOutlined style={{ color: "#16a34a", fontSize: 16 }} />
+              <span style={{ fontSize: 13, color: "#334155" }}><strong>Multi-Staff Accounts:</strong> Add your team members with granular permissions</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <CheckCircleOutlined style={{ color: "#16a34a", fontSize: 16 }} />
+              <span style={{ fontSize: 13, color: "#334155" }}><strong>0% Payment Commission:</strong> 100% direct bank settlements via UPI QR</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <CheckCircleOutlined style={{ color: "#16a34a", fontSize: 16 }} />
+              <span style={{ fontSize: 13, color: "#334155" }}><strong>Automated WhatsApp Bills & Khata:</strong> Instant billing with zero monthly charges</span>
+            </div>
           </div>
-        )}
+        </div>
+
+        <Button type="primary" size="large" onClick={onClose} style={{ width: "100%", background: "#16a34a", borderColor: "#16a34a", height: 44, fontWeight: 600 }}>
+          Got It, Continue to My Store
+        </Button>
       </div>
     </Modal>
   );

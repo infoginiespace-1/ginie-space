@@ -484,26 +484,9 @@ export default function LeadsPage() {
         </div>
         {quotaInfo && (
           <Space wrap>
-            {quotaInfo.plan === "free" ? (
-              <Tag color="orange" style={{ fontSize: 13, padding: "4px 10px", borderRadius: 6 }}>
-                Daily Searches: <strong>{quotaInfo.usedToday}/{quotaInfo.maxDaily}</strong> ({quotaInfo.remainingToday} left today)
-              </Tag>
-            ) : (
-              <Tag color="gold" style={{ fontSize: 13, padding: "4px 10px", borderRadius: 6 }}>
-                👑 PRO Searches: <strong>{quotaInfo.usedThisMonth}/{quotaInfo.maxMonthly}</strong> ({quotaInfo.remainingThisMonth} left this month)
-              </Tag>
-            )}
-            {quotaInfo.plan === "free" && (
-              <Button
-                type="primary"
-                size="small"
-                icon={<CrownOutlined />}
-                onClick={() => setUpgradeModalOpen(true)}
-                style={{ background: "#f59e0b", borderColor: "#f59e0b", fontWeight: 600 }}
-              >
-                Upgrade to PRO (₹199)
-              </Button>
-            )}
+            <Tag color="green" style={{ fontSize: 13, padding: "4px 10px", borderRadius: 6, fontWeight: 600 }}>
+              Free Searches: {quotaInfo.usedToday}/100 ({quotaInfo.remainingToday} left today)
+            </Tag>
           </Space>
         )}
       </div>

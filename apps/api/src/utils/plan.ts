@@ -2,57 +2,31 @@ import { IDatabase } from "@giniespace/sheets-db";
 import { AuthenticatedUser } from "../middleware/auth";
 
 export const FREE_PLAN_LIMITS = {
-  maxProducts: 15,
-  maxLeads: 10,
-  maxDailyLeadSearches: 3,
-  maxStaff: 1,
-  allowBulkBroadcast: false,
-  allowDailySummary: false,
+  maxProducts: 100000, // Unlimited products for all merchants
+  maxLeads: 100000,    // Unlimited leads
+  maxDailyLeadSearches: 100, // Generous free search quota
+  maxStaff: 20,        // Multi-staff unlocked for everyone
+  allowBulkBroadcast: true,
+  allowDailySummary: true,
 };
 
 export const PRO_PLAN_LIMITS = {
-  maxProducts: 10000,
-  maxLeads: 10000,
-  maxMonthlyLeadSearches: 50,
-  maxStaff: 5,
+  maxProducts: 100000,
+  maxLeads: 100000,
+  maxMonthlyLeadSearches: 1000,
+  maxStaff: 20,
   allowBulkBroadcast: true,
   allowDailySummary: true,
 };
 
 export const PRO_PRICING = {
-  monthly: 199,
-  yearly: 1799,
+  monthly: 0, // 100% Free Forever
+  yearly: 0,
   currency: "INR",
-  upiId: "paytmqr9tziqdamfo@paytm", // Official GinieSpace Paytm Merchant UPI ID
   supportPhone: "919279259690",
 };
 
 export async function getEffectivePlan(db: IDatabase, user?: AuthenticatedUser): Promise<"free" | "pro"> {
-  if (!user) return "free";
-  if (user.role === "admin") return "pro";
-
-  try {
-    const dbUser = await db.users.findById(user.id);
-    if (!dbUser) return user.plan === "pro" ? "pro" : "free";
-
-    // Check subscription expiration if plan is pro
-    if (dbUser.plan === "pro") {
-      if (dbUser.planExpiresAt) {
-        const expiryTime = new Date(dbUser.planExpiresAt).getTime();
-        if (Number.isFinite(expiryTime) && expiryTime < Date.now()) {
-          // Subscription expired, downgrade to free
-          await db.users.update(dbUser.id, {
-            plan: "free",
-            subscriptionStatus: "expired",
-          }).catch(() => {});
-          return "free";
-        }
-      }
-      return "pro";
-    }
-
-    if (dbUser.plan === "free") return "free";
-  } catch {}
-
-  return user.plan === "pro" ? "pro" : "free";
+  // All merchants have full, unlimited access forever
+  return "free";
 }

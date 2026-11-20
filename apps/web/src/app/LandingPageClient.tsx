@@ -124,10 +124,10 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
   // Live Chat Simulator state
   const [simStep, setSimStep] = useState<number>(1);
 
-  // Calculations for zero-fee gateway savings
+  // Calculations for zero-fee gateway savings (100% Free Forever)
   const traditionalGatewayFee = Math.round(monthlySales * 0.025); // ~2.5% avg gateway charge
-  const ginieSpaceFee = billingCycle === "monthly" ? 199 : 150; // ₹150/mo on yearly (₹1,799 / 12)
-  const monthlySavings = Math.max(0, traditionalGatewayFee - ginieSpaceFee);
+  const ginieSpaceFee = 0; // 100% Free Forever
+  const monthlySavings = traditionalGatewayFee; // Save 100% of middleman cuts
   const [copiedLink, setCopiedLink] = useState(false);
 
   const handleCopyLink = (text: string) => {
@@ -469,16 +469,16 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
               <Link
                 href="/pricing"
                 onClick={() => setMobileMenuOpen(false)}
-                style={{ display: "flex", alignItems: "center", gap: 10, color: "#b45309", fontWeight: 700, fontSize: 14, textDecoration: "none", padding: "9px 12px", borderRadius: 8, background: "#fffbeb", border: "1px solid #fde68a" }}
+                style={{ display: "flex", alignItems: "center", gap: 10, color: "#15803d", fontWeight: 700, fontSize: 14, textDecoration: "none", padding: "9px 12px", borderRadius: 8, background: "#f0fdf4", border: "1px solid #bbf7d0" }}
               >
-                <span>👑</span> <span>{t.nav.pricing}</span>
+                <span>🎁</span> <span>{t.nav.pricing}</span>
               </Link>
               <Link
                 href={locale === "hi" ? "/hi/about" : "/about"}
                 onClick={() => setMobileMenuOpen(false)}
                 style={{ display: "flex", alignItems: "center", gap: 10, color: "#1e293b", fontWeight: 600, fontSize: 14, textDecoration: "none", padding: "9px 12px", borderRadius: 8, background: "#f8fafc" }}
               >
-                <span>👨‍💻</span> <span>{t.nav.about}</span>
+                <span>🏢</span> <span>{t.nav.about}</span>
               </Link>
               <a
                 href="#faqs"
@@ -1805,7 +1805,7 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
               <Col xs={12}>
                 <div style={{ color: "#94a3b8", fontSize: isMobile ? 11 : 12 }}>{t.calculator.ginieFee}</div>
                 <div style={{ color: "#34d399", fontSize: isMobile ? 15 : 18, fontWeight: 700 }}>
-                  ₹{ginieSpaceFee}/mo (0% Cut)
+                  ₹0/mo (100% Free Forever)
                 </div>
               </Col>
             </Row>
@@ -2573,7 +2573,7 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
               <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13 }}>
                 <Link href="/login" style={{ color: "#94a3b8", textDecoration: "none" }}>Merchant Sign In</Link>
                 <Link href="/signup" style={{ color: "#94a3b8", textDecoration: "none" }}>Create Free Account</Link>
-                <Link href="/pricing" style={{ color: "#94a3b8", textDecoration: "none" }}>PRO Plan (₹199)</Link>
+                <Link href="/pricing" style={{ color: "#94a3b8", textDecoration: "none" }}>100% Free Forever</Link>
                 <a href="#faqs" style={{ color: "#94a3b8", textDecoration: "none" }}>Merchant FAQs</a>
               </div>
             </Col>

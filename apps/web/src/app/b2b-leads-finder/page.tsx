@@ -185,14 +185,14 @@ export default function B2bLeadsFinderPage() {
           </div>
 
           <div style={{ background: "#ffffff", padding: 28, borderRadius: 16, border: "2px solid #059669", boxShadow: "0 8px 24px rgba(5,150,105,0.1)" }}>
-            <div style={{ fontSize: 12, fontWeight: 800, color: "#059669", marginBottom: 8 }}>PRO GROWTH PLAN</div>
-            <h3 style={{ fontSize: 22, fontWeight: 800, color: "#059669", marginBottom: 12 }}>PRO (₹199 / mo)</h3>
+            <div style={{ fontSize: 12, fontWeight: 800, color: "#059669", marginBottom: 8 }}>ALL BUSINESSES</div>
+            <h3 style={{ fontSize: 22, fontWeight: 800, color: "#059669", marginBottom: 12 }}>100% Free Access</h3>
             <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 10, fontSize: 14, color: "#334155" }}>
-              <li>👑 50 Search Queries / month</li>
-              <li>👑 1,000 Verified High-Intent B2B Leads</li>
-              <li>👑 Store up to 10,000 Leads in CRM</li>
-              <li>👑 Multi-city &amp; cross-state discovery</li>
-              <li>👑 Priority phone and WhatsApp support</li>
+              <li>✅ Generous Daily Search Queries</li>
+              <li>✅ Verified High-Intent B2B Local Leads</li>
+              <li>✅ Store Leads Directly in your CRM</li>
+              <li>✅ Multi-city &amp; cross-state discovery</li>
+              <li>✅ 100% Free Forever with Zero Fees</li>
             </ul>
           </div>
         </div>
@@ -218,7 +218,7 @@ export default function B2bLeadsFinderPage() {
               Wholesale Distributors &amp; Bulk MOQs ➔
             </Link>
             <Link href="/pricing" style={{ padding: "8px 16px", background: "#f8fafc", border: "1px solid #cbd5e1", borderRadius: 8, color: "#0f172a", fontWeight: 600, textDecoration: "none", fontSize: 13 }}>
-              Pricing Plans (₹0 Free &amp; ₹199 PRO) ➔
+              100% Free Forever Plan ➔
             </Link>
           </div>
         </div>

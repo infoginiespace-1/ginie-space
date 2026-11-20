@@ -938,45 +938,26 @@ export default function SettingsPage() {
             </Space>
           </Card>
 
-          {/* Plan Quotas & PRO Upgrade */}
-          {planUsage && (
-            <Card
-              title={
-                <Space>
-                  <CrownOutlined style={{ color: "#faad14" }} />
-                  <span>Subscription Tier &amp; Limits</span>
-                </Space>
-              }
-              style={{ borderRadius: 12, marginBottom: 20 }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                <Text strong>Current Plan:</Text>
-                <Tag color={planUsage.plan === "pro" ? "gold" : "default"} style={{ fontWeight: 700, padding: "2px 8px" }}>
-                  {planUsage.plan === "pro" ? "👑 PRO ACTIVE" : "FREE PLAN"}
-                </Tag>
-              </div>
-
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
-                  <span>Catalog Products</span>
-                  <span>{planUsage.usage?.productsCount || 0} / {planUsage.limits?.maxProducts || 50}</span>
-                </div>
-                <Progress percent={Math.round(((planUsage.usage?.productsCount || 0) / (planUsage.limits?.maxProducts || 50)) * 100)} size="small" status="active" />
-              </div>
-
-              {planUsage.plan !== "pro" && (
-                <Button
-                  block
-                  type="primary"
-                  icon={<CrownOutlined />}
-                  onClick={() => setUpgradeModalOpen(true)}
-                  style={{ background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", borderColor: "#d97706", fontWeight: 700 }}
-                >
-                  Upgrade to PRO (₹199 / Mo)
-                </Button>
-              )}
-            </Card>
-          )}
+          {/* Platform Access: 100% Free Forever */}
+          <Card
+            title={
+              <Space>
+                <CheckCircleOutlined style={{ color: "#16a34a" }} />
+                <span>Plan &amp; Platform Access</span>
+              </Space>
+            }
+            style={{ borderRadius: 12, marginBottom: 20 }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <Text strong>Account Status:</Text>
+              <Tag color="green" style={{ fontWeight: 700, padding: "2px 10px", fontSize: 12, borderRadius: 6 }}>
+                100% FREE LIFETIME
+              </Tag>
+            </div>
+            <div style={{ background: "#f0fdf4", borderRadius: 8, padding: "10px 14px", border: "1px solid #bbf7d0", fontSize: 13, color: "#15803d", lineHeight: 1.5 }}>
+              All features are permanently unlocked for your store with <strong>₹0 platform fees</strong>, <strong>0% payment commission</strong>, and <strong>unlimited catalog &amp; staff</strong>.
+            </div>
+          </Card>
 
           {/* Change Password Card */}
           <Card

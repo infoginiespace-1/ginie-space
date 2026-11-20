@@ -275,13 +275,6 @@ export function createProductsRouter(db: IDatabase, io: Server): Router {
         return;
       }
 
-      if (plan === "free" && existingProducts.length + toCreate.length > FREE_PLAN_LIMITS.maxProducts) {
-        res.status(403).json({
-          error: `Free plan allows up to ${FREE_PLAN_LIMITS.maxProducts} items. Upgrade to Pro to import the full pack.`,
-        });
-        return;
-      }
-
       const created = [];
       for (const tpl of toCreate) {
         const prod = await db.products.create({
@@ -327,17 +320,6 @@ export function createProductsRouter(db: IDatabase, io: Server): Router {
       const resolvedItemType = itemType === "service" ? "service" : "product";
       const resolvedServiceMode = VALID_SERVICE_MODES.includes(serviceMode) ? serviceMode : undefined;
 
-      const [plan, existingProducts] = await Promise.all([
-        getEffectivePlan(db, req.user),
-        db.products.findMany({ userId: req.user!.id }),
-      ]);
-      if (plan === "free" && existingProducts.length >= FREE_PLAN_LIMITS.maxProducts) {
-        res.status(403).json({
-          error: `Free plan allows up to ${FREE_PLAN_LIMITS.maxProducts} products. Upgrade to Pro for unlimited catalog items!`,
-        });
-        return;
-      }
-
       const product = await db.products.create({
         userId: req.user!.id,
         name: name.trim(),
@@ -375,18 +357,6 @@ export function createProductsRouter(db: IDatabase, io: Server): Router {
       }
       if (items.length > 200) {
         res.status(400).json({ error: "Maximum 200 items can be uploaded at a time" });
-        return;
-      }
-
-      const [plan, existingProducts] = await Promise.all([
-        getEffectivePlan(db, req.user),
-        db.products.findMany({ userId: req.user!.id }),
-      ]);
-
-      if (plan === "free" && existingProducts.length + items.length > FREE_PLAN_LIMITS.maxProducts) {
-        res.status(403).json({
-          error: `Free plan allows up to ${FREE_PLAN_LIMITS.maxProducts} products. You currently have ${existingProducts.length}. Adding ${items.length} items exceeds the limit. Upgrade to PRO for unlimited bulk upload!`,
-        });
         return;
       }
 

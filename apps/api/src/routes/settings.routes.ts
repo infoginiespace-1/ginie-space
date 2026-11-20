@@ -102,88 +102,45 @@ export function createSettingsRouter(
     }
   });
 
-  // Plan & Quotas Usage Endpoint
+  // Plan & Quotas Usage Endpoint (100% Free Forever)
   router.get("/plan-usage", async (req: Request, res: Response): Promise<void> => {
     try {
       const userId = req.user!.id;
-      const [plan, products, leads, allUsers, dbUser] = await Promise.all([
-        getEffectivePlan(db, req.user),
+      const [products, leads, allUsers, dbUser] = await Promise.all([
         db.products.findMany({ userId }),
         db.leads.findMany({ userId }),
         db.users.findMany({ ownerId: userId }).catch(() => []),
         db.users.findById(userId).catch(() => null),
       ]);
 
-      const limits = plan === "pro" ? PRO_PLAN_LIMITS : FREE_PLAN_LIMITS;
-
       res.json({
-        plan,
-        subscriptionStatus: dbUser?.subscriptionStatus || (plan === "pro" ? "active" : "none"),
-        planExpiresAt: dbUser?.planExpiresAt || null,
-        planPurchasedAt: dbUser?.planPurchasedAt || null,
-        paymentUtr: dbUser?.paymentUtr || null,
-        pricing: PRO_PRICING,
+        plan: "free",
+        isFreeForever: true,
+        subscriptionStatus: "active",
+        planExpiresAt: null,
+        planPurchasedAt: null,
+        paymentUtr: null,
+        pricing: { monthly: 0, yearly: 0, currency: "INR" },
         usage: {
           productsCount: products.length,
           leadsCount: leads.length,
           staffCount: allUsers.length,
         },
-        limits,
+        limits: FREE_PLAN_LIMITS,
       });
     } catch {
       res.status(500).json({ error: "Could not load plan usage" });
     }
   });
 
-  // Submit PRO Upgrade Request with UPI UTR
+  // Upgrade Request is now a no-op congratulating merchant on 100% Free Lifetime Access
   router.post("/upgrade-request", async (req: Request, res: Response): Promise<void> => {
-    try {
-      const userId = req.user!.id;
-      const { utrNumber, billingCycle = "monthly", amount = PRO_PRICING.monthly } = req.body;
-
-      if (!utrNumber || String(utrNumber).trim().length < 6) {
-        res.status(400).json({ error: "Please enter a valid 12-digit UPI UTR / Transaction Reference Number." });
-        return;
-      }
-
-      const cleanUtr = String(utrNumber).trim();
-      const user = await db.users.findById(userId);
-      if (!user) {
-        res.status(404).json({ error: "User account not found" });
-        return;
-      }
-
-      const now = new Date().toISOString();
-      await db.users.update(userId, {
-        paymentUtr: cleanUtr,
-        subscriptionStatus: "pending",
-        updatedAt: now,
-      });
-
-      // Send Instant WhatsApp Alert to Admin Bot (+91 92792 59690)
-      if (notificationService) {
-        const biz = await db.businesses.findOne({ userId }).catch(() => null);
-        const adminMsg = `🔔 *New PRO Subscription Upgrade Request!*\n\n` +
-          `👤 *Merchant:* ${user.name} (${user.email})\n` +
-          `🏪 *Store:* ${biz?.name || "N/A"}\n` +
-          `📞 *Phone:* ${biz?.phone || "N/A"}\n` +
-          `💰 *Amount:* ₹${amount} (${billingCycle})\n` +
-          `🔢 *UPI UTR:* \`${cleanUtr}\`\n\n` +
-          `Admin panel me jakar Subscriptions tab se Verify & 1-Click Approve karein:\n` +
-          `https://app.ginie.space/admin`;
-
-        await notificationService.sendSupportNotification(PRO_PRICING.supportPhone, adminMsg).catch(() => {});
-      }
-
-      res.json({
-        success: true,
-        message: "Your PRO Upgrade request has been submitted! It will be verified and activated shortly.",
-        subscriptionStatus: "pending",
-        utr: cleanUtr,
-      });
-    } catch (err: any) {
-      res.status(500).json({ error: err.message || "Failed to submit upgrade request" });
-    }
+    res.json({
+      success: true,
+      message: "GinieSpace is 100% Free Forever! All features are already fully unlocked for your business.",
+      subscriptionStatus: "active",
+      plan: "free",
+    });
   });
 
   // Team / Staff Multi-User Management
@@ -217,14 +174,11 @@ export function createSettingsRouter(
         return;
       }
 
-      const [plan, existingStaff] = await Promise.all([
-        getEffectivePlan(db, req.user),
-        db.users.findMany({ ownerId: req.user!.id }),
-      ]);
-      const maxStaff = plan === "pro" ? 10 : FREE_PLAN_LIMITS.maxStaff;
+      const existingStaff = await db.users.findMany({ ownerId: req.user!.id }).catch(() => []);
+      const maxStaff = FREE_PLAN_LIMITS.maxStaff;
       if (existingStaff.length >= maxStaff) {
         res.status(403).json({
-          error: `${plan === "pro" ? "Pro" : "Free"} plan supports up to ${maxStaff} staff account(s).`,
+          error: `Your store supports up to ${maxStaff} staff accounts.`,
         });
         return;
       }
@@ -250,7 +204,7 @@ export function createSettingsRouter(
         ownerId: req.user!.id,
         staffPermissions: perms,
         status: "active",
-        plan,
+        plan: "free",
       });
 
       res.status(201).json({

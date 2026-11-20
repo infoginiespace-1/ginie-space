@@ -185,14 +185,14 @@ export default function HindiB2bLeadsFinderPage() {
           </div>
 
           <div style={{ background: "#ffffff", padding: 28, borderRadius: 16, border: "2px solid #059669", boxShadow: "0 8px 24px rgba(5,150,105,0.1)" }}>
-            <div style={{ fontSize: 12, fontWeight: 800, color: "#059669", marginBottom: 8 }}>PRO ग्रोथ प्लान</div>
-            <h3 style={{ fontSize: 22, fontWeight: 800, color: "#059669", marginBottom: 12 }}>PRO (₹199 / महीना)</h3>
+            <div style={{ fontSize: 12, fontWeight: 800, color: "#059669", marginBottom: 8 }}>सभी व्यापारियों के लिए</div>
+            <h3 style={{ fontSize: 22, fontWeight: 800, color: "#059669", marginBottom: 12 }}>100% फ्री एक्सेस</h3>
             <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 10, fontSize: 14, color: "#334155" }}>
-              <li>👑 प्रति माह 50 सर्च क्वेरी</li>
-              <li>👑 1,000 वेरिफाइड हाई-इंटेंट B2B लीड्स</li>
-              <li>👑 CRM में 10,000 लीड्स स्टोर करें</li>
-              <li>👑 पूरे भारत के किसी भी शहर में सर्च</li>
-              <li>👑 प्राथमिकता फ़ोन व व्हाट्सएप सपोर्ट</li>
+              <li>✅ पर्याप्त डेली सर्च क्वेरी</li>
+              <li>✅ सत्यापित लोकल B2B व्यापारी व दुकानें</li>
+              <li>✅ CRM में लीड्स स्टोर करें</li>
+              <li>✅ पूरे भारत के किसी भी शहर में सर्च</li>
+              <li>✅ हमेशा 100% फ्री - कोई शुल्क नहीं</li>
             </ul>
           </div>
         </div>
@@ -218,7 +218,7 @@ export default function HindiB2bLeadsFinderPage() {
               थोक व्यापारी व डिस्ट्रीब्यूटर्स ➔
             </Link>
             <Link href="/hi/pricing" style={{ padding: "8px 16px", background: "#f8fafc", border: "1px solid #cbd5e1", borderRadius: 8, color: "#0f172a", fontWeight: 600, textDecoration: "none", fontSize: 13 }}>
-              प्लान्स और प्राइसिंग (₹199) ➔
+              100% फ्री प्लान देखें ➔
             </Link>
           </div>
         </div>

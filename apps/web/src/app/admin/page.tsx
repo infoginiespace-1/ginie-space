@@ -1300,12 +1300,8 @@ export default function AdminPage() {
       text: "WhatsApp link karne ke liye: WhatsApp open karein -> Settings / 3-dots -> 'Linked Devices' -> 'Link a Device' par click karein aur dashboard par dikh rahe QR code ko scan karein.",
     },
     {
-      title: "PRO Plan Upgrade Details",
-      text: "GinieSpace PRO plan me aapko Unlimited Catalog, 50 B2B Lead Searches/month (1,000 verified leads), 10,000 Saved Leads, 5 Staff Accounts aur Bulk WhatsApp alerts milte hain. Upgrade ke liye UPI ID: paytmqr9tziqdamfo@paytm par ₹199 (monthly) ya ₹1,799 (yearly) pay karke UTR submit karein.",
-    },
-    {
-      title: "Payment UTR Verified",
-      text: "Namaste! Aapka PRO subscription payment UTR verify ho gaya hai aur aapka account PRO me upgrade kar diya gaya hai. Thank you for choosing GinieSpace!",
+      title: "100% Free Lifetime Access",
+      text: "Namaste! GinieSpace sabhi merchants ke liye 100% Free platform hai. Isme aapko Unlimited Catalog, Direct Bank UPI QR billing, Multi-Staff Accounts aur WhatsApp order management bina kisi monthly subscription ya transaction commission ke milta hai.",
     },
     {
       title: "Order Fulfillment Help",

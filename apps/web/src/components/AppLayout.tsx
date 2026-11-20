@@ -368,30 +368,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 )}
 
                 {user?.role !== "admin" && user?.role !== "staff" && (
-                  user?.plan === "pro" ? (
-                    <Tag
-                      color="gold"
-                      style={{ fontWeight: 700, margin: 0, padding: "1px 5px", fontSize: 11, cursor: "pointer" }}
-                      onClick={() => setUpgradeModalOpen(true)}
-                    >
-                      👑 PRO
-                    </Tag>
-                  ) : (
-                    <Button
-                      size="small"
-                      onClick={() => setUpgradeModalOpen(true)}
-                      style={{
-                        background: "linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)",
-                        borderColor: "#f59e0b",
-                        color: "#92400e",
-                        fontWeight: 700,
-                        fontSize: 11,
-                        padding: "0 6px",
-                      }}
-                    >
-                      PRO ₹199
-                    </Button>
-                  )
+                  <Tag
+                    color="green"
+                    style={{ fontWeight: 700, margin: 0, padding: "1px 6px", fontSize: 11, borderRadius: 4 }}
+                  >
+                    100% Free
+                  </Tag>
                 )}
 
                 <Button
@@ -496,37 +478,17 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
               <Space size="small">
                 {user?.role !== "admin" && user?.role !== "staff" && (
-                  user?.plan === "pro" ? (
-                    <Tag
-                      icon={<CrownOutlined style={{ color: "#d97706" }} />}
-                      color="gold"
-                      style={{
-                        fontWeight: 700,
-                        padding: "3px 10px",
-                        fontSize: 12,
-                        cursor: "pointer",
-                        borderRadius: 6,
-                      }}
-                      onClick={() => setUpgradeModalOpen(true)}
-                    >
-                      👑 PRO
-                    </Tag>
-                  ) : (
-                    <Button
-                      size="middle"
-                      icon={<CrownOutlined style={{ color: "#b45309" }} />}
-                      onClick={() => setUpgradeModalOpen(true)}
-                      style={{
-                        background: "linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)",
-                        borderColor: "#f59e0b",
-                        color: "#92400e",
-                        fontWeight: 700,
-                        boxShadow: "0 2px 8px rgba(245, 158, 11, 0.18)",
-                      }}
-                    >
-                      👑 Upgrade to PRO (₹199)
-                    </Button>
-                  )
+                  <Tag
+                    color="green"
+                    style={{
+                      fontWeight: 700,
+                      padding: "3px 10px",
+                      fontSize: 12,
+                      borderRadius: 6,
+                    }}
+                  >
+                    100% Free Forever
+                  </Tag>
                 )}
                 <Button
                   size="small"
@@ -586,8 +548,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     {user?.role === "admin" ? "Admin" : user?.role === "staff" ? "Staff" : "Business"}
                   </Tag>
                   {user?.role !== "admin" && (
-                    <Tag color={user?.plan === "pro" ? "gold" : "default"}>
-                      {user?.plan === "pro" ? "PRO" : "FREE"}
+                    <Tag color="green">
+                      FREE
                     </Tag>
                   )}
                 </Space>

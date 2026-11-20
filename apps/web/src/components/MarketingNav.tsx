@@ -189,14 +189,14 @@ export default function MarketingNav({ currentPath, lang = "en" }: MarketingNavP
             className="nav-link-pill"
             style={{ color: currentPath.includes("/pricing") ? "#059669" : undefined, fontWeight: currentPath.includes("/pricing") ? 700 : 500 }}
           >
-            {lang === "hi" ? "प्लान्स (₹199)" : "Pricing (₹199)"}
+            {lang === "hi" ? "100% फ्री (₹0)" : "100% Free (₹0)"}
           </Link>
           <Link
             href={`${prefix}/about`}
             className="nav-link-pill"
             style={{ color: currentPath.includes("/about") ? "#059669" : undefined, fontWeight: currentPath.includes("/about") ? 700 : 500 }}
           >
-            {lang === "hi" ? "संस्थापक (Founder)" : "About Founder"}
+            {lang === "hi" ? "हमारे बारे में" : "About Us"}
           </Link>
         </nav>
 
@@ -391,25 +391,25 @@ export default function MarketingNav({ currentPath, lang = "en" }: MarketingNavP
             </div>
           </div>
 
-          {/* Group 3: Company & Pricing */}
+          {/* Group 3: Company & Free Platform */}
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6, paddingLeft: 4 }}>
-              {lang === "hi" ? "प्लान्स व कंपनी" : "Pricing & About"}
+              {lang === "hi" ? "प्लान व कंपनी" : "Platform & About"}
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               <Link
                 href={`${prefix}/pricing`}
                 onClick={() => setMobileMenuOpen(false)}
-                style={{ display: "flex", alignItems: "center", gap: 10, color: "#b45309", fontWeight: 700, fontSize: 14, textDecoration: "none", padding: "9px 12px", borderRadius: 8, background: "#fffbeb", border: "1px solid #fde68a" }}
+                style={{ display: "flex", alignItems: "center", gap: 10, color: "#15803d", fontWeight: 700, fontSize: 14, textDecoration: "none", padding: "9px 12px", borderRadius: 8, background: "#f0fdf4", border: "1px solid #bbf7d0" }}
               >
-                <span>👑</span> <span>{lang === "hi" ? "प्लान्स (₹199)" : "Pricing (₹199)"}</span>
+                <span>🎁</span> <span>{lang === "hi" ? "100% फ्री (₹0)" : "100% Free (₹0)"}</span>
               </Link>
               <Link
                 href={`${prefix}/about`}
                 onClick={() => setMobileMenuOpen(false)}
                 style={{ display: "flex", alignItems: "center", gap: 10, color: "#1e293b", fontWeight: 600, fontSize: 14, textDecoration: "none", padding: "9px 12px", borderRadius: 8, background: "#f8fafc" }}
               >
-                <span>👨‍💻</span> <span>{lang === "hi" ? "संस्थापक (Founder)" : "About Founder"}</span>
+                <span>🏢</span> <span>{lang === "hi" ? "हमारे बारे में" : "About Us"}</span>
               </Link>
             </div>
           </div>

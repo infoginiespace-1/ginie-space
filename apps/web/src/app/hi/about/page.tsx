@@ -444,7 +444,7 @@ export default function HindiAboutPage() {
                 fontSize: 16,
               }}
             >
-              PRO प्लान देखें (₹199)
+              100% फ्री प्लान देखें
             </Link>
           </div>
         </div>

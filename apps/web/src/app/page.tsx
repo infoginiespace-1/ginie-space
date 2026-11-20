@@ -5,7 +5,7 @@ import LandingPageClient from "./LandingPageClient";
 export const metadata: Metadata = {
   title: "WhatsApp Catalog & UPI Billing Software India | GinieSpace",
   description:
-    "Apna WhatsApp catalog banayein, 0% commission par direct UPI payment lein aur local B2B leads payein. Free plan, PRO sirf ₹199/month.",
+    "Apna WhatsApp catalog banayein, 0% commission par direct UPI payment lein aur local B2B leads payein. 100% Free Forever platform.",
   alternates: {
     canonical: "https://app.ginie.space",
     languages: {
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "WhatsApp Catalog & UPI Billing Software India | GinieSpace",
     description:
-      "Apna WhatsApp catalog banayein, 0% commission par direct UPI payment lein aur local B2B leads payein. Free plan, PRO sirf ₹199/month.",
+      "Apna WhatsApp catalog banayein, 0% commission par direct UPI payment lein aur local B2B leads payein. 100% Free Forever platform.",
     url: "https://app.ginie.space",
     siteName: "GinieSpace",
     locale: "en_IN",
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "WhatsApp Catalog & UPI Billing Software India | GinieSpace",
     description:
-      "Apna WhatsApp catalog banayein, 0% commission par direct UPI payment lein aur local B2B leads payein. Free plan, PRO sirf ₹199/month.",
+      "Apna WhatsApp catalog banayein, 0% commission par direct UPI payment lein aur local B2B leads payein. 100% Free Forever platform.",
     images: ["https://app.ginie.space/og-catalog.jpg"],
   },
   robots: {
@@ -56,16 +56,9 @@ export default function HomePage() {
         "offers": [
           {
             "@type": "Offer",
-            "name": "Free Starter Plan",
+            "name": "100% Free Lifetime Platform",
             "price": "0",
             "priceCurrency": "INR"
-          },
-          {
-            "@type": "Offer",
-            "name": "PRO Monthly Plan",
-            "price": "199",
-            "priceCurrency": "INR",
-            "billingDuration": "P1M"
           }
         ]
       },

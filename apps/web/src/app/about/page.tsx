@@ -444,7 +444,7 @@ export default function AboutPage() {
                 fontSize: 16,
               }}
             >
-              View PRO Plan (₹199)
+              Explore 100% Free Platform
             </Link>
           </div>
         </div>

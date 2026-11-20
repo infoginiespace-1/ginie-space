@@ -114,7 +114,7 @@ export default function MarketingFooter({ lang = "en" }: MarketingFooterProps) {
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 13 }}>
               <Link href={`${prefix}/pricing`} style={{ color: "#94a3b8", textDecoration: "none" }}>
-                {lang === "hi" ? "प्लान्स व प्राइसिंग (₹199)" : "Pricing Plans (₹199)"}
+                {lang === "hi" ? "100% फ्री प्लान (₹0)" : "100% Free Forever (₹0)"}
               </Link>
               <Link href={`${prefix}/about`} style={{ color: "#94a3b8", textDecoration: "none" }}>
                 {lang === "hi" ? "हमारे बारे में (About GinieSpace)" : "About GinieSpace"}

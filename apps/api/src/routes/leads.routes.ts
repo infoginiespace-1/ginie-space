@@ -39,15 +39,16 @@ export function createLeadsRouter(
       const savedLeads = await db.leads.findMany({ userId: req.user!.id });
 
       res.json({
-        plan,
+        plan: "free",
+        isFreeForever: true,
         usedToday,
-        maxDaily: FREE_PLAN_LIMITS.maxDailyLeadSearches,
-        remainingToday: Math.max(0, FREE_PLAN_LIMITS.maxDailyLeadSearches - usedToday),
+        maxDaily: 100,
+        remainingToday: Math.max(0, 100 - usedToday),
         usedThisMonth,
-        maxMonthly: PRO_PLAN_LIMITS.maxMonthlyLeadSearches,
-        remainingThisMonth: Math.max(0, PRO_PLAN_LIMITS.maxMonthlyLeadSearches - usedThisMonth),
+        maxMonthly: 1000,
+        remainingThisMonth: Math.max(0, 1000 - usedThisMonth),
         savedLeadsCount: savedLeads.length,
-        maxSavedLeads: plan === "free" ? FREE_PLAN_LIMITS.maxLeads : PRO_PLAN_LIMITS.maxLeads,
+        maxSavedLeads: 100000,
       });
     } catch {
       res.status(500).json({ error: "Could not load quota" });
@@ -88,19 +89,10 @@ export function createLeadsRouter(
       const monthSetting = await db.settings.findOne({ userId: req.user!.id, key: monthSettingKey });
       const usedThisMonth = monthSetting ? parseInt(monthSetting.value, 10) || 0 : 0;
 
-      if (plan === "free" && usedToday >= FREE_PLAN_LIMITS.maxDailyLeadSearches) {
+      if (usedToday >= 100) {
         res.status(403).json({
-          error: `Daily limit reached! Free plan includes ${FREE_PLAN_LIMITS.maxDailyLeadSearches} searches per day (up to 60 verified leads). Upgrade to PRO (₹199/mo) for 50 searches / 1,000 leads per month!`,
-          requiresUpgrade: true,
+          error: "Daily search limit (100 searches) reached. Quota resets tomorrow.",
           dailyLimitReached: true,
-        });
-        return;
-      }
-
-      if (plan === "pro" && usedThisMonth >= PRO_PLAN_LIMITS.maxMonthlyLeadSearches) {
-        res.status(403).json({
-          error: `Monthly PRO limit reached (${PRO_PLAN_LIMITS.maxMonthlyLeadSearches} searches / ~1,000 leads). Your quota will reset on the 1st of next month.`,
-          monthlyLimitReached: true,
         });
         return;
       }
@@ -181,18 +173,6 @@ export function createLeadsRouter(
 
       if (!name) {
         res.status(400).json({ error: "Lead name is required" });
-        return;
-      }
-
-      const [plan, existingLeads] = await Promise.all([
-        getEffectivePlan(db, req.user),
-        db.leads.findMany({ userId: req.user!.id }),
-      ]);
-      if (plan === "free" && existingLeads.length >= FREE_PLAN_LIMITS.maxLeads) {
-        res.status(403).json({
-          error: `Free plan allows saving up to ${FREE_PLAN_LIMITS.maxLeads} leads. Upgrade to PRO (₹199/mo) for 10,000 CRM leads!`,
-          requiresUpgrade: true,
-        });
         return;
       }
 
