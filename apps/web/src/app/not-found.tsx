@@ -112,7 +112,7 @@ export default function NotFound() {
               fontSize: 14,
             }}
           >
-            Pricing (₹199)
+            100% Free Plan
           </Link>
         </div>
 

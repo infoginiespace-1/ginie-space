@@ -108,7 +108,7 @@ export default function HindiServicesAppointmentsPage() {
               textDecoration: "none",
             }}
           >
-            प्लान्स देखें (₹199/माह)
+            100% फ्री प्लान देखें (₹0)
           </Link>
         </div>
       </section>
@@ -149,7 +149,7 @@ export default function HindiServicesAppointmentsPage() {
                 🎟️ एडवांस UPI टोकन बुकिंग
               </h3>
               <p style={{ fontSize: 14, color: "#64748b", lineHeight: 1.6 }}>
-                बुकिंग पक्की करने के लिए सीधे अपने बैंक UPI में टोकन एडवांस (जैसे ₹99 या ₹199) लें, जिससे ग्राहक समय पर मौजूद रहे और समय की बर्बादी न हो।
+                बुकिंग पक्की करने के लिए सीधे अपने बैंक UPI में टोकन एडवांस (जैसे ₹99 या ₹250) लें, जिससे ग्राहक समय पर मौजूद रहे और समय की बर्बादी न हो।
               </p>
             </div>
           </div>
@@ -176,7 +176,7 @@ export default function HindiServicesAppointmentsPage() {
               किराना व रिटेल दुकान ➔
             </Link>
             <Link href="/hi/pricing" style={{ padding: "8px 16px", background: "#f8fafc", border: "1px solid #cbd5e1", borderRadius: 8, color: "#0f172a", fontWeight: 600, textDecoration: "none", fontSize: 13 }}>
-              प्लान्स और प्राइसिंग (₹199) ➔
+              100% फ्री प्लान (₹0) ➔
             </Link>
           </div>
         </div>

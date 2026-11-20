@@ -108,7 +108,7 @@ export default function HindiRetailKiranaStorePage() {
               textDecoration: "none",
             }}
           >
-            प्लान्स देखें (₹0 व ₹199)
+            100% फ्री प्लान देखें (₹0)
           </Link>
         </div>
       </section>
@@ -176,7 +176,7 @@ export default function HindiRetailKiranaStorePage() {
               थोक व्यापारी व डिस्ट्रीब्यूटर्स ➔
             </Link>
             <Link href="/hi/pricing" style={{ padding: "8px 16px", background: "#f8fafc", border: "1px solid #cbd5e1", borderRadius: 8, color: "#0f172a", fontWeight: 600, textDecoration: "none", fontSize: 13 }}>
-              प्लान्स और प्राइसिंग (₹199) ➔
+              100% फ्री प्लान (₹0) ➔
             </Link>
           </div>
         </div>

@@ -24,7 +24,6 @@ import {
   Modal,
   Drawer,
   Grid,
-  Segmented,
   Dropdown,
 } from "antd";
 import {
@@ -113,8 +112,6 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
     }
   }, [user, loading, router]);
 
-  // Billing Cycle state (Monthly ₹99 vs Yearly ₹999)
-  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
   // Interactive ROI Calculator State (Monthly sales in ₹)
   const [monthlySales, setMonthlySales] = useState<number>(100000);
   // Interactive Tour Active Tab
@@ -307,15 +304,22 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
 
           {/* Desktop Action CTAs */}
           <Space size="middle" className="hide-on-mobile">
-            <Segmented
-              value={locale}
-              onChange={(val: any) => handleLocaleChange(val)}
-              options={[
-                { label: "🇬🇧 English", value: "en" },
-                { label: "🇮🇳 Hinglish", value: "hi" },
-              ]}
-              style={{ background: "#f1f5f9", fontWeight: 600 }}
-            />
+            <div className="lang-switcher-group" role="group" aria-label="Language Switcher">
+              <button
+                type="button"
+                onClick={() => handleLocaleChange("en")}
+                className={`lang-btn ${locale === "en" ? "active" : ""}`}
+              >
+                🇬🇧 English
+              </button>
+              <button
+                type="button"
+                onClick={() => handleLocaleChange("hi")}
+                className={`lang-btn ${locale === "hi" ? "active" : ""}`}
+              >
+                🇮🇳 Hinglish
+              </button>
+            </div>
             <Button
               onClick={() => router.push("/login")}
               style={{ fontWeight: 600, borderColor: "#cbd5e1", borderRadius: 8 }}
@@ -395,16 +399,24 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
             <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>
               {locale === "en" ? "Language Preference" : "भाषा का चयन"}
             </div>
-            <Segmented
-              block
-              value={locale}
-              onChange={(val: any) => handleLocaleChange(val)}
-              options={[
-                { label: "🇬🇧 English", value: "en" },
-                { label: "🇮🇳 Hinglish", value: "hi" },
-              ]}
-              style={{ background: "#fff", fontWeight: 600, border: "1px solid #e2e8f0" }}
-            />
+            <div className="lang-switcher-group" style={{ width: "100%", display: "flex" }} role="group" aria-label="Language Switcher">
+              <button
+                type="button"
+                onClick={() => handleLocaleChange("en")}
+                className={`lang-btn ${locale === "en" ? "active" : ""}`}
+                style={{ flex: 1, textAlign: "center" }}
+              >
+                🇬🇧 English
+              </button>
+              <button
+                type="button"
+                onClick={() => handleLocaleChange("hi")}
+                className={`lang-btn ${locale === "hi" ? "active" : ""}`}
+                style={{ flex: 1, textAlign: "center" }}
+              >
+                🇮🇳 Hinglish
+              </button>
+            </div>
           </div>
 
           {/* Group 1: Core Commerce Tools */}
@@ -736,16 +748,22 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
         {/* Mobile Switcher Toggle */}
         {isMobile && (
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
-            <Segmented
-              value={deviceMockupView}
-              onChange={(val) => setDeviceMockupView(val as "store" | "merchant")}
-              options={[
-                { label: t.twinDevice.storeTab, value: "store" },
-                { label: t.twinDevice.merchantTab, value: "merchant" },
-              ]}
-              size="large"
-              style={{ background: "#e2e8f0", padding: 4, borderRadius: 10, fontWeight: 600 }}
-            />
+            <div className="device-switcher-group" role="group" aria-label="Device Preview Switcher">
+              <button
+                type="button"
+                onClick={() => setDeviceMockupView("store")}
+                className={`device-btn ${deviceMockupView === "store" ? "active" : ""}`}
+              >
+                {t.twinDevice.storeTab}
+              </button>
+              <button
+                type="button"
+                onClick={() => setDeviceMockupView("merchant")}
+                className={`device-btn ${deviceMockupView === "merchant" ? "active" : ""}`}
+              >
+                {t.twinDevice.merchantTab}
+              </button>
+            </div>
           </div>
         )}
 
@@ -1828,165 +1846,108 @@ export default function LandingPageClient({ initialLocale }: { initialLocale?: L
         </Card>
       </section>
 
-      {/* Transparent Pricing Section (FREE vs PRO ₹99) */}
-      <section id="pricing" style={{ maxWidth: 1080, margin: isMobile ? "40px auto" : "64px auto", padding: isMobile ? "0 16px" : "0 24px" }}>
-        <div style={{ textAlign: "center", marginBottom: 36 }}>
-          <Tag color="gold" style={{ padding: "4px 14px", borderRadius: 999, fontWeight: 700, fontSize: 13 }}>
-            {t.pricing.tag}
+      {/* 100% Free Forever Showcase Section */}
+      <section id="pricing" style={{ maxWidth: 960, margin: isMobile ? "40px auto" : "64px auto", padding: isMobile ? "0 16px" : "0 24px" }}>
+        <div style={{ textAlign: "center", marginBottom: 32 }}>
+          <Tag color="success" style={{ padding: "4px 14px", borderRadius: 999, fontWeight: 700, fontSize: 13, background: "#ecfdf5", color: "#047857", borderColor: "#a7f3d0" }}>
+            🇮🇳 100% FREE FOREVER FOR ALL MERCHANTS
           </Tag>
           <Title level={2} style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)", fontWeight: 800, marginTop: 12, color: "#0f172a" }}>
             {t.pricing.title}
           </Title>
-          <Paragraph style={{ color: "#64748b", fontSize: 16 }}>
+          <Paragraph style={{ color: "#64748b", fontSize: 16, maxWidth: 680, margin: "0 auto" }}>
             {t.pricing.subtitle}
           </Paragraph>
+        </div>
 
-          {/* Billing Cycle Toggle */}
-          <div style={{ display: "inline-flex", background: "#e2e8f0", padding: 4, borderRadius: 10, marginTop: 8 }}>
+        <div
+          style={{
+            background: "linear-gradient(180deg, #f0fdf4 0%, #ffffff 45%)",
+            borderRadius: 24,
+            border: "2px solid #10b981",
+            boxShadow: "0 20px 48px -12px rgba(16, 185, 129, 0.18)",
+            padding: isMobile ? "28px 20px" : "40px 44px",
+            position: "relative",
+            overflow: "hidden",
+          }}
+        >
+          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "flex-start", gap: 16, marginBottom: 24 }}>
+            <div>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#dcfce7", color: "#166534", padding: "4px 12px", borderRadius: 999, fontSize: 12, fontWeight: 700, marginBottom: 10 }}>
+                <span>✨</span> <span>Aatmanirbhar Bharat Initiative</span>
+              </div>
+              <Title level={3} style={{ margin: "0 0 6px", color: "#065f46", fontSize: isMobile ? 22 : 28, fontWeight: 800 }}>
+                {t.pricing.freeTitle}
+              </Title>
+              <div style={{ color: "#047857", fontSize: 14, fontWeight: 600 }}>
+                {t.pricing.freeDesc}
+              </div>
+            </div>
+
+            <div style={{ textAlign: isMobile ? "left" : "right" }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+                <span style={{ fontSize: isMobile ? 38 : 48, fontWeight: 900, color: "#065f46", lineHeight: 1 }}>
+                  ₹0
+                </span>
+                <span style={{ fontSize: 15, fontWeight: 600, color: "#047857" }}>
+                  {t.pricing.freePeriod}
+                </span>
+              </div>
+              <div style={{ fontSize: 12, color: "#059669", fontWeight: 600, marginTop: 4 }}>
+                ✓ No monthly rent • 0% gateway commission
+              </div>
+            </div>
+          </div>
+
+          <Divider style={{ borderColor: "#bbf7d0", margin: "20px 0 24px" }} />
+
+          {/* Grid of All-Inclusive Free Capabilities */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)",
+              gap: "14px 24px",
+              marginBottom: 32,
+            }}
+          >
+            {t.pricing.freeItems.map((item, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: 14, color: "#1e293b", fontWeight: 500 }}>
+                <CheckCircleOutlined style={{ color: "#059669", fontSize: 17, marginTop: 2, flexShrink: 0 }} />
+                <span>{item}</span>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: 14, alignItems: "center", justifyContent: "space-between", background: "#f8fafc", padding: "18px 24px", borderRadius: 16, border: "1px solid #e2e8f0" }}>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 15, color: "#0f172a" }}>
+                Ready to empower your business today?
+              </div>
+              <div style={{ fontSize: 13, color: "#64748b" }}>
+                Set up your WhatsApp storefront in 30 seconds. No credit card, no bank paperwork needed.
+              </div>
+            </div>
+
             <Button
-              type={billingCycle === "monthly" ? "primary" : "text"}
+              type="primary"
+              size="large"
               style={{
-                background: billingCycle === "monthly" ? "#0f172a" : "transparent",
-                color: billingCycle === "monthly" ? "#fff" : "#475569",
-                fontWeight: 600,
-                borderRadius: 8,
+                height: 50,
+                padding: "0 32px",
+                fontWeight: 700,
+                fontSize: 16,
+                borderRadius: 12,
+                background: "#059669",
+                borderColor: "#059669",
+                boxShadow: "0 6px 20px rgba(5, 150, 105, 0.35)",
+                width: isMobile ? "100%" : "auto",
               }}
-              onClick={() => setBillingCycle("monthly")}
+              onClick={() => router.push("/signup")}
             >
-              {t.pricing.monthlyBilling}
-            </Button>
-            <Button
-              type={billingCycle === "yearly" ? "primary" : "text"}
-              style={{
-                background: billingCycle === "yearly" ? "#0f172a" : "transparent",
-                color: billingCycle === "yearly" ? "#fff" : "#475569",
-                fontWeight: 600,
-                borderRadius: 8,
-              }}
-              onClick={() => setBillingCycle("yearly")}
-            >
-              {t.pricing.yearlyBilling} <Tag color="green" style={{ marginLeft: 4 }}>{t.pricing.saveBadge}</Tag>
+              {t.pricing.freeCta}
             </Button>
           </div>
         </div>
-
-        <Row gutter={[24, 24]} align="stretch">
-          {/* FREE PLAN */}
-          <Col xs={24} md={12}>
-            <Card
-              style={{
-                borderRadius: 18,
-                height: "100%",
-                border: "1px solid #e2e8f0",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-                boxShadow: "0 4px 16px rgba(0,0,0,0.03)",
-              }}
-            >
-              <div>
-                <Tag color="default" style={{ fontWeight: 600, marginBottom: 12 }}>
-                  {t.pricing.freeTag}
-                </Tag>
-                <Title level={3} style={{ margin: "0 0 6px", color: "#0f172a" }}>{t.pricing.freeTitle}</Title>
-                <div style={{ fontSize: 32, fontWeight: 800, color: "#0f172a", marginBottom: 16 }}>
-                  {t.pricing.freePrice} <span style={{ fontSize: 14, fontWeight: 500, color: "#64748b" }}>{t.pricing.freePeriod}</span>
-                </div>
-                <Paragraph style={{ color: "#64748b", fontSize: 13 }}>
-                  {t.pricing.freeDesc}
-                </Paragraph>
-
-                <Divider style={{ margin: "16px 0" }} />
-
-                <ul style={{ listStyle: "none", padding: 0, margin: 0, fontSize: 14, lineHeight: 2 }}>
-                  {t.pricing.freeItems.map((item, i) => (
-                    <li key={i}>
-                      <CheckCircleOutlined style={{ color: "#25D366", marginRight: 8 }} /> {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div style={{ marginTop: 28 }}>
-                <Button
-                  block
-                  size="large"
-                  style={{ height: 48, fontWeight: 600, borderRadius: 10 }}
-                  onClick={() => router.push("/signup")}
-                >
-                  {t.pricing.freeCta}
-                </Button>
-              </div>
-            </Card>
-          </Col>
-
-          {/* PRO PLAN */}
-          <Col xs={24} md={12}>
-            <Card
-              style={{
-                borderRadius: 18,
-                height: "100%",
-                border: "2px solid #f59e0b",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-                background: "linear-gradient(180deg, #fffbeb 0%, #ffffff 40%)",
-                boxShadow: "0 12px 32px rgba(245, 158, 11, 0.15)",
-                position: "relative",
-              }}
-            >
-              <div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                  <Tag color="gold" icon={<CrownOutlined />} style={{ fontWeight: 700, padding: "2px 8px" }}>
-                    {t.pricing.proTag}
-                  </Tag>
-                  <Tag color="success" style={{ fontWeight: 600 }}>{t.pricing.proZeroCut}</Tag>
-                </div>
-
-                <Title level={3} style={{ margin: "0 0 6px", color: "#92400e" }}>{t.pricing.proTitle}</Title>
-                <div style={{ fontSize: 32, fontWeight: 800, color: "#92400e", marginBottom: 16 }}>
-                  ₹{billingCycle === "monthly" ? "199" : "1,799"}{" "}
-                  <span style={{ fontSize: 14, fontWeight: 500, color: "#b45309" }}>
-                    {billingCycle === "monthly" ? t.pricing.proPeriodMonthly : t.pricing.proPeriodYearly}
-                  </span>
-                </div>
-                <Paragraph style={{ color: "#78350f", fontSize: 13 }}>
-                  {t.pricing.proDesc}
-                </Paragraph>
-
-                <Divider style={{ margin: "16px 0" }} />
-
-                <ul style={{ listStyle: "none", padding: 0, margin: 0, fontSize: 14, lineHeight: 2, color: "#451a03" }}>
-                  {t.pricing.proItems.map((item, i) => (
-                    <li key={i}>
-                      <CheckCircleOutlined style={{ color: "#f59e0b", marginRight: 8 }} /> {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div style={{ marginTop: 28 }}>
-                <Button
-                  type="primary"
-                  block
-                  size="large"
-                  icon={<CrownOutlined />}
-                  style={{
-                    height: 48,
-                    fontWeight: 700,
-                    borderRadius: 10,
-                    background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
-                    borderColor: "#f59e0b",
-                    boxShadow: "0 6px 18px rgba(245, 158, 11, 0.3)",
-                  }}
-                  onClick={() => router.push("/signup")}
-                >
-                  {t.pricing.proCta} (₹{billingCycle === "monthly" ? "199" : "1,799"})
-                </Button>
-              </div>
-            </Card>
-          </Col>
-        </Row>
       </section>
 
       {/* Authentic Indian Merchant Testimonials */}

@@ -187,10 +187,10 @@ export default function UpiBillingSoftwarePage() {
             </thead>
             <tbody>
               {[
-                { sales: "₹1,00,000 / mo", standard: "₹2,500 / mo", ginie: "₹0 / mo (Free Tier)", savings: "₹30,000 / year" },
-                { sales: "₹2,50,000 / mo", standard: "₹6,250 / mo", ginie: "₹199 / mo (PRO)", savings: "₹72,612 / year" },
-                { sales: "₹5,00,000 / mo", standard: "₹12,500 / mo", ginie: "₹199 / mo (PRO)", savings: "₹1,47,612 / year" },
-                { sales: "₹10,00,000 / mo", standard: "₹25,000 / mo", ginie: "₹199 / mo (PRO)", savings: "₹2,97,612 / year" },
+                { sales: "₹1,00,000 / mo", standard: "₹2,500 / mo", ginie: "₹0 / mo (100% Free)", savings: "₹30,000 / year" },
+                { sales: "₹2,50,000 / mo", standard: "₹6,250 / mo", ginie: "₹0 / mo (100% Free)", savings: "₹75,000 / year" },
+                { sales: "₹5,00,000 / mo", standard: "₹12,500 / mo", ginie: "₹0 / mo (100% Free)", savings: "₹1,50,000 / year" },
+                { sales: "₹10,00,000 / mo", standard: "₹25,000 / mo", ginie: "₹0 / mo (100% Free)", savings: "₹3,00,000 / year" },
               ].map((row, i) => (
                 <tr key={i} style={{ borderBottom: "1px solid #f1f5f9" }}>
                   <td style={{ padding: "16px 20px", fontWeight: 600 }}>{row.sales}</td>
@@ -224,7 +224,7 @@ export default function UpiBillingSoftwarePage() {
               Wholesale &amp; Bulk MOQs ➔
             </Link>
             <Link href="/pricing" style={{ padding: "8px 16px", background: "#f8fafc", border: "1px solid #cbd5e1", borderRadius: 8, color: "#0f172a", fontWeight: 600, textDecoration: "none", fontSize: 13 }}>
-              Pricing Plans (₹0 Free &amp; ₹199 PRO) ➔
+              100% Free Plan (₹0 Forever) ➔
             </Link>
           </div>
         </div>

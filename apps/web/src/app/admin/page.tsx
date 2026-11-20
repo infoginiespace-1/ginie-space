@@ -182,7 +182,7 @@ const ADMIN_MARKETING_PRESETS = [
     tag: "Festive Sale",
     segment: "all" as const,
     imageUrl: "https://app.ginie.space/marketing/diwali-dhanteras.png",
-    text: `🪔 *शुभ दीपावली एवं धनतेरस की हार्दिक शुभकामनाएं!* ✨\n\nनमस्ते {{name}},\n\nत्योहारों के इस सीजन में ग्राहकों की भारी भीड़ में ना बिलिंग रुकेगी, ना पेमेंट!\n\nGinieSpace के साथ अपनी दुकान को बनाएं *Super-Fast Digital Dukan*:\n🛍️ *WhatsApp Catalog*: 2 मिनट में अपने प्रोडक्ट्स का डिजिटल स्टोर बनाएं\n⚡ *0% UPI Billing*: ग्राहक QR स्कैन करेगा, 100% पैसा सीधा आपके बैंक खाते में\n📈 *Automatic Khata*: उधारी का हिसाब और WhatsApp पेमेंट रिमाइंडर\n\n🎁 *Diwali Special Offer*:\nPro Plan sirf ₹199/month me — Unlimited Catalog aur 50 Free Monthly Leads!\n\n👉 *Abhi Free Dukan Shuru Karein:*\nhttps://app.ginie.space\n\n💬 WhatsApp Help: +91 92792 59690\n_(Type STOP to unsubscribe)_`,
+    text: `🪔 *शुभ दीपावली एवं धनतेरस की हार्दिक शुभकामनाएं!* ✨\n\nनमस्ते {{name}},\n\nत्योहारों के इस सीजन में ग्राहकों की भारी भीड़ में ना बिलिंग रुकेगी, ना पेमेंट!\n\nGinieSpace के साथ अपनी दुकान को बनाएं *Super-Fast Digital Dukan*:\n🛍️ *WhatsApp Catalog*: 2 मिनट में अपने प्रोडक्ट्स का डिजिटल स्टोर बनाएं\n⚡ *0% UPI Billing*: ग्राहक QR स्कैन करेगा, 100% पैसा सीधा आपके बैंक खाते में\n📈 *Automatic Khata*: उधारी का हिसाब और WhatsApp पेमेंट रिमाइंडर\n\n🎁 *Diwali Special Offer*:\n100% Free Lifetime Platform — Unlimited Catalog aur Free Monthly Leads!\n\n👉 *Abhi Free Dukan Shuru Karein:*\nhttps://app.ginie.space\n\n💬 WhatsApp Help: +91 92792 59690\n_(Type STOP to unsubscribe)_`,
   },
   {
     id: "eid",
@@ -2147,11 +2147,11 @@ export default function AdminPage() {
                           style={{ borderRadius: 12, background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)", color: "#fff" }}
                         >
                           <Statistic
-                            title={<span style={{ color: "rgba(255,255,255,0.85)", fontSize: isMobile ? 11 : 14 }}>MRR Run Rate</span>}
-                            value={subscriptions.filter((s) => s.plan === "pro").length * 199}
+                            title={<span style={{ color: "rgba(255,255,255,0.85)", fontSize: isMobile ? 11 : 14 }}>Active Pro Merchants</span>}
+                            value={subscriptions.filter((s) => s.plan === "pro").length}
                             precision={0}
-                            prefix={<DollarOutlined style={{ color: "#fff", fontSize: isMobile ? 14 : 18 }} />}
-                            formatter={(val) => `₹${Number(val).toLocaleString("en-IN")}`}
+                            prefix={<CheckCircleOutlined style={{ color: "#fff", fontSize: isMobile ? 14 : 18 }} />}
+                            formatter={(val) => `${Number(val)}`}
                             valueStyle={{ color: "#fff", fontWeight: 700, fontSize: isMobile ? 18 : 24 }}
                           />
                         </Card>
@@ -2267,7 +2267,7 @@ export default function AdminPage() {
                                       onClick={() => handleApproveSubscription(r.userId, "monthly")}
                                       style={{ background: "#10b981", borderColor: "#10b981", fontWeight: 600 }}
                                     >
-                                      Approve (₹199 / 1 Mo)
+                                      Approve Lifetime Free
                                     </Button>
                                     <Popconfirm
                                       title="Reject upgrade request?"

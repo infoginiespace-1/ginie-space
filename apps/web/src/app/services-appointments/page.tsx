@@ -150,7 +150,7 @@ export default function ServicesAppointmentsPage() {
                 🎟️ Advance UPI Token Payments
               </h3>
               <p style={{ fontSize: 14, color: "#64748b", lineHeight: 1.6 }}>
-                Collect advance booking deposits (e.g. ₹99 or ₹199 token) via direct bank UPI to confirm appointment slots and prevent last-minute client cancellations.
+                Collect advance booking deposits (e.g. ₹99 or ₹250 token) via direct bank UPI to confirm appointment slots and prevent last-minute client cancellations.
               </p>
             </div>
           </div>
@@ -177,7 +177,7 @@ export default function ServicesAppointmentsPage() {
               Retail &amp; Kirana Dukaans ➔
             </Link>
             <Link href="/pricing" style={{ padding: "8px 16px", background: "#f8fafc", border: "1px solid #cbd5e1", borderRadius: 8, color: "#0f172a", fontWeight: 600, textDecoration: "none", fontSize: 13 }}>
-              Pricing Plans (₹0 Free &amp; ₹199 PRO) ➔
+              100% Free Plan (₹0 Forever) ➔
             </Link>
           </div>
         </div>

@@ -109,7 +109,7 @@ export default function WholesaleDistributorsPage() {
               textDecoration: "none",
             }}
           >
-            View PRO Tier for Distributors (₹199)
+            View 100% Free Plan (₹0)
           </Link>
         </div>
       </section>
@@ -177,7 +177,7 @@ export default function WholesaleDistributorsPage() {
               Retail &amp; Kirana Stores ➔
             </Link>
             <Link href="/pricing" style={{ padding: "8px 16px", background: "#f8fafc", border: "1px solid #cbd5e1", borderRadius: 8, color: "#0f172a", fontWeight: 600, textDecoration: "none", fontSize: 13 }}>
-              Pricing Plans (₹0 Free &amp; ₹199 PRO) ➔
+              100% Free Plan (₹0 Forever) ➔
             </Link>
           </div>
         </div>

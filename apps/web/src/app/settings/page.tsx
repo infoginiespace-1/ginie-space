@@ -660,7 +660,7 @@ export default function SettingsPage() {
     // 3. Smart Catalog check
     if (!matchedReply && smartKeywordBot && /\b(catalog|menu|price|rate|items|products|list)\b/.test(q)) {
       matchedReply = {
-        text: `📋 *${storeName} Price List & Offerings*\n\n• Sample Special Product — ₹199 / pcs\n• Premium Offering — ₹499 / pack\n\n🛒 *Full Catalog & Online Booking:* ${storeLink}`,
+        text: `📋 *${storeName} Price List & Offerings*\n\n• Sample Special Product — ₹250 / pcs\n• Premium Offering — ₹499 / pack\n\n🛒 *Full Catalog & Online Booking:* ${storeLink}`,
       };
     }
 

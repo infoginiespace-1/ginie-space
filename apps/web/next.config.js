@@ -16,7 +16,7 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || "https://api.ginie.space",
   },
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, webpack }) => {
     if (!isServer) {
       const emptyPolyfill = path.resolve(__dirname, "src/lib/empty-polyfill.js");
       try {
@@ -25,6 +25,15 @@ const nextConfig = {
       } catch {}
       config.resolve.alias["../build/polyfills/polyfill-module"] = emptyPolyfill;
       config.resolve.alias["./build/polyfills/polyfill-module"] = emptyPolyfill;
+
+      if (webpack) {
+        config.plugins.push(
+          new webpack.NormalModuleReplacementPlugin(
+            /[\\\/]next[\\\/]dist[\\\/]build[\\\/]polyfills[\\\/]polyfill-module/,
+            emptyPolyfill
+          )
+        );
+      }
     }
     return config;
   },

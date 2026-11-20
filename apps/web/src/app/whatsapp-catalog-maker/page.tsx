@@ -231,7 +231,7 @@ export default function WhatsAppCatalogMakerPage() {
               Wholesale Distributors &amp; Bulk MOQs ➔
             </Link>
             <Link href="/pricing" style={{ padding: "8px 16px", background: "#f8fafc", border: "1px solid #cbd5e1", borderRadius: 8, color: "#0f172a", fontWeight: 600, textDecoration: "none", fontSize: 13 }}>
-              Pricing &amp; Plans (₹0 Free &amp; ₹199 PRO) ➔
+              100% Free Plan (₹0 Forever) ➔
             </Link>
           </div>
         </div>

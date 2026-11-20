@@ -145,6 +145,58 @@ export default function RootLayout({
                 height: 36px;
                 contain: layout;
               }
+              .lang-switcher-group {
+                display: inline-flex;
+                align-items: center;
+                background: #f1f5f9;
+                border-radius: 8px;
+                padding: 3px;
+                gap: 2px;
+                border: 1px solid #e2e8f0;
+              }
+              .lang-btn {
+                border: none;
+                background: transparent;
+                padding: 5px 12px;
+                font-size: 13px;
+                font-weight: 600;
+                border-radius: 6px;
+                cursor: pointer;
+                color: #475569;
+                transition: all 0.15s ease;
+              }
+              .lang-btn:hover {
+                color: #0f172a;
+              }
+              .lang-btn.active {
+                background: #ffffff;
+                color: #059669;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+              }
+              .device-switcher-group {
+                display: inline-flex;
+                align-items: center;
+                background: #e2e8f0;
+                border-radius: 10px;
+                padding: 4px;
+                gap: 4px;
+              }
+              .device-btn {
+                border: none;
+                background: transparent;
+                padding: 8px 18px;
+                font-size: 14px;
+                font-weight: 600;
+                border-radius: 8px;
+                cursor: pointer;
+                color: #475569;
+                transition: all 0.15s ease;
+              }
+              .device-btn.active {
+                background: #ffffff;
+                color: #0f172a;
+                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+              }
               .roi-range-input {
                 width: 100%;
                 height: 8px;

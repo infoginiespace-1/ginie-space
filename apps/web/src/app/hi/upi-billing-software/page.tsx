@@ -187,10 +187,10 @@ export default function HindiUpiBillingSoftwarePage() {
             </thead>
             <tbody>
               {[
-                { sales: "₹1,00,000 / महीना", standard: "₹2,500 / महीना", ginie: "₹0 (फ्री प्लान)", savings: "₹30,000 / साल" },
-                { sales: "₹2,50,000 / महीना", standard: "₹6,250 / महीना", ginie: "₹199 / महीना (PRO)", savings: "₹72,612 / साल" },
-                { sales: "₹5,00,000 / महीना", standard: "₹12,500 / महीना", ginie: "₹199 / महीना (PRO)", savings: "₹1,47,612 / साल" },
-                { sales: "₹10,00,000 / महीना", standard: "₹25,000 / महीना", ginie: "₹199 / महीना (PRO)", savings: "₹2,97,612 / साल" },
+                { sales: "₹1,00,000 / महीना", standard: "₹2,500 / महीना", ginie: "₹0 (100% फ्री)", savings: "₹30,000 / साल" },
+                { sales: "₹2,50,000 / महीना", standard: "₹6,250 / महीना", ginie: "₹0 (100% फ्री)", savings: "₹75,000 / साल" },
+                { sales: "₹5,00,000 / महीना", standard: "₹12,500 / महीना", ginie: "₹0 (100% फ्री)", savings: "₹1,50,000 / साल" },
+                { sales: "₹10,00,000 / महीना", standard: "₹25,000 / महीना", ginie: "₹0 (100% फ्री)", savings: "₹3,00,000 / साल" },
               ].map((row, i) => (
                 <tr key={i} style={{ borderBottom: "1px solid #f1f5f9" }}>
                   <td style={{ padding: "16px 20px", fontWeight: 600 }}>{row.sales}</td>
@@ -224,7 +224,7 @@ export default function HindiUpiBillingSoftwarePage() {
               थोक व्यापारी व डिस्ट्रीब्यूटर्स ➔
             </Link>
             <Link href="/hi/pricing" style={{ padding: "8px 16px", background: "#f8fafc", border: "1px solid #cbd5e1", borderRadius: 8, color: "#0f172a", fontWeight: 600, textDecoration: "none", fontSize: 13 }}>
-              प्लान्स और प्राइसिंग (₹199) ➔
+              100% फ्री प्लान (₹0) ➔
             </Link>
           </div>
         </div>

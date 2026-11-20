@@ -158,12 +158,12 @@ export default function RefundPolicyPage() {
                   lineHeight: 1.7,
                 }}
               >
-                <strong>💰 100% RISK-FREE 7-DAY REFUND PROMISE:</strong>
+                <strong>💰 100% FREE FOREVER PLATFORM (₹0 FEES):</strong>
                 <p style={{ margin: "6px 0 0", color: "#1e293b" }}>
-                  When you upgrade your business to the <strong>GinieSpace PRO Plan</strong> (₹199/month or ₹1,799/year), you are protected by our 7-Day Money-Back Guarantee. If for any reason the platform does not meet your operational expectations, you may request a <strong>100% full refund within seven (7) calendar days of activation</strong>.
+                  GinieSpace operates as a <strong>100% Free Forever Platform (₹0 platform fees & 0% gateway commission)</strong> for all Indian merchants under the Aatmanirbhar Bharat Initiative. Because access is completely free without mandatory recurring subscriptions, there are no recurring subscription charges or hidden debits on your account.
                 </p>
                 <p style={{ margin: "6px 0 0", color: "#475569", fontSize: 13 }}>
-                  No complex forms or tedious questions asked. Simply message our WhatsApp support desk with your registered phone number and payment UTR.
+                  If you have any questions regarding past transactions or billing queries, simply message our official WhatsApp helpline (+91 92792 59690).
                 </p>
               </div>
 
@@ -236,7 +236,7 @@ export default function RefundPolicyPage() {
 
               <Divider />
 
-              <Title level={3} style={{ fontWeight: 700 }}>2. PRO Plan (₹199) Par 7-Din Ki Money-Back Guarantee</Title>
+              <Title level={3} style={{ fontWeight: 700 }}>2. 100% Free Forever Platform (₹0 Fees)</Title>
               <div
                 style={{
                   background: "#f0fdf4",
@@ -249,12 +249,12 @@ export default function RefundPolicyPage() {
                   lineHeight: 1.7,
                 }}
               >
-                <strong>💰 100% SURAKSHIT 7 DINO KI REFUND GUARANTEE:</strong>
+                <strong>💰 100% FREE PLATFORM GUARANTEE:</strong>
                 <p style={{ margin: "6px 0 0", color: "#1e293b" }}>
-                  Jab aap apna business <strong>GinieSpace PRO Plan (₹199/mahina ya ₹1,799/saal)</strong> par upgrade karte hain, to aapko poore 7 dino ki money-back guarantee milti hai. Agar kisi bhi kaaran se aap software se santusht nahi hain, to <strong>activation ke 7 dino ke andar 100% full refund</strong> claim kar sakte hain.
+                  GinieSpace sabhi Bharatiya vyapariyon ke liye <strong>100% Free Forever Platform (₹0 platform fees & 0% gateway cuts)</strong> hai. Yahan koi mandatory monthly subscription nahi hai, isliye aapke account se koi anchaaha charge nahi kaata jaata.
                 </p>
                 <p style={{ margin: "6px 0 0", color: "#475569", fontSize: 13 }}>
-                  Kewal hamare official WhatsApp helpline par apna phone number aur UTR message karein, aapka refund turant process kiya jayega.
+                  Kisi bhi sahayata ya jaankari ke liye aap hamare official WhatsApp helpline (+91 92792 59690) par message kar sakte hain.
                 </p>
               </div>
 
