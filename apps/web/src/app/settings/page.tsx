@@ -55,13 +55,13 @@ import {
   SendOutlined,
   CheckOutlined,
   LinkOutlined,
+  WhatsAppOutlined,
 } from "@ant-design/icons";
 import { api } from "../../lib/api";
 import { getSocket } from "../../lib/socket";
 import { UpgradeModal } from "../../components/UpgradeModal";
 import { CounterStandeeModal } from "../../components/CounterStandeeModal";
 import { useAuth } from "../../context/AuthContext";
-import { isLeadDiscoveryRelevant } from "../../lib/business";
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -183,7 +183,6 @@ export default function SettingsPage() {
   const [editingRule, setEditingRule] = useState<AutoReplyCustomRule | null>(null);
   const [ruleKeywordsInput, setRuleKeywordsInput] = useState("");
   const [savingAutoReply, setSavingAutoReply] = useState(false);
-  const [enableLeadDiscovery, setEnableLeadDiscovery] = useState<boolean>(false);
 
   // Live Simulator State
   const [simulatorInput, setSimulatorInput] = useState("");
@@ -265,13 +264,6 @@ export default function SettingsPage() {
         }
         if (parsedSettings.logoUrl) {
           setLogoPreview(parsedSettings.logoUrl);
-        }
-
-        const bType = res.data?.businessType || user?.businessType || "retail";
-        if (typeof parsedSettings.enableLeadDiscovery === "boolean") {
-          setEnableLeadDiscovery(parsedSettings.enableLeadDiscovery);
-        } else {
-          setEnableLeadDiscovery(isLeadDiscoveryRelevant(bType));
         }
 
         const firstCoupon = Array.isArray(parsedSettings.coupons) ? parsedSettings.coupons[0] : null;
@@ -436,7 +428,6 @@ export default function SettingsPage() {
         customRules,
         workingHours,
         fallbackReply,
-        enableLeadDiscovery,
       });
 
       const res = await api.put("/api/settings/business", {
@@ -451,9 +442,6 @@ export default function SettingsPage() {
       if (res.data?.businessType) {
         updateUserLocal({ businessType: res.data.businessType });
       }
-      try {
-        localStorage.setItem("giniespace_lead_discovery_override", String(enableLeadDiscovery));
-      } catch {}
       setCurrentSlug(res.data?.business?.slug || "");
       message.success("Settings & Auto-Reply Rules saved successfully!");
     } catch (err: any) {
@@ -727,7 +715,6 @@ export default function SettingsPage() {
                     <Select
                       onChange={(val) => {
                         form.setFieldsValue({ businessType: val });
-                        setEnableLeadDiscovery(isLeadDiscoveryRelevant(val));
                       }}
                       options={[
                         { label: "🛒 Retail Store & Kirana", value: "retail" },
@@ -742,24 +729,35 @@ export default function SettingsPage() {
                 </Col>
               </Row>
 
-              <div style={{ padding: "12px 16px", background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0", marginBottom: 20 }}>
+              <div style={{ padding: "14px 18px", background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0", marginBottom: 20 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
                   <div>
                     <div style={{ fontWeight: 600, color: "#1e293b", fontSize: 14 }}>
                       🔍 B2B Lead Discovery (Google Places Search)
                     </div>
                     <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>
-                      {enableLeadDiscovery
-                        ? "Active — 'Find New Leads' is enabled in navigation & dashboard (optimized for Wholesale & B2B Services)."
-                        : "Hidden — Streamlined for Retail, Restaurants, Garments & Hotels who serve walk-in / neighborhood footfall."}
+                      {user?.role === "admin" || user?.leadsEnabled
+                        ? "Active — Granted by Platform Admin. 'Find New Leads' is unlocked on your sidebar and dashboard."
+                        : "Disabled by default. B2B Lead Discovery is an exclusive wholesale feature governed exclusively by Platform Admin."}
                     </div>
                   </div>
-                  <Switch
-                    checked={enableLeadDiscovery}
-                    onChange={(checked) => setEnableLeadDiscovery(checked)}
-                    checkedChildren="Active"
-                    unCheckedChildren="Hidden"
-                  />
+                  {user?.role === "admin" || user?.leadsEnabled ? (
+                    <Tag color="green" style={{ padding: "4px 10px", fontSize: 12, fontWeight: 600 }}>
+                      ✓ ACTIVE (ADMIN GRANTED)
+                    </Tag>
+                  ) : (
+                    <a
+                      href={`https://wa.me/917488825824?text=${encodeURIComponent(
+                        `Namaste GinieSpace Admin! Please activate B2B Leads Discovery for my account: ${user?.email || ""}`
+                      )}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Button size="small" type="primary" icon={<WhatsAppOutlined />} style={{ background: "#25D366", borderColor: "#25D366", fontWeight: 600 }}>
+                        Request Activation on WhatsApp
+                      </Button>
+                    </a>
+                  )}
                 </div>
               </div>
 

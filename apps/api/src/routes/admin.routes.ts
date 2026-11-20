@@ -517,6 +517,7 @@ export function createAdminRouter(
           businessType: u.businessType,
           status: u.status || "active",
           plan: u.plan || "free",
+          leadsEnabled: Boolean(u.leadsEnabled === true),
           ownerId: u.ownerId,
           createdAt: u.createdAt,
           business: {
@@ -579,6 +580,7 @@ export function createAdminRouter(
       }
       if (businessType && ["retail", "wholesale", "services", "restaurant", "garments", "hotel"].includes(businessType)) patch.businessType = businessType;
       if (name && typeof name === "string" && name.trim()) patch.name = name.trim();
+      if (typeof req.body.leadsEnabled === "boolean") patch.leadsEnabled = req.body.leadsEnabled;
 
       const updated = await db.users.update(target.id, patch);
 
@@ -593,6 +595,7 @@ export function createAdminRouter(
           plan: updated.plan || "free",
           subscriptionStatus: updated.subscriptionStatus || "none",
           planExpiresAt: updated.planExpiresAt || null,
+          leadsEnabled: Boolean(updated.leadsEnabled === true),
         });
       }
 
@@ -615,12 +618,50 @@ export function createAdminRouter(
           plan: updated.plan || "free",
           subscriptionStatus: updated.subscriptionStatus || "none",
           planExpiresAt: updated.planExpiresAt || null,
+          leadsEnabled: Boolean(updated.leadsEnabled === true),
           createdAt: updated.createdAt,
         },
         message: "User account updated successfully",
       });
     } catch {
       res.status(500).json({ error: "Could not update user account" });
+    }
+  });
+
+  // 10b. Admin Toggle B2B Leads Discovery Access for Merchant
+  router.post("/merchants/:id/toggle-leads", async (req: Request, res: Response): Promise<void> => {
+    try {
+      const target = await db.users.findById((req.params.id as string));
+      if (!target) {
+        res.status(404).json({ error: "Merchant not found" });
+        return;
+      }
+
+      const enabled = typeof req.body.enabled === "boolean" ? req.body.enabled : !target.leadsEnabled;
+      const updated = await db.users.update(target.id, { leadsEnabled: enabled });
+
+      if (io) {
+        io.to(`user:${target.id}`).emit("user:updated", {
+          id: updated.id,
+          leadsEnabled: enabled,
+        });
+      }
+
+      const adminEmail = req.user?.email || "admin";
+      await recordAuditLog(
+        db,
+        adminEmail,
+        "TOGGLE_LEADS_ACCESS",
+        `${enabled ? "Enabled" : "Disabled"} B2B Leads Discovery for merchant ${target.name} (${target.email})`
+      );
+
+      res.json({
+        success: true,
+        leadsEnabled: enabled,
+        message: `B2B Leads Discovery ${enabled ? "activated" : "deactivated"} for ${target.name}`,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Failed to toggle leads access" });
     }
   });
 

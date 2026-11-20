@@ -17,6 +17,7 @@ export interface User {
   subscriptionStatus?: "active" | "pending" | "expired" | "none";
   planExpiresAt?: string | null;
   staffPermissions?: string[];
+  leadsEnabled?: boolean;
 }
 
 interface AuthContextType {

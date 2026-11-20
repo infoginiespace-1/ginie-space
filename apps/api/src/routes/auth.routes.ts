@@ -91,6 +91,7 @@ export function createAuthRouter(
         role: newUser.role,
         businessType: newUser.businessType,
         plan: newUser.role === "admin" ? "pro" : "free",
+        leadsEnabled: newUser.role === "admin",
       };
 
       const token = jwt.sign(payload, jwtSecret, { expiresIn: "30d" });
@@ -150,6 +151,7 @@ export function createAuthRouter(
           role: "admin",
           businessType: user?.businessType || "retail",
           plan: "pro",
+          leadsEnabled: true,
         };
 
         const token = jwt.sign(payload, jwtSecret, { expiresIn: "30d" });
@@ -208,6 +210,7 @@ export function createAuthRouter(
         businessType: user.businessType,
         plan,
         staffPermissions,
+        leadsEnabled: Boolean(user.leadsEnabled === true || user.role === "admin"),
       };
 
       const token = jwt.sign(payload, jwtSecret, { expiresIn: "30d" });
@@ -264,6 +267,7 @@ export function createAuthRouter(
           subscriptionStatus: user?.subscriptionStatus || (effectivePlan === "pro" ? "active" : "none"),
           planExpiresAt: user?.planExpiresAt || null,
           staffPermissions: userPayload.staffPermissions,
+          leadsEnabled: Boolean(user?.leadsEnabled === true || userPayload.role === "admin" || user?.role === "admin"),
           createdAt: user?.createdAt || new Date().toISOString(),
         },
         business: business || {

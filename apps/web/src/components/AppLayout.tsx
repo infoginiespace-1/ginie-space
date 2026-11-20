@@ -30,7 +30,7 @@ import { api } from "../lib/api";
 import { UpgradeModal } from "./UpgradeModal";
 import { SoundboxModal } from "./SoundboxModal";
 import { announceOrderSoundbox, playSoundboxChime, getSoundboxSettings } from "../lib/soundbox";
-import { shouldShowLeadDiscovery, getBusinessHubSubtitle } from "../lib/business";
+import { getBusinessHubSubtitle } from "../lib/business";
 
 const { Header, Content, Sider } = Layout;
 const { Text } = Typography;
@@ -175,18 +175,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   const isServiceBiz = user?.businessType === "services";
 
-  const [explicitLeadOverride, setExplicitLeadOverride] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem("giniespace_lead_discovery_override");
-      if (stored !== null) {
-        setExplicitLeadOverride(stored === "true");
-      }
-    } catch {}
-  }, []);
-
-  const showLeads = shouldShowLeadDiscovery(user?.businessType, explicitLeadOverride);
+  // B2B Leads Discovery is disabled by default for all merchants.
+  // Only Platform Admin or accounts explicitly activated by Admin can see or use it.
+  const showLeads = Boolean(user?.role === "admin" || user?.leadsEnabled === true);
 
   const allMenuItems = [
     { key: "/dashboard", area: "dashboard", icon: <DashboardOutlined />, label: "Dashboard" },

@@ -11,6 +11,7 @@ export interface AuthenticatedUser {
   name: string;
   plan?: "free" | "pro";
   staffPermissions?: string[];
+  leadsEnabled?: boolean;
 }
 
 declare global {

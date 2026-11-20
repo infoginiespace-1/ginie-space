@@ -39,7 +39,8 @@ import {
 } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 import { CounterStandeeModal } from "../../components/CounterStandeeModal";
-import { shouldShowLeadDiscovery, getBusinessCategoryLabel } from "../../lib/business";
+import { getBusinessCategoryLabel } from "../../lib/business";
+import { useAuth } from "../../context/AuthContext";
 
 const { Title, Text } = Typography;
 
@@ -64,19 +65,12 @@ export default function DashboardPage() {
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
   const [gstRate, setGstRate] = useState(0);
-  const [enableLeadDiscovery, setEnableLeadDiscovery] = useState<boolean | null>(null);
+  const { user } = useAuth();
+  const showLeads = Boolean(user?.role === "admin" || user?.leadsEnabled === true);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("giniespace_lead_discovery_override");
-      if (stored !== null) {
-        setEnableLeadDiscovery(stored === "true");
-      }
-    } catch {}
     loadDashboardData();
-  }, []);
-
-  const showLeads = shouldShowLeadDiscovery(businessType, enableLeadDiscovery);
+  }, [showLeads]);
 
   const loadDashboardData = async () => {
     setLoading(true);
@@ -85,7 +79,7 @@ export default function DashboardPage() {
         api.get("/api/orders").catch(() => ({ data: { orders: [] } })),
         api.get("/api/products").catch(() => ({ data: { products: [] } })),
         api.get("/api/customers").catch(() => ({ data: { customers: [] } })),
-        api.get("/api/leads").catch(() => ({ data: { leads: [] } })),
+        showLeads ? api.get("/api/leads").catch(() => ({ data: { leads: [] } })) : Promise.resolve({ data: { leads: [] } }),
         api.get("/api/settings").catch(() => ({ data: { business: null } })),
       ]);
 
@@ -107,9 +101,6 @@ export default function DashboardPage() {
             const parsedSettings = JSON.parse(setRes.data.business.settingsJson);
             setGstRate(Number(parsedSettings.gstRate) || 0);
             setBusinessUpiId(parsedSettings.upiId || "");
-            if (typeof parsedSettings.enableLeadDiscovery === "boolean") {
-              setEnableLeadDiscovery(parsedSettings.enableLeadDiscovery);
-            }
           } catch {}
         }
       }

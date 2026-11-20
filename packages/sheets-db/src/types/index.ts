@@ -20,6 +20,7 @@ export interface User {
   planExpiresAt?: string;
   paymentUtr?: string;
   subscriptionStatus?: "active" | "pending" | "expired" | "none";
+  leadsEnabled?: boolean;
   createdAt: string;
   updatedAt: string;
 }

@@ -23,6 +23,32 @@ export function createLeadsRouter(
 ): Router {
   const router = Router();
 
+  // Access Guard: B2B Leads Discovery is disabled by default for all merchants.
+  // Only Platform Admin or merchants explicitly enabled by Admin can access leads.
+  router.use(async (req: Request, res: Response, next) => {
+    if (!req.user) {
+      res.status(401).json({ error: "Please log in to access B2B Leads Discovery." });
+      return;
+    }
+    if (req.user.role === "admin") {
+      return next();
+    }
+    if (req.user.leadsEnabled) {
+      return next();
+    }
+    try {
+      const user = await db.users.findById(req.user.id);
+      if (user?.leadsEnabled === true) {
+        req.user.leadsEnabled = true;
+        return next();
+      }
+    } catch {}
+    res.status(403).json({
+      error: "B2B Leads Discovery is restricted. Please contact GinieSpace Admin to activate this feature for your business.",
+      code: "LEADS_DISABLED_BY_ADMIN",
+    });
+  });
+
   router.get("/quota", async (req: Request, res: Response): Promise<void> => {
     try {
       const plan = await getEffectivePlan(db, req.user);

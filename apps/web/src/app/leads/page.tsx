@@ -39,6 +39,7 @@ import { api } from "../../lib/api";
 import { downloadCsv } from "../../lib/csv";
 import { getSocket } from "../../lib/socket";
 import { useAuth } from "../../context/AuthContext";
+import { useRouter } from "next/navigation";
 import { UpgradeModal } from "../../components/UpgradeModal";
 import { isLeadDiscoveryRelevant, getBusinessCategoryLabel } from "../../lib/business";
 
@@ -81,6 +82,8 @@ function getDefaultPitchTemplate(businessType?: string): string {
 
 export default function LeadsPage() {
   const { user } = useAuth();
+  const router = useRouter();
+  const isAuthorized = Boolean(user?.role === "admin" || user?.leadsEnabled === true);
   const [activeTab, setActiveTab] = useState("discover");
   const [searching, setSearching] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -122,8 +125,10 @@ export default function LeadsPage() {
   };
 
   useEffect(() => {
-    loadQuota();
-  }, [user]);
+    if (isAuthorized) {
+      loadQuota();
+    }
+  }, [user, isAuthorized]);
 
   useEffect(() => {
     if (user?.businessType) {
@@ -144,6 +149,7 @@ export default function LeadsPage() {
   };
 
   useEffect(() => {
+    if (!isAuthorized) return;
     loadSavedLeads();
 
     const socket = getSocket();
@@ -165,7 +171,7 @@ export default function LeadsPage() {
         socket.off("lead:converted");
       }
     };
-  }, []);
+  }, [isAuthorized]);
 
   const handleSearch = async (values: any) => {
     const cleanQuery = (values.query || "").trim();
@@ -474,6 +480,73 @@ export default function LeadsPage() {
       ),
     },
   ];
+
+  if (!isAuthorized) {
+    return (
+      <AppLayout>
+        <div style={{ maxWidth: 580, margin: "60px auto", padding: "0 16px" }}>
+          <Card
+            style={{
+              borderRadius: 16,
+              textAlign: "center",
+              boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01)",
+              border: "1px solid #e2e8f0",
+              padding: "32px 20px",
+            }}
+          >
+            <div
+              style={{
+                width: 68,
+                height: 68,
+                borderRadius: "50%",
+                background: "#fef3c7",
+                color: "#d97706",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 20px",
+                fontSize: 30,
+              }}
+            >
+              🔒
+            </div>
+            <Title level={3} style={{ marginBottom: 10, color: "#0f172a" }}>
+              B2B Lead Discovery is Restricted
+            </Title>
+            <Text type="secondary" style={{ fontSize: 14, display: "block", marginBottom: 28, lineHeight: 1.6 }}>
+              B2B Outbound Leads Discovery is disabled by default and exclusively managed by Platform Admin.
+              If your business requires high-volume local business prospecting, please request activation directly from Admin.
+            </Text>
+
+            <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+              <a
+                href={`https://wa.me/917488825824?text=${encodeURIComponent(
+                  `Namaste GinieSpace Admin! Please activate B2B Leads Discovery for my account: ${user?.email || ""}`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ width: "100%" }}
+              >
+                <Button
+                  type="primary"
+                  size="large"
+                  icon={<WhatsAppOutlined />}
+                  block
+                  style={{ background: "#25D366", borderColor: "#25D366", height: 46, fontWeight: 600 }}
+                >
+                  Request Admin to Activate on WhatsApp
+                </Button>
+              </a>
+
+              <Button size="large" block onClick={() => router.push("/dashboard")}>
+                Return to Dashboard
+              </Button>
+            </Space>
+          </Card>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>

@@ -94,6 +94,7 @@ export interface MerchantItem {
   businessType: "retail" | "wholesale" | "services";
   status: "active" | "suspended";
   plan: "free" | "pro";
+  leadsEnabled?: boolean;
   ownerId?: string;
   createdAt: string;
   business: {
@@ -860,7 +861,15 @@ export default function AdminPage() {
   };
 
   // User Actions
-  const handleUpdateMerchant = async (target: MerchantItem, patch: { status?: "active" | "suspended"; plan?: "free" | "pro"; businessType?: "retail" | "wholesale" | "services" }) => {
+  const handleUpdateMerchant = async (
+    target: MerchantItem,
+    patch: {
+      status?: "active" | "suspended";
+      plan?: "free" | "pro";
+      businessType?: "retail" | "wholesale" | "services";
+      leadsEnabled?: boolean;
+    }
+  ) => {
     try {
       setUpdatingUserId(target.id);
       const res = await api.put(`/api/admin/users/${target.id}`, patch);
@@ -877,6 +886,34 @@ export default function AdminPage() {
       loadAnalytics();
     } catch (err: any) {
       message.error(err.message || "Could not update user account");
+    } finally {
+      setUpdatingUserId(null);
+    }
+  };
+
+  const handleToggleMerchantLeads = async (merchantId: string, enabled: boolean) => {
+    try {
+      setUpdatingUserId(merchantId);
+      // Optimistic update
+      setMerchants((prev) =>
+        prev.map((m) => (m.id === merchantId ? { ...m, leadsEnabled: enabled } : m))
+      );
+      if (selectedMerchant?.id === merchantId) {
+        setSelectedMerchant((prev) => (prev ? { ...prev, leadsEnabled: enabled } : null));
+      }
+
+      const res = await api.post(`/api/admin/merchants/${merchantId}/toggle-leads`, { enabled });
+      message.success(res.data?.message || `B2B Leads Discovery ${enabled ? "activated" : "deactivated"}`);
+      loadAuditLogs();
+    } catch (err: any) {
+      // Revert optimistic update
+      setMerchants((prev) =>
+        prev.map((m) => (m.id === merchantId ? { ...m, leadsEnabled: !enabled } : m))
+      );
+      if (selectedMerchant?.id === merchantId) {
+        setSelectedMerchant((prev) => (prev ? { ...prev, leadsEnabled: !enabled } : null));
+      }
+      message.error(err.message || "Failed to toggle B2B leads access");
     } finally {
       setUpdatingUserId(null);
     }
@@ -2042,6 +2079,23 @@ export default function AdminPage() {
                                   </Tag>
                                 );
                               },
+                            },
+                            {
+                              title: "B2B Leads",
+                              key: "leadsEnabled",
+                              align: "center",
+                              render: (_: any, r: MerchantItem) => (
+                                <Tooltip title={r.leadsEnabled ? "B2B Leads active. Click to disable for this merchant." : "B2B Leads disabled (default). Click to activate."}>
+                                  <Switch
+                                    size="small"
+                                    checked={Boolean(r.leadsEnabled)}
+                                    checkedChildren="ON"
+                                    unCheckedChildren="OFF"
+                                    loading={updatingUserId === r.id}
+                                    onChange={(checked) => handleToggleMerchantLeads(r.id, checked)}
+                                  />
+                                </Tooltip>
+                              ),
                             },
                             {
                               title: "Actions",
@@ -4199,6 +4253,22 @@ export default function AdminPage() {
 
             <Card type="inner" title="Quick Admin Controls" style={{ borderRadius: 8 }}>
               <Space direction="vertical" style={{ width: "100%" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", background: "#f8fafc", borderRadius: 6, border: "1px solid #e2e8f0" }}>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: 13, color: "#1e293b" }}>B2B Leads Discovery Access</div>
+                    <div style={{ fontSize: 11, color: "#64748b" }}>
+                      {selectedMerchant.leadsEnabled ? "Granted & Active on Merchant Dashboard" : "Disabled by Default (Exclusive Admin Control)"}
+                    </div>
+                  </div>
+                  <Switch
+                    checked={Boolean(selectedMerchant.leadsEnabled)}
+                    checkedChildren="ON"
+                    unCheckedChildren="OFF"
+                    loading={updatingUserId === selectedMerchant.id}
+                    onChange={(checked) => handleToggleMerchantLeads(selectedMerchant.id, checked)}
+                  />
+                </div>
+
                 <Button
                   block
                   icon={<CrownOutlined />}
