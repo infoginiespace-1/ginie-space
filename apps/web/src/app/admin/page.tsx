@@ -203,11 +203,11 @@ const ADMIN_MARKETING_PRESETS = [
   },
   {
     id: "new_year",
-    title: "🎉 New Year 2026",
-    tag: "Upgrade Pro",
-    segment: "free" as const,
+    title: "🎉 New Year Growth",
+    tag: "100% Free",
+    segment: "all" as const,
     imageUrl: "https://app.ginie.space/marketing/new-year-growth.png",
-    text: `🎉 *Naya Saal, Naya Khata, Naya Record!* 📈\n\nनमस्ते {{name}},\n\nनए साल में अपनी दुकान को दीजिए एक आधुनिक डिजिटल पहचान! पुराने रजिस्टर छोड़कर अपनाइए GinieSpace Smart Billing:\n\n⚡ *5-Second Mobile Invoicing*: फोन से ही तुरंत पक्का GST/Non-GST बिल बनाएं\n📱 *24x7 WhatsApp Orders*: दुकान बंद होने के बाद भी ग्राहक आपके WhatsApp कैटलॉग से ऑर्डर कर सकते हैं\n🎯 *50 B2B Leads Monthly*: अपने शहर और पिनकोड के नए रीटेलर्स खोजें और व्यापार बढ़ाएं\n\n🚀 *New Year Growth Offer*:\nPro Annual Plan at just ₹1799/Year (मात्र ₹150/महीना)!\n\n👉 *Upgrade Your Business Today:*\nhttps://app.ginie.space/pricing\n\n💬 WhatsApp Support: +91 92792 59690\n_(Type STOP to unsubscribe)_`,
+    text: `🎉 *Naya Saal, Naya Khata, Naya Record!* 📈\n\nनमस्ते {{name}},\n\nनए साल में अपनी दुकान को दीजिए एक आधुनिक डिजिटल पहचान! पुराने रजिस्टर छोड़कर अपनाइए GinieSpace Smart Billing:\n\n⚡ *5-Second Mobile Invoicing*: फोन से ही तुरंत पक्का GST/Non-GST बिल बनाएं\n📱 *24x7 WhatsApp Orders*: दुकान बंद होने के बाद भी ग्राहक आपके WhatsApp कैटलॉग से ऑर्डर कर सकते हैं\n📦 *Unlimited Products & Catalogs*: बिना किसी रोक-टोक जितने चाहें उतने प्रोडक्ट्स जोड़ें\n\n🚀 *100% Free Lifetime Guarantee*:\n₹0 Monthly Subscription & 0% Payment Commission!\n\n👉 *Grow Your Store Today:*\nhttps://app.ginie.space\n\n💬 WhatsApp Support: +91 92792 59690\n_(Type STOP to unsubscribe)_`,
   },
   {
     id: "aatmanirbhar",
@@ -243,7 +243,6 @@ export default function AdminPage() {
 
   // Sub-view toggles inside modules
   const [overviewSubView, setOverviewSubView] = useState<"kpis" | "analytics">("kpis");
-  const [merchantsSubView, setMerchantsSubView] = useState<"merchants" | "subscriptions">("merchants");
   const [whatsappSubView, setWhatsappSubView] = useState<"live-chat" | "broadcast" | "bot-settings">("live-chat");
 
   // Analytics & KPIs
@@ -254,7 +253,7 @@ export default function AdminPage() {
   const [merchants, setMerchants] = useState<MerchantItem[]>([]);
   const [loadingMerchants, setLoadingMerchants] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [planFilter, setPlanFilter] = useState<"all" | "free" | "pro">("all");
+  const [leadsFilter, setLeadsFilter] = useState<"all" | "active" | "disabled">("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "suspended">("all");
   const [typeFilter, setTypeFilter] = useState<"all" | "retail" | "wholesale" | "services">("all");
   const [selectedMerchant, setSelectedMerchant] = useState<MerchantItem | null>(null);
@@ -289,7 +288,7 @@ export default function AdminPage() {
   const [sendingTest, setSendingTest] = useState(false);
 
   // Broadcast State
-  const [broadcastSegment, setBroadcastSegment] = useState<"all" | "free" | "pro" | "retail" | "wholesale" | "services">("all");
+  const [broadcastSegment, setBroadcastSegment] = useState<"all" | "retail" | "wholesale" | "services">("all");
   const [broadcastText, setBroadcastText] = useState("");
   const [broadcastImageUrl, setBroadcastImageUrl] = useState("");
   const [sendingBroadcast, setSendingBroadcast] = useState(false);
@@ -323,13 +322,6 @@ export default function AdminPage() {
   const [downloadingBackup, setDownloadingBackup] = useState(false);
   const [resettingRatchets, setResettingRatchets] = useState(false);
 
-  // Subscriptions & PRO Upgrade Requests State
-  const [subscriptions, setSubscriptions] = useState<any[]>([]);
-  const [loadingSubscriptions, setLoadingSubscriptions] = useState(false);
-  const [subscriptionSearch, setSubscriptionSearch] = useState("");
-  const [subscriptionFilter, setSubscriptionFilter] = useState<string>("all");
-  const [approvingUserId, setApprovingUserId] = useState<string | null>(null);
-  const [rejectingUserId, setRejectingUserId] = useState<string | null>(null);
 
   // Web Analytics & SEO State
   const [webAnalytics, setWebAnalytics] = useState<any>(null);
@@ -431,17 +423,6 @@ export default function AdminPage() {
     }
   };
 
-  const loadSubscriptions = async () => {
-    try {
-      setLoadingSubscriptions(true);
-      const res = await api.get("/api/admin/subscriptions");
-      setSubscriptions(res.data?.subscriptions || []);
-    } catch {
-      // ignore
-    } finally {
-      setLoadingSubscriptions(false);
-    }
-  };
 
   const loadWebAnalytics = async () => {
     try {
@@ -475,33 +456,6 @@ export default function AdminPage() {
     }
   };
 
-  const handleApproveSubscription = async (userId: string, cycle: "monthly" | "yearly" = "monthly") => {
-    try {
-      setApprovingUserId(userId);
-      const res = await api.post(`/api/admin/subscriptions/${userId}/approve`, { cycle });
-      message.success(res.data?.message || "PRO Plan activated successfully!");
-      loadSubscriptions();
-      loadMerchants();
-    } catch (err: any) {
-      message.error(err.response?.data?.error || err.message || "Failed to approve subscription");
-    } finally {
-      setApprovingUserId(null);
-    }
-  };
-
-  const handleRejectSubscription = async (userId: string) => {
-    try {
-      setRejectingUserId(userId);
-      await api.post(`/api/admin/subscriptions/${userId}/reject`, { reason: "Payment UTR not verified" });
-      message.info("Subscription request rejected.");
-      loadSubscriptions();
-      loadMerchants();
-    } catch (err: any) {
-      message.error(err.message || "Failed to reject subscription");
-    } finally {
-      setRejectingUserId(null);
-    }
-  };
 
   const loadAdminLeads = async () => {
     try {
@@ -712,7 +666,6 @@ export default function AdminPage() {
 
     loadAnalytics();
     loadMerchants();
-    loadSubscriptions();
     loadSupportMessages();
     loadAnnouncement();
     loadAuditLogs();
@@ -982,15 +935,6 @@ export default function AdminPage() {
     }
   };
 
-  const handleSendProPitch = async (target: MerchantItem) => {
-    try {
-      const res = await api.post(`/api/admin/users/${target.id}/send-pro-pitch`);
-      message.success(res.data.message);
-      loadSupportMessages();
-    } catch (err: any) {
-      message.error(err.message || "Could not send Pro upgrade message");
-    }
-  };
 
   // Broadcast Handler
   const handleSendBroadcast = async () => {
@@ -1100,7 +1044,8 @@ export default function AdminPage() {
   // Filtered Merchants
   const filteredMerchants = useMemo(() => {
     return merchants.filter((m) => {
-      if (planFilter !== "all" && m.plan !== planFilter) return false;
+      if (leadsFilter === "active" && !m.leadsEnabled) return false;
+      if (leadsFilter === "disabled" && m.leadsEnabled) return false;
       if (statusFilter !== "all" && m.status !== statusFilter) return false;
       if (typeFilter !== "all" && m.businessType !== typeFilter) return false;
 
@@ -1114,13 +1059,11 @@ export default function AdminPage() {
         m.business?.slug?.toLowerCase().includes(q)
       );
     });
-  }, [merchants, searchTerm, planFilter, statusFilter, typeFilter]);
+  }, [merchants, searchTerm, leadsFilter, statusFilter, typeFilter]);
 
   // Target count for selected broadcast segment
   const broadcastTargetCount = useMemo(() => {
     const targets = merchants.filter((m) => m.role !== "staff" && m.status !== "suspended");
-    if (broadcastSegment === "free") return targets.filter((m) => m.plan === "free").length;
-    if (broadcastSegment === "pro") return targets.filter((m) => m.plan === "pro").length;
     if (broadcastSegment === "retail" || broadcastSegment === "wholesale" || broadcastSegment === "services") {
       return targets.filter((m) => m.businessType === broadcastSegment).length;
     }
@@ -1374,7 +1317,6 @@ export default function AdminPage() {
               loadMerchants();
               loadSupportMessages();
               loadAuditLogs();
-              loadSubscriptions();
               loadWebAnalytics();
             }}
           >
@@ -1460,7 +1402,7 @@ export default function AdminPage() {
                                 valueStyle={{ color: "#fff", fontWeight: 700, fontSize: isMobile ? 17 : 24 }}
                               />
                               <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: isMobile ? 10 : 12, display: "block", marginTop: 4 }}>
-                                {merchants.filter((m) => m.plan === "pro").length} on PRO tier
+                                100% Lifetime Free Platform (₹0)
                               </Text>
                             </Card>
                           </Col>
@@ -1778,84 +1720,52 @@ export default function AdminPage() {
           },
 
           // ==========================================
-          // MODULE 2: MERCHANTS & SUBSCRIPTIONS
+          // MODULE 2: MERCHANTS DIRECTORY
           // ==========================================
           {
             key: "merchants",
             label: (
               <span>
-                <ShopOutlined /> {isMobile ? "Merchants" : "Merchants & Subscriptions"}
-                {subscriptions.filter((s) => s.subscriptionStatus === "pending").length > 0 && (
-                  <Badge
-                    count={subscriptions.filter((s) => s.subscriptionStatus === "pending").length}
-                    style={{ marginLeft: 6, backgroundColor: "#f59e0b" }}
-                  />
-                )}
+                <ShopOutlined /> {isMobile ? "Merchants" : "Merchants Directory"}
               </span>
             ),
             children: (
               <div>
-                {/* Module Sub-Switch */}
+                {/* Module Header */}
                 <div style={{ marginBottom: 18, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
-                  <Segmented
-                    value={merchantsSubView}
-                    onChange={(val) => setMerchantsSubView(val as "merchants" | "subscriptions")}
-                    options={[
-                      { label: `🏬 All Merchants (${merchants.length})`, value: "merchants" },
-                      {
-                        label: (
-                          <span>
-                            👑 Pro Subscriptions & Approvals
-                            {subscriptions.filter((s) => s.subscriptionStatus === "pending").length > 0 && (
-                              <Badge
-                                count={subscriptions.filter((s) => s.subscriptionStatus === "pending").length}
-                                style={{ marginLeft: 6, backgroundColor: "#ef4444" }}
-                              />
-                            )}
-                          </span>
-                        ),
-                        value: "subscriptions",
-                      },
-                    ]}
-                    size={isMobile ? "small" : "middle"}
-                  />
-                  {merchantsSubView === "merchants" ? (
-                    <Button icon={<DownloadOutlined />} onClick={handleExportMerchantsCSV} size={isMobile ? "small" : "middle"}>
-                      Export CSV
-                    </Button>
-                  ) : (
-                    <Button icon={<SyncOutlined />} onClick={loadSubscriptions} size={isMobile ? "small" : "middle"}>
-                      Refresh UTRs
-                    </Button>
-                  )}
+                  <div style={{ fontSize: 16, fontWeight: 700, color: "#0f172a" }}>
+                    🏬 Registered Merchants ({merchants.length})
+                  </div>
+                  <Button icon={<DownloadOutlined />} onClick={handleExportMerchantsCSV} size={isMobile ? "small" : "middle"}>
+                    Export CSV
+                  </Button>
                 </div>
 
-                {merchantsSubView === "merchants" ? (
-                  <div>
-                    {/* Filters Bar */}
-                    <Card styles={{ body: { padding: isMobile ? 12 : 20 } }} style={{ marginBottom: 16, borderRadius: 12 }}>
-                      <Row gutter={isMobile ? [8, 10] : [16, 12]} align="middle">
-                        <Col xs={24} md={8}>
-                          <Input
-                            placeholder="Search store name, phone, owner, email..."
-                            prefix={<SearchOutlined style={{ color: "#8c8c8c" }} />}
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            allowClear
-                          />
-                        </Col>
-                        <Col xs={12} md={5}>
-                          <Select
-                            style={{ width: "100%" }}
-                            value={planFilter}
-                            onChange={setPlanFilter}
-                            options={[
-                              { value: "all", label: "All Plans" },
-                              { value: "free", label: "FREE Plan Only" },
-                              { value: "pro", label: "PRO Subscribers Only" },
-                            ]}
-                          />
-                        </Col>
+                <div>
+                  {/* Filters Bar */}
+                  <Card styles={{ body: { padding: isMobile ? 12 : 20 } }} style={{ marginBottom: 16, borderRadius: 12 }}>
+                    <Row gutter={isMobile ? [8, 10] : [16, 12]} align="middle">
+                      <Col xs={24} md={8}>
+                        <Input
+                          placeholder="Search store name, phone, owner, email..."
+                          prefix={<SearchOutlined style={{ color: "#8c8c8c" }} />}
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          allowClear
+                        />
+                      </Col>
+                      <Col xs={12} md={5}>
+                        <Select
+                          style={{ width: "100%" }}
+                          value={leadsFilter}
+                          onChange={setLeadsFilter}
+                          options={[
+                            { value: "all", label: "All Leads Status" },
+                            { value: "active", label: "🎯 Leads Active" },
+                            { value: "disabled", label: "🔒 Leads Disabled" },
+                          ]}
+                        />
+                      </Col>
                         <Col xs={12} md={5}>
                           <Select
                             style={{ width: "100%" }}
@@ -1915,8 +1825,8 @@ export default function AdminPage() {
                             </div>
 
                             <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
-                              <Tag color={r.plan === "pro" ? "gold" : "default"} style={{ margin: 0, fontWeight: 700 }}>
-                                {r.plan === "pro" ? "👑 PRO" : "FREE"}
+                              <Tag color="green" style={{ margin: 0, fontWeight: 700 }}>
+                                100% FREE
                               </Tag>
                               <Tag color={r.businessType === "wholesale" ? "blue" : r.businessType === "services" ? "purple" : "green"} style={{ margin: 0 }}>
                                 {r.businessType?.toUpperCase()}
@@ -2028,18 +1938,8 @@ export default function AdminPage() {
                             {
                               title: "Plan",
                               key: "plan",
-                              render: (_: any, r: MerchantItem) => (
-                                <Select
-                                  size="small"
-                                  value={r.plan || "free"}
-                                  style={{ width: 88 }}
-                                  loading={updatingUserId === r.id}
-                                  onChange={(val) => handleUpdateMerchant(r, { plan: val as "free" | "pro" })}
-                                  options={[
-                                    { value: "free", label: "FREE" },
-                                    { value: "pro", label: "PRO" },
-                                  ]}
-                                />
+                              render: () => (
+                                <Tag color="green" style={{ fontWeight: 600 }}>100% FREE</Tag>
                               ),
                             },
                             {
@@ -2156,201 +2056,6 @@ export default function AdminPage() {
                       </Card>
                     )}
                   </div>
-                ) : (
-                  <div>
-                    {/* SUBSCRIPTIONS & UTR APPROVALS */}
-                    {/* Revenue & Subscription KPIs (2x2 on Mobile) */}
-                    <Row gutter={isMobile ? [10, 10] : [16, 16]} style={{ marginBottom: isMobile ? 16 : 20 }}>
-                      <Col xs={12} sm={12} lg={6}>
-                        <Card
-                          styles={{ body: { padding: isMobile ? "12px 14px" : "20px" } }}
-                          style={{ borderRadius: 12, background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", color: "#fff" }}
-                        >
-                          <Statistic
-                            title={<span style={{ color: "rgba(255,255,255,0.85)", fontSize: isMobile ? 11 : 14 }}>Active PRO</span>}
-                            value={subscriptions.filter((s) => s.plan === "pro").length}
-                            prefix={<CrownOutlined style={{ color: "#fff", fontSize: isMobile ? 14 : 18 }} />}
-                            valueStyle={{ color: "#fff", fontWeight: 700, fontSize: isMobile ? 18 : 24 }}
-                          />
-                        </Card>
-                      </Col>
-
-                      <Col xs={12} sm={12} lg={6}>
-                        <Card
-                          styles={{ body: { padding: isMobile ? "12px 14px" : "20px" } }}
-                          style={{
-                            borderRadius: 12,
-                            background: subscriptions.filter((s) => s.subscriptionStatus === "pending").length > 0
-                              ? "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)"
-                              : "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-                            color: "#fff",
-                          }}
-                        >
-                          <Statistic
-                            title={<span style={{ color: "rgba(255,255,255,0.85)", fontSize: isMobile ? 11 : 14 }}>Pending UTRs</span>}
-                            value={subscriptions.filter((s) => s.subscriptionStatus === "pending").length}
-                            prefix={<CheckCircleOutlined style={{ color: "#fff", fontSize: isMobile ? 14 : 18 }} />}
-                            valueStyle={{ color: "#fff", fontWeight: 700, fontSize: isMobile ? 18 : 24 }}
-                          />
-                        </Card>
-                      </Col>
-
-                      <Col xs={12} sm={12} lg={6}>
-                        <Card
-                          styles={{ body: { padding: isMobile ? "12px 14px" : "20px" } }}
-                          style={{ borderRadius: 12, background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)", color: "#fff" }}
-                        >
-                          <Statistic
-                            title={<span style={{ color: "rgba(255,255,255,0.85)", fontSize: isMobile ? 11 : 14 }}>Active Pro Merchants</span>}
-                            value={subscriptions.filter((s) => s.plan === "pro").length}
-                            precision={0}
-                            prefix={<CheckCircleOutlined style={{ color: "#fff", fontSize: isMobile ? 14 : 18 }} />}
-                            formatter={(val) => `${Number(val)}`}
-                            valueStyle={{ color: "#fff", fontWeight: 700, fontSize: isMobile ? 18 : 24 }}
-                          />
-                        </Card>
-                      </Col>
-
-                      <Col xs={12} sm={12} lg={6}>
-                        <Card
-                          styles={{ body: { padding: isMobile ? "12px 14px" : "20px" } }}
-                          style={{ borderRadius: 12, background: "linear-gradient(135deg, #6b7280 0%, #4b5563 100%)", color: "#fff" }}
-                        >
-                          <Statistic
-                            title={<span style={{ color: "rgba(255,255,255,0.85)", fontSize: isMobile ? 11 : 14 }}>Expired Accounts</span>}
-                            value={subscriptions.filter((s) => s.subscriptionStatus === "expired").length}
-                            valueStyle={{ color: "#fff", fontWeight: 700, fontSize: isMobile ? 18 : 24 }}
-                          />
-                        </Card>
-                      </Col>
-                    </Row>
-
-                    {/* Subscriptions Table */}
-                    <Card style={{ borderRadius: 12 }}>
-                      <Table
-                        dataSource={subscriptions}
-                        rowKey="userId"
-                        loading={loadingSubscriptions}
-                        scroll={{ x: 900 }}
-                        pagination={{ pageSize: 10 }}
-                        columns={[
-                          {
-                            title: "Merchant",
-                            key: "merchant",
-                            render: (_: any, r: any) => (
-                              <div>
-                                <Text strong>{r.name}</Text>
-                                <div style={{ fontSize: 12, color: "#64748b" }}>🏬 {r.storeName}</div>
-                                <div style={{ fontSize: 11, color: "#8c8c8c" }}>{r.email}</div>
-                              </div>
-                            ),
-                          },
-                          {
-                            title: "Phone & Chat",
-                            key: "phone",
-                            render: (_: any, r: any) => (
-                              <div>
-                                <div style={{ fontWeight: 600, color: "#047857" }}>
-                                  📱 {formatDisplayPhone(r.phone)}
-                                </div>
-                                <Button
-                                  type="link"
-                                  size="small"
-                                  icon={<MessageOutlined />}
-                                  style={{ padding: 0, color: "#25D366", fontWeight: 600 }}
-                                  onClick={() => handleStartChat(r.phone, r.name || r.storeName)}
-                                >
-                                  Chat in Hub
-                                </Button>
-                              </div>
-                            ),
-                          },
-                          {
-                            title: "Plan",
-                            key: "plan",
-                            render: (_: any, r: any) => (
-                              <Tag color={r.plan === "pro" ? "gold" : "default"} style={{ fontWeight: 700 }}>
-                                {r.plan === "pro" ? "👑 PRO" : "FREE"}
-                              </Tag>
-                            ),
-                          },
-                          {
-                            title: "Status",
-                            key: "status",
-                            render: (_: any, r: any) => {
-                              const s = r.subscriptionStatus;
-                              return s === "pending" ? (
-                                <Tag color="orange" style={{ fontWeight: 700 }}>VERIFY UTR</Tag>
-                              ) : s === "active" ? (
-                                <Tag color="green">ACTIVE</Tag>
-                              ) : s === "expired" ? (
-                                <Tag color="red">EXPIRED</Tag>
-                              ) : (
-                                <Tag color="default">NONE</Tag>
-                              );
-                            },
-                          },
-                          {
-                            title: "Payment UTR",
-                            dataIndex: "paymentUtr",
-                            key: "utr",
-                            render: (utr: string) =>
-                              utr ? (
-                                <Space>
-                                  <Text copyable style={{ fontFamily: "monospace", fontWeight: 700 }}>
-                                    {utr}
-                                  </Text>
-                                </Space>
-                              ) : (
-                                <Text type="secondary">-</Text>
-                              ),
-                          },
-                          {
-                            title: "Actions",
-                            key: "actions",
-                            align: "right",
-                            render: (_: any, r: any) => (
-                              <Space size="small">
-                                {r.subscriptionStatus === "pending" ? (
-                                  <>
-                                    <Button
-                                      type="primary"
-                                      size="small"
-                                      icon={<CheckCircleOutlined />}
-                                      loading={approvingUserId === r.userId}
-                                      onClick={() => handleApproveSubscription(r.userId, "monthly")}
-                                      style={{ background: "#10b981", borderColor: "#10b981", fontWeight: 600 }}
-                                    >
-                                      Approve Lifetime Free
-                                    </Button>
-                                    <Popconfirm
-                                      title="Reject upgrade request?"
-                                      description="Merchant ko re-submit karna hoga."
-                                      onConfirm={() => handleRejectSubscription(r.userId)}
-                                    >
-                                      <Button size="small" danger loading={rejectingUserId === r.userId}>
-                                        Reject
-                                      </Button>
-                                    </Popconfirm>
-                                  </>
-                                ) : (
-                                  <Button
-                                    size="small"
-                                    icon={<CrownOutlined />}
-                                    loading={approvingUserId === r.userId}
-                                    onClick={() => handleApproveSubscription(r.userId, "monthly")}
-                                  >
-                                    +30 Days PRO
-                                  </Button>
-                                )}
-                              </Space>
-                            ),
-                          },
-                        ]}
-                      />
-                    </Card>
-                  </div>
-                )}
               </div>
             ),
           },
@@ -2413,12 +2118,12 @@ export default function AdminPage() {
                   <Col xs={12} sm={6}>
                     <Card styles={{ body: { padding: isMobile ? "12px" : "18px" } }} style={{ borderRadius: 12, background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", color: "#fff" }}>
                       <Statistic
-                        title={<span style={{ color: "rgba(255,255,255,0.85)", fontSize: isMobile ? 11 : 13 }}>PRO Subscriptions</span>}
-                        value={adminLeadStats.proCount}
-                        prefix={<CrownOutlined style={{ color: "#fff", fontSize: isMobile ? 14 : 18 }} />}
+                        title={<span style={{ color: "rgba(255,255,255,0.85)", fontSize: isMobile ? 11 : 13 }}>Leads Enabled</span>}
+                        value={merchants.filter((m) => m.leadsEnabled).length}
+                        prefix={<CheckCircleOutlined style={{ color: "#fff", fontSize: isMobile ? 14 : 18 }} />}
                         valueStyle={{ color: "#fff", fontWeight: 700, fontSize: isMobile ? 18 : 24 }}
                       />
-                      <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: 11 }}>Paid SaaS Merchants</Text>
+                      <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: 11 }}>Admin Unlocked Stores</Text>
                     </Card>
                   </Col>
                 </Row>
@@ -2693,11 +2398,7 @@ export default function AdminPage() {
                                     <Tag color="purple">
                                       <ShopOutlined /> Registered Merchant
                                     </Tag>
-                                    {record.registeredMerchant.plan === "pro" ? (
-                                      <Tag color="gold" style={{ marginTop: 4 }}><CrownOutlined /> PRO</Tag>
-                                    ) : (
-                                      <Tag color="default" style={{ marginTop: 4 }}>Free Tier</Tag>
-                                    )}
+                                    <Tag color="green" style={{ marginTop: 4 }}>100% Free</Tag>
                                     {record.registeredMerchant.slug && (
                                       <div style={{ marginTop: 3 }}>
                                         <a href={`/shop/${record.registeredMerchant.slug}`} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: "#059669" }}>
@@ -2898,11 +2599,7 @@ export default function AdminPage() {
                                 return (
                                   <div>
                                     <Tag color="purple"><ShopOutlined /> Registered</Tag>
-                                    {record.registeredMerchant.plan === "pro" ? (
-                                      <Tag color="gold"><CrownOutlined /> PRO</Tag>
-                                    ) : (
-                                      <Tag color="default">Free</Tag>
-                                    )}
+                                    <Tag color="green">100% Free</Tag>
                                     {record.registeredMerchant.slug && (
                                       <div style={{ marginTop: 2 }}>
                                         <a href={`/shop/${record.registeredMerchant.slug}`} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: "#059669" }}>
@@ -3600,12 +3297,10 @@ export default function AdminPage() {
                                 value={broadcastSegment}
                                 onChange={setBroadcastSegment}
                                 options={[
-                                  { value: "all", label: `All Active Businesses (${merchants.filter((m) => m.role !== "staff" && m.status !== "suspended").length} users)` },
-                                  { value: "free", label: `Free Plan Users Only (${merchants.filter((m) => m.role !== "staff" && m.status !== "suspended" && m.plan === "free").length} users)` },
-                                  { value: "pro", label: `Pro Subscribers Only (${merchants.filter((m) => m.role !== "staff" && m.status !== "suspended" && m.plan === "pro").length} users)` },
-                                  { value: "retail", label: "Retail Stores" },
-                                  { value: "wholesale", label: "Wholesale Businesses" },
-                                  { value: "services", label: "Service Providers" },
+                                  { value: "all", label: `All Active Businesses (${merchants.filter((m) => m.role !== "staff" && m.status !== "suspended").length} merchants)` },
+                                  { value: "retail", label: "Retail Stores Only" },
+                                  { value: "wholesale", label: "Wholesale Businesses Only" },
+                                  { value: "services", label: "Service Providers Only" },
                                 ]}
                               />
                             </Form.Item>
@@ -4179,8 +3874,8 @@ export default function AdminPage() {
                 <Tag color={selectedMerchant.businessType === "wholesale" ? "blue" : selectedMerchant.businessType === "services" ? "purple" : "green"}>
                   {selectedMerchant.businessType?.toUpperCase()}
                 </Tag>
-                <Tag color={selectedMerchant.plan === "pro" ? "gold" : "default"}>
-                  {selectedMerchant.plan?.toUpperCase()} PLAN
+                <Tag color="green">
+                  100% FREE PLAN
                 </Tag>
                 <Tag color={selectedMerchant.status === "suspended" ? "red" : "green"}>
                   {selectedMerchant.status?.toUpperCase()}
@@ -4269,14 +3964,6 @@ export default function AdminPage() {
                   />
                 </div>
 
-                <Button
-                  block
-                  icon={<CrownOutlined />}
-                  onClick={() => handleSendProPitch(selectedMerchant)}
-                  disabled={selectedMerchant.plan === "pro" || !selectedMerchant.business?.phone}
-                >
-                  Send Pro Upgrade Pitch on WhatsApp
-                </Button>
 
                 <Button
                   block

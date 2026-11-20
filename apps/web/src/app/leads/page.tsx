@@ -40,7 +40,6 @@ import { downloadCsv } from "../../lib/csv";
 import { getSocket } from "../../lib/socket";
 import { useAuth } from "../../context/AuthContext";
 import { useRouter } from "next/navigation";
-import { UpgradeModal } from "../../components/UpgradeModal";
 import { isLeadDiscoveryRelevant, getBusinessCategoryLabel } from "../../lib/business";
 
 const { Title, Text } = Typography;
@@ -98,7 +97,6 @@ export default function LeadsPage() {
   const [followUpTarget, setFollowUpTarget] = useState<SavedLead | null>(null);
   const [followUpDateVal, setFollowUpDateVal] = useState("");
   const [followUpNoteVal, setFollowUpNoteVal] = useState("");
-  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [savingFollowUp, setSavingFollowUp] = useState(false);
   const [selectedLeadKeys, setSelectedLeadKeys] = useState<React.Key[]>([]);
   const [campaignModalOpen, setCampaignModalOpen] = useState(false);
@@ -210,9 +208,6 @@ export default function LeadsPage() {
       }
     } catch (err: any) {
       const errMsg = err.response?.data?.error || err.message || "Failed to search for leads";
-      if (err.response?.data?.requiresUpgrade || err.response?.status === 403) {
-        setUpgradeModalOpen(true);
-      }
       message.error(errMsg);
     } finally {
       setSearching(false);
@@ -239,9 +234,6 @@ export default function LeadsPage() {
       }
     } catch (err: any) {
       const errMsg = err.response?.data?.error || err.message || "Could not load more leads";
-      if (err.response?.data?.requiresUpgrade || err.response?.status === 403) {
-        setUpgradeModalOpen(true);
-      }
       message.error(errMsg);
     } finally {
       setLoadingMore(false);
@@ -274,9 +266,6 @@ export default function LeadsPage() {
       message.success(`${lead.name} saved to your leads book!`);
     } catch (err: any) {
       const errMsg = err.response?.data?.error || err.message || "Could not save lead";
-      if (errMsg.includes("Upgrade to Pro") || err.response?.status === 403) {
-        setUpgradeModalOpen(true);
-      }
       message.error(errMsg);
     } finally {
       setSavingId(null);
@@ -895,15 +884,6 @@ export default function LeadsPage() {
         </Space>
       </Modal>
 
-      <UpgradeModal
-        open={upgradeModalOpen}
-        onClose={() => setUpgradeModalOpen(false)}
-        onSuccess={() => {
-          setUpgradeModalOpen(false);
-          loadQuota();
-        }}
-        currentPlan={user?.plan}
-      />
     </AppLayout>
   );
 }

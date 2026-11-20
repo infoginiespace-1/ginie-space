@@ -109,7 +109,7 @@ export default function ServicesAppointmentsPage() {
               textDecoration: "none",
             }}
           >
-            Explore Free vs PRO
+            100% Free Forever (₹0)
           </Link>
         </div>
       </section>

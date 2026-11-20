@@ -117,8 +117,8 @@ export default function RefundPolicyPage() {
           </Title>
           <Paragraph style={{ color: "#d1fae5", fontSize: 15, marginTop: 10, maxWidth: 650, margin: "10px auto 0" }}>
             {lang === "en"
-              ? "Transparent terms covering GinieSpace PRO subscriptions, 7-day money-back guarantee, cancellation rights, and direct UPI settlements."
-              : "GinieSpace PRO subscription, 7 din ki money-back guarantee, cancellation aur direct UPI billing ki poori transparent jankari."}
+              ? "Transparent terms covering GinieSpace's 100% Free Forever platform model, zero subscription fees, and direct peer-to-peer UPI settlements."
+              : "GinieSpace ke 100% Free Forever platform model, zero subscription fees, aur direct UPI billing ki poori transparent jankari."}
           </Paragraph>
           <div style={{ fontSize: 12, color: "#a7f3d0", marginTop: 12 }}>
             Effective Date: November 1, 2026 • Governed by Consumer Protection (E-Commerce) Rules India
@@ -138,14 +138,14 @@ export default function RefundPolicyPage() {
         >
           {lang === "en" ? (
             <div>
-              <Title level={3} style={{ fontWeight: 700 }}>1. Free Evaluation Before You Upgrade</Title>
+              <Title level={3} style={{ fontWeight: 700 }}>1. 100% Free Forever Sovereign Platform Guarantee</Title>
               <Paragraph style={{ lineHeight: 1.8, color: "#334155" }}>
-                At GinieSpace, we believe merchants should never pay for software without testing its real value. We offer a <strong>permanent Free Starter Tier</strong> (₹0) that enables any shopkeeper or wholesaler to test catalog creation, automated message handling, and direct UPI QR generation before making any financial commitment.
+                At GinieSpace, our foundational mission is to empower Indian MSMEs, Kirana stores, wholesalers, and service providers with sovereign digital commerce. GinieSpace is <strong>100% Free Forever (₹0 platform fees &amp; 0% payment gateway commission)</strong>. Merchants have unlimited access to digital catalogs, POS billing, and automated customer order notifications without paying software subscription fees.
               </Paragraph>
 
               <Divider />
 
-              <Title level={3} style={{ fontWeight: 700 }}>2. 7-Day Money-Back Guarantee for PRO Subscriptions</Title>
+              <Title level={3} style={{ fontWeight: 700 }}>2. Zero Subscription Debits &amp; Direct Settlements</Title>
               <div
                 style={{
                   background: "#f0fdf4",
@@ -169,14 +169,14 @@ export default function RefundPolicyPage() {
 
               <Divider />
 
-              <Title level={3} style={{ fontWeight: 700 }}>3. Subscription Cancellation Policy (Zero Lock-in)</Title>
+              <Title level={3} style={{ fontWeight: 700 }}>3. Zero Subscription Fee &amp; Account Control</Title>
               <Paragraph style={{ lineHeight: 1.8, color: "#334155" }}>
-                You maintain complete control over your subscription:
+                Because GinieSpace operates on a 100% Free Forever model (₹0 platform fees &amp; 0% gateway commission):
               </Paragraph>
               <ul style={{ lineHeight: 1.8, color: "#334155", paddingLeft: 20 }}>
-                <li>You can cancel your PRO plan renewal at any time directly through your merchant dashboard or by notifying our support desk.</li>
+                <li>There are <strong>no recurring subscriptions, no auto-debit mandates, and no hidden monthly fees</strong>.</li>
                 <li>There are <strong>zero lock-in periods and zero cancellation penalties</strong>.</li>
-                <li>Upon cancellation, all PRO capabilities remain fully active until the expiration of your current 30-day or 365-day paid cycle. After expiration, your account smoothly downgrades to the Free Starter Tier with all your catalogs and data preserved.</li>
+                <li>You maintain full sovereignty over your store. You can pause, export your data, or close your account at any time with complete data privacy.</li>
               </ul>
 
               <Divider />
@@ -229,9 +229,9 @@ export default function RefundPolicyPage() {
             </div>
           ) : (
             <div>
-              <Title level={3} style={{ fontWeight: 700 }}>1. Upgrade Karne Se Pehle Free Trial</Title>
+              <Title level={3} style={{ fontWeight: 700 }}>1. 100% Free Forever Platform Guarantee</Title>
               <Paragraph style={{ lineHeight: 1.8, color: "#334155" }}>
-                GinieSpace par har vyapari ke liye <strong>Lifetime Free Starter Tier (₹0)</strong> uplabdh hai. Aap pehle bina koi paisa diye catalog bana kar aur software chala kar dekh sakte hain.
+                GinieSpace sabhi Bharatiya vyapariyon ke liye <strong>Lifetime Free Platform (₹0)</strong> hai. Aap bina koi subscription fee diye catalog bana sakte hain, POS billing kar sakte hain aur WhatsApp orders manage kar sakte hain.
               </Paragraph>
 
               <Divider />
@@ -260,14 +260,14 @@ export default function RefundPolicyPage() {
 
               <Divider />
 
-              <Title level={3} style={{ fontWeight: 700 }}>3. Cancellation Policy (Bina Kisi Lock-in Ke)</Title>
+              <Title level={3} style={{ fontWeight: 700 }}>3. Zero Subscription Fee Aur Store Control</Title>
               <Paragraph style={{ lineHeight: 1.8, color: "#334155" }}>
-                Aap jab chahein apna plan cancel kar sakte hain:
+                Kyunki GinieSpace 100% Free Forever Model (₹0 platform fees &amp; 0% gateway cut) par chalta hai:
               </Paragraph>
               <ul style={{ lineHeight: 1.8, color: "#334155", paddingLeft: 20 }}>
-                <li>Aap Settings me jakar kabhi bhi PRO plan cancel kar sakte hain.</li>
-                <li>Isme koi lock-in period ya cancellation penalty nahi hoti.</li>
-                <li>Cancel karne ke baad bhi aapka plan 30 din poore hone tak active rahega, aur agle mahine koi paisa nahi katega.</li>
+                <li>Yahan koi <strong>recurring subscription, auto-debit mandate, ya hidden monthly fee nahi hoti</strong>.</li>
+                <li>Isme koi lock-in period ya cancellation penalty nahi hai.</li>
+                <li>Aapka business poori tarah aapke control me hai. Aap kabhi bhi apna store data export ya deactivate kar sakte hain bina kisi charge ke.</li>
               </ul>
 
               <Divider />

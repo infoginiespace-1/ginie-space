@@ -27,7 +27,6 @@ import { useAuth } from "../context/AuthContext";
 import { usePathname, useRouter } from "next/navigation";
 import { getSocket } from "../lib/socket";
 import { api } from "../lib/api";
-import { UpgradeModal } from "./UpgradeModal";
 import { SoundboxModal } from "./SoundboxModal";
 import { announceOrderSoundbox, playSoundboxChime, getSoundboxSettings } from "../lib/soundbox";
 import { getBusinessHubSubtitle } from "../lib/business";
@@ -57,7 +56,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [unreadChatsCount, setUnreadChatsCount] = useState(0);
   const [announcement, setAnnouncement] = useState<{ message: string; title?: string; type?: "info" | "warning" | "success" | "error" } | null>(null);
   const [announcementDismissed, setAnnouncementDismissed] = useState(false);
-  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [soundboxModalOpen, setSoundboxModalOpen] = useState(false);
   const [soundboxEnabled, setSoundboxEnabled] = useState(true);
 
@@ -631,12 +629,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </Modal>
 
-      {/* PRO Upgrade Modal */}
-      <UpgradeModal
-        open={upgradeModalOpen}
-        onClose={() => setUpgradeModalOpen(false)}
-        currentPlan={user?.plan}
-      />
 
       {/* Soundbox Configuration & Test Modal */}
       <SoundboxModal

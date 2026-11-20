@@ -223,7 +223,7 @@ export default function TermsAndConditionsPage() {
 
               <Title level={3} style={{ fontWeight: 700 }}>9. Limitation of Liability</Title>
               <Paragraph style={{ lineHeight: 1.8, color: "#334155" }}>
-                To the fullest extent permitted by Indian law, GinieSpace, its directors, developers, and partners shall not be liable for any indirect, incidental, punitive, or consequential damages resulting from third-party network outages, telecom carrier blocks, WhatsApp Multi-Device session disconnects, or customer disputes. GinieSpace&apos;s maximum aggregate liability shall be strictly limited to the subscription fee amount paid by you in the preceding three (3) months.
+                To the fullest extent permitted by Indian law, GinieSpace, its directors, developers, and partners shall not be liable for any indirect, incidental, punitive, or consequential damages resulting from third-party network outages, telecom carrier blocks, WhatsApp Multi-Device session disconnects, or customer disputes. Given the 100% Free Forever platform model, GinieSpace&apos;s maximum aggregate liability shall be strictly limited to direct platform fees paid (if any) or a nominal aggregate limit of ₹100.
               </Paragraph>
 
               <Divider />

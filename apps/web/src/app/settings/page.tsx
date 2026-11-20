@@ -59,7 +59,6 @@ import {
 } from "@ant-design/icons";
 import { api } from "../../lib/api";
 import { getSocket } from "../../lib/socket";
-import { UpgradeModal } from "../../components/UpgradeModal";
 import { CounterStandeeModal } from "../../components/CounterStandeeModal";
 import { useAuth } from "../../context/AuthContext";
 
@@ -169,7 +168,6 @@ export default function SettingsPage() {
   const [logoPreview, setLogoPreview] = useState<string>("");
   const [currentSlug, setCurrentSlug] = useState<string>("");
   const [standeeModalOpen, setStandeeModalOpen] = useState(false);
-  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [planUsage, setPlanUsage] = useState<any>(null);
 
   // Auto-Reply Rules Engine State
@@ -381,11 +379,7 @@ export default function SettingsPage() {
       setStaffList((prev) => [res.data.staff, ...prev]);
       fetchPlanUsage();
     } catch (err: any) {
-      if (err.response?.status === 403 && err.response?.data?.upgradeRequired) {
-        setUpgradeModalOpen(true);
-      } else {
-        message.error(err.response?.data?.error || err.message || "Could not create staff account");
-      }
+      message.error(err.response?.data?.error || err.message || "Could not create staff account");
     } finally {
       setCreatingStaff(false);
     }
@@ -1507,12 +1501,6 @@ export default function SettingsPage() {
         </div>
       </Modal>
 
-      {/* Upgrade to Pro Modal */}
-      <UpgradeModal
-        open={upgradeModalOpen}
-        onClose={() => setUpgradeModalOpen(false)}
-        currentPlan={planUsage?.plan || "free"}
-      />
 
       <CounterStandeeModal
         open={standeeModalOpen}

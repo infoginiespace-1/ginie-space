@@ -109,7 +109,7 @@ export default function WhatsAppCatalogMakerPage() {
               textDecoration: "none",
             }}
           >
-            View Free vs PRO Plans
+            100% Free Forever (₹0)
           </Link>
         </div>
       </section>

@@ -39,7 +39,6 @@ import { Radio } from "antd";
 import { api } from "../../lib/api";
 import { downloadCsv, parseCsv } from "../../lib/csv";
 import { useAuth } from "../../context/AuthContext";
-import { UpgradeModal } from "../../components/UpgradeModal";
 
 const { Title, Text } = Typography;
 
@@ -180,7 +179,6 @@ export default function ProductsPage() {
   const [importingPack, setImportingPack] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [storeSlug, setStoreSlug] = useState<string>("");
-  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [form] = Form.useForm();
 
   // Feature 7: Low Stock Alerts & Supplier WhatsApp PO State
@@ -297,9 +295,6 @@ export default function ProductsPage() {
       loadProducts();
     } catch (err: any) {
       const errMsg = err.response?.data?.error || err.message || "Failed to save item";
-      if (errMsg.includes("Upgrade to Pro") || err.response?.status === 403) {
-        setUpgradeModalOpen(true);
-      }
       message.error(errMsg);
     } finally {
       setSaving(false);
@@ -388,9 +383,6 @@ export default function ProductsPage() {
       loadProducts();
     } catch (err: any) {
       const errMsg = err.response?.data?.error || err.message || "Could not import service pack";
-      if (errMsg.includes("Upgrade to Pro") || err.response?.status === 403) {
-        setUpgradeModalOpen(true);
-      }
       message.error(errMsg);
     } finally {
       setImportingPack(null);
@@ -1233,15 +1225,6 @@ export default function ProductsPage() {
         </div>
       </Modal>
 
-      <UpgradeModal
-        open={upgradeModalOpen}
-        onClose={() => setUpgradeModalOpen(false)}
-        onSuccess={() => {
-          setUpgradeModalOpen(false);
-          loadProducts();
-        }}
-        currentPlan={user?.plan}
-      />
 
       {/* Feature 7: Single Product Supplier PO Modal */}
       <Modal
