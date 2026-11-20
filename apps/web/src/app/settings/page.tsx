@@ -61,6 +61,7 @@ import { getSocket } from "../../lib/socket";
 import { UpgradeModal } from "../../components/UpgradeModal";
 import { CounterStandeeModal } from "../../components/CounterStandeeModal";
 import { useAuth } from "../../context/AuthContext";
+import { isLeadDiscoveryRelevant } from "../../lib/business";
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -182,6 +183,7 @@ export default function SettingsPage() {
   const [editingRule, setEditingRule] = useState<AutoReplyCustomRule | null>(null);
   const [ruleKeywordsInput, setRuleKeywordsInput] = useState("");
   const [savingAutoReply, setSavingAutoReply] = useState(false);
+  const [enableLeadDiscovery, setEnableLeadDiscovery] = useState<boolean>(false);
 
   // Live Simulator State
   const [simulatorInput, setSimulatorInput] = useState("");
@@ -264,6 +266,14 @@ export default function SettingsPage() {
         if (parsedSettings.logoUrl) {
           setLogoPreview(parsedSettings.logoUrl);
         }
+
+        const bType = res.data?.businessType || user?.businessType || "retail";
+        if (typeof parsedSettings.enableLeadDiscovery === "boolean") {
+          setEnableLeadDiscovery(parsedSettings.enableLeadDiscovery);
+        } else {
+          setEnableLeadDiscovery(isLeadDiscoveryRelevant(bType));
+        }
+
         const firstCoupon = Array.isArray(parsedSettings.coupons) ? parsedSettings.coupons[0] : null;
         form.setFieldsValue({
           name: b.name || "",
@@ -426,6 +436,7 @@ export default function SettingsPage() {
         customRules,
         workingHours,
         fallbackReply,
+        enableLeadDiscovery,
       });
 
       const res = await api.put("/api/settings/business", {
@@ -440,6 +451,9 @@ export default function SettingsPage() {
       if (res.data?.businessType) {
         updateUserLocal({ businessType: res.data.businessType });
       }
+      try {
+        localStorage.setItem("giniespace_lead_discovery_override", String(enableLeadDiscovery));
+      } catch {}
       setCurrentSlug(res.data?.business?.slug || "");
       message.success("Settings & Auto-Reply Rules saved successfully!");
     } catch (err: any) {
@@ -711,6 +725,10 @@ export default function SettingsPage() {
                 <Col xs={24} md={12}>
                   <Form.Item name="businessType" label="Business Category / Industry" rules={[{ required: true }]}>
                     <Select
+                      onChange={(val) => {
+                        form.setFieldsValue({ businessType: val });
+                        setEnableLeadDiscovery(isLeadDiscoveryRelevant(val));
+                      }}
                       options={[
                         { label: "🛒 Retail Store & Kirana", value: "retail" },
                         { label: "👗 Garments, Boutique & Fashion", value: "garments" },
@@ -723,6 +741,27 @@ export default function SettingsPage() {
                   </Form.Item>
                 </Col>
               </Row>
+
+              <div style={{ padding: "12px 16px", background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0", marginBottom: 20 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                  <div>
+                    <div style={{ fontWeight: 600, color: "#1e293b", fontSize: 14 }}>
+                      🔍 B2B Lead Discovery (Google Places Search)
+                    </div>
+                    <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>
+                      {enableLeadDiscovery
+                        ? "Active — 'Find New Leads' is enabled in navigation & dashboard (optimized for Wholesale & B2B Services)."
+                        : "Hidden — Streamlined for Retail, Restaurants, Garments & Hotels who serve walk-in / neighborhood footfall."}
+                    </div>
+                  </div>
+                  <Switch
+                    checked={enableLeadDiscovery}
+                    onChange={(checked) => setEnableLeadDiscovery(checked)}
+                    checkedChildren="Active"
+                    unCheckedChildren="Hidden"
+                  />
+                </div>
+              </div>
 
               <Row gutter={16}>
                 <Col xs={24} md={12}>

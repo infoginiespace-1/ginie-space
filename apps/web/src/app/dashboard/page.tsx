@@ -39,6 +39,7 @@ import {
 } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 import { CounterStandeeModal } from "../../components/CounterStandeeModal";
+import { shouldShowLeadDiscovery, getBusinessCategoryLabel } from "../../lib/business";
 
 const { Title, Text } = Typography;
 
@@ -63,10 +64,19 @@ export default function DashboardPage() {
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
   const [gstRate, setGstRate] = useState(0);
+  const [enableLeadDiscovery, setEnableLeadDiscovery] = useState<boolean | null>(null);
 
   useEffect(() => {
+    try {
+      const stored = localStorage.getItem("giniespace_lead_discovery_override");
+      if (stored !== null) {
+        setEnableLeadDiscovery(stored === "true");
+      }
+    } catch {}
     loadDashboardData();
   }, []);
+
+  const showLeads = shouldShowLeadDiscovery(businessType, enableLeadDiscovery);
 
   const loadDashboardData = async () => {
     setLoading(true);
@@ -97,6 +107,9 @@ export default function DashboardPage() {
             const parsedSettings = JSON.parse(setRes.data.business.settingsJson);
             setGstRate(Number(parsedSettings.gstRate) || 0);
             setBusinessUpiId(parsedSettings.upiId || "");
+            if (typeof parsedSettings.enableLeadDiscovery === "boolean") {
+              setEnableLeadDiscovery(parsedSettings.enableLeadDiscovery);
+            }
           } catch {}
         }
       }
@@ -321,15 +334,12 @@ export default function DashboardPage() {
               }
               style={{ fontWeight: 600, padding: "2px 8px", borderRadius: 6, margin: 0 }}
             >
-              {businessType === "restaurant" && "🍽️ Restaurant & Food"}
-              {businessType === "garments" && "👗 Garments & Fashion"}
-              {businessType === "hotel" && "🏨 Hotels & Homestays"}
-              {businessType === "services" && "🛠️ Services & Bookings"}
-              {businessType === "wholesale" && "📦 Wholesale & B2B"}
-              {businessType === "retail" && "🛒 Retail & Kirana"}
+              {getBusinessCategoryLabel(businessType)}
             </Tag>
           </div>
-          <Text type="secondary">Real-time overview of sales, pending orders, low stock &amp; leads</Text>
+          <Text type="secondary">
+            Real-time overview of sales, pending orders, stock{showLeads ? " & leads" : " & customers"}
+          </Text>
         </div>
 
         <Space wrap>
@@ -506,19 +516,27 @@ export default function DashboardPage() {
         <Col xs={24} sm={12} lg={6}>
           <Card loading={loading} style={{ borderRadius: 12 }}>
             <Statistic
-              title="Customers &amp; Leads"
-              value={`${customers.length} / ${leads.length}`}
+              title={showLeads ? "Customers & Leads" : "Registered Customers"}
+              value={showLeads ? `${customers.length} / ${leads.length}` : customers.length}
               prefix={<TeamOutlined />}
               valueStyle={{ color: "#2563eb", fontWeight: 700 }}
             />
-            <Space size={8} style={{ marginTop: 4 }}>
-              <Button type="link" size="small" style={{ padding: 0 }} onClick={() => router.push("/customers")}>
-                Customers
-              </Button>
-              <Button type="link" size="small" style={{ padding: 0 }} onClick={() => router.push("/leads")}>
-                Leads <ArrowRightOutlined />
-              </Button>
-            </Space>
+            {showLeads ? (
+              <Space size={8} style={{ marginTop: 4 }}>
+                <Button type="link" size="small" style={{ padding: 0 }} onClick={() => router.push("/customers")}>
+                  Customers
+                </Button>
+                <Button type="link" size="small" style={{ padding: 0 }} onClick={() => router.push("/leads")}>
+                  Leads <ArrowRightOutlined />
+                </Button>
+              </Space>
+            ) : (
+              <div style={{ marginTop: 4 }}>
+                <Button type="link" size="small" style={{ padding: 0 }} onClick={() => router.push("/customers")}>
+                  View Customer Khata <ArrowRightOutlined />
+                </Button>
+              </div>
+            )}
           </Card>
         </Col>
       </Row>

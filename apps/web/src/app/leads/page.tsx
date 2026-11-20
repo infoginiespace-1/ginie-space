@@ -19,6 +19,7 @@ import {
   Progress,
   Select,
   Popconfirm,
+  Alert,
 } from "antd";
 import {
   SearchOutlined,
@@ -39,6 +40,7 @@ import { downloadCsv } from "../../lib/csv";
 import { getSocket } from "../../lib/socket";
 import { useAuth } from "../../context/AuthContext";
 import { UpgradeModal } from "../../components/UpgradeModal";
+import { isLeadDiscoveryRelevant, getBusinessCategoryLabel } from "../../lib/business";
 
 const { Title, Text } = Typography;
 
@@ -505,6 +507,24 @@ export default function LeadsPage() {
           </Space>
         )}
       </div>
+
+      {!isLeadDiscoveryRelevant(user?.businessType) && (
+        <Alert
+          type="info"
+          showIcon
+          style={{ marginBottom: 20, borderRadius: 10 }}
+          message={
+            <span style={{ fontWeight: 600 }}>
+              Lead Discovery is tailored for Wholesale & B2B Services
+            </span>
+          }
+          description={
+            <span>
+              Your business profile is currently set to <strong>{getBusinessCategoryLabel(user?.businessType)}</strong>. Lead Discovery finds local shops, suppliers, and institutions to pitch in bulk. For retail & walk-in footfall, we recommend managing your walk-in shoppers under <strong>Customers</strong>. You are still welcome to search here, or customize navigation in <a href="/settings">Settings</a>.
+            </span>
+          }
+        />
+      )}
 
       <Tabs
         activeKey={activeTab}

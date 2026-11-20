@@ -30,6 +30,7 @@ import { api } from "../lib/api";
 import { UpgradeModal } from "./UpgradeModal";
 import { SoundboxModal } from "./SoundboxModal";
 import { announceOrderSoundbox, playSoundboxChime, getSoundboxSettings } from "../lib/soundbox";
+import { shouldShowLeadDiscovery, getBusinessHubSubtitle } from "../lib/business";
 
 const { Header, Content, Sider } = Layout;
 const { Text } = Typography;
@@ -174,6 +175,19 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   const isServiceBiz = user?.businessType === "services";
 
+  const [explicitLeadOverride, setExplicitLeadOverride] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("giniespace_lead_discovery_override");
+      if (stored !== null) {
+        setExplicitLeadOverride(stored === "true");
+      }
+    } catch {}
+  }, []);
+
+  const showLeads = shouldShowLeadDiscovery(user?.businessType, explicitLeadOverride);
+
   const allMenuItems = [
     { key: "/dashboard", area: "dashboard", icon: <DashboardOutlined />, label: "Dashboard" },
     {
@@ -192,7 +206,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <Space size={6}><span>{isServiceBiz ? "Bookings & Orders" : "Orders & Sales"}</span><Badge count={pendingOrdersCount} size="small" color="#fa8c16" /></Space>
       ) : isServiceBiz ? "Bookings & Orders" : "Orders & Sales",
     },
-    { key: "/leads", area: "leads", icon: <SearchOutlined />, label: "Find New Leads" },
+    ...(showLeads
+      ? [{ key: "/leads", area: "leads", icon: <SearchOutlined />, label: "Find New Leads" }]
+      : []),
     { key: "/customers", area: "customers", icon: <TeamOutlined />, label: "Customers" },
     { key: "/marketing", area: "marketing", icon: <PictureOutlined />, label: "Marketing Kit" },
     { key: "/products", area: "products", icon: <AppstoreOutlined />, label: isServiceBiz ? "Services & Catalog" : "Catalog & Items" },
@@ -230,11 +246,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <div>
         <div style={{ fontWeight: 700, fontSize: 16, color: "#1f1f1f", lineHeight: 1.2 }}>GinieSpace</div>
         <div style={{ fontSize: 11, color: "#8c8c8c" }}>
-          {user?.businessType === "wholesale"
-            ? "Wholesale Hub"
-            : user?.businessType === "services"
-            ? "Services & Booking Hub"
-            : "Retail Hub"}
+          {getBusinessHubSubtitle(user?.businessType)}
         </div>
       </div>
     </div>
