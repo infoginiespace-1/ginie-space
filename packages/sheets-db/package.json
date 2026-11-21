@@ -9,7 +9,7 @@
     "init-db": "ts-node src/scripts/init-sheets.ts"
   },
   "dependencies": {
-    "google-auth-library": "^9.15.0",
+    "google-auth-library": "^11.3.4",
     "googleapis": "^144.0.0",
     "uuid": "^11.0.3"
   },
