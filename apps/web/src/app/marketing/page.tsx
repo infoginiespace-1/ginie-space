@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Card,
   Row,
@@ -30,6 +30,7 @@ import {
 } from "@ant-design/icons";
 import { AppLayout } from "../../components/AppLayout";
 import { useAuth } from "../../context/AuthContext";
+import { api } from "../../lib/api";
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -173,10 +174,30 @@ export default function MarketingPage() {
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<CreativePost | null>(null);
 
-  const businessName = (user as any)?.businessName || user?.name || "Apni Dukan";
-  const phone = (user as any)?.phone || "+91 92792 59690";
-  const storefrontSlug = (user as any)?.storefrontSlug || (user as any)?.username || "store";
-  const storeUrl = `https://app.ginie.space/s/${storefrontSlug}`;
+  const [storeSlug, setStoreSlug] = useState("");
+  const [bizName, setBizName] = useState("");
+  const [bizPhone, setBizPhone] = useState("");
+
+  useEffect(() => {
+    api
+      .get("/api/settings")
+      .then((res) => {
+        const b = res.data?.business;
+        if (b) {
+          if (b.slug) setStoreSlug(String(b.slug));
+          if (b.name) setBizName(String(b.name));
+          if (b.phone) setBizPhone(String(b.phone));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const businessName = bizName || (user as any)?.businessName || user?.name || "Apni Dukan";
+  const phone = bizPhone || (user as any)?.phone || "+91 92792 59690";
+  const activeSlug = storeSlug || user?.id || "demo";
+  const storeUrl = typeof window !== "undefined"
+    ? `${window.location.origin}/shop/${activeSlug}`
+    : `https://app.ginie.space/shop/${activeSlug}`;
 
   const filteredPosts = useMemo(() => {
     if (activeTab === "all") return CREATIVE_POSTS;

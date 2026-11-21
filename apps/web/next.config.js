@@ -16,6 +16,14 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || "https://api.ginie.space",
   },
+  async rewrites() {
+    return [
+      {
+        source: "/s/:storeId*",
+        destination: "/shop/:storeId*",
+      },
+    ];
+  },
   webpack: (config, { isServer, webpack }) => {
     if (!isServer) {
       const emptyPolyfill = path.resolve(__dirname, "src/lib/empty-polyfill.js");

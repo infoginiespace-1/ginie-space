@@ -559,7 +559,19 @@ export default function PublicStorefrontPage() {
   if (notFound || !store) {
     return (
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-        <Result status="404" title="Store Not Found" subTitle="This GinieSpace digital storefront link is invalid or unavailable." />
+        <Result
+          status="404"
+          title="Store Not Found"
+          subTitle="This GinieSpace digital storefront link is invalid or unavailable."
+          extra={
+            <Space>
+              <Button type="primary" href="/shop/demo" style={{ background: "#059669", borderColor: "#059669" }}>
+                Explore Live Demo Store 🛍️
+              </Button>
+              <Button href="/dashboard">Go to Dashboard</Button>
+            </Space>
+          }
+        />
       </div>
     );
   }

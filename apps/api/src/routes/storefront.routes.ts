@@ -5,6 +5,139 @@ import { Server } from "socket.io";
 import { NotificationService } from "../services/notification.service";
 import { normalizePhoneDigits, toE164 } from "../utils/phone";
 
+const DEMO_STORE_PAYLOAD = {
+  store: {
+    id: "demo",
+    slug: "demo",
+    name: "GinieSpace Live Demo Store (Supermarket & Kirana)",
+    phone: "+91 92792 59690",
+    address: "Main Market, New Delhi - 110001",
+    businessType: "retail",
+    upiId: "9279259690@okbizaxis",
+    gstin: "07AAAAA0000A1Z5",
+    deliveryFee: 30,
+    coupons: [
+      { code: "WELCOME10", discountPercent: 10 },
+      { code: "FESTIVE20", discountPercent: 20 },
+    ],
+    logoUrl: "",
+    isOpen: true,
+    closedMessage: "Store is currently closed for orders. Please check back later.",
+  },
+  products: [
+    {
+      id: "demo_p1",
+      userId: "demo",
+      name: "Aashirvaad Shudh Chakki Atta (5kg)",
+      description: "100% pure whole wheat flour, high dietary fiber, gives soft rotis.",
+      price: 245,
+      unit: "kg",
+      stock: 50,
+      imageUrl: "",
+      category: "Staples & Grains",
+      minOrderQty: 1,
+      itemType: "product",
+      dietary: "veg",
+    },
+    {
+      id: "demo_p2",
+      userId: "demo",
+      name: "Tata Salt Vacuum Evaporated (1kg)",
+      description: "Desh ka namak with essential iodine.",
+      price: 28,
+      unit: "kg",
+      stock: 100,
+      imageUrl: "",
+      category: "Staples & Grains",
+      minOrderQty: 1,
+      itemType: "product",
+      dietary: "veg",
+    },
+    {
+      id: "demo_p3",
+      userId: "demo",
+      name: "Fortune Sunlite Refined Sunflower Oil (1L)",
+      description: "Light and healthy cooking oil, enriched with Vitamins A & D.",
+      price: 135,
+      unit: "litre",
+      stock: 40,
+      imageUrl: "",
+      category: "Oils & Ghee",
+      minOrderQty: 1,
+      itemType: "product",
+      dietary: "veg",
+    },
+    {
+      id: "demo_p4",
+      userId: "demo",
+      name: "Amul Butter Pasteurized (500g)",
+      description: "Utterly butterly delicious fresh dairy butter.",
+      price: 275,
+      unit: "pcs",
+      stock: 35,
+      imageUrl: "",
+      category: "Dairy & Eggs",
+      minOrderQty: 1,
+      itemType: "product",
+      dietary: "veg",
+    },
+    {
+      id: "demo_p5",
+      userId: "demo",
+      name: "Surf Excel Easy Wash Detergent Powder (1kg)",
+      description: "Super fast stain removal powder for washing machines & bucket wash.",
+      price: 140,
+      unit: "kg",
+      stock: 60,
+      imageUrl: "",
+      category: "Household & Cleaning",
+      minOrderQty: 1,
+      itemType: "product",
+    },
+    {
+      id: "demo_p6",
+      userId: "demo",
+      name: "Dettol Original Germ Protection Bathing Soap (Pack of 4)",
+      description: "100% better protection against everyday illness causing germs.",
+      price: 160,
+      unit: "pcs",
+      stock: 45,
+      imageUrl: "",
+      category: "Personal Care",
+      minOrderQty: 1,
+      itemType: "product",
+    },
+    {
+      id: "demo_p7",
+      userId: "demo",
+      name: "Maggi 2-Minute Masala Noodles (Pack of 4)",
+      description: "Classic Indian noodle snack with authentic spices.",
+      price: 56,
+      unit: "pcs",
+      stock: 80,
+      imageUrl: "",
+      category: "Snacks & Packaged Food",
+      minOrderQty: 1,
+      itemType: "product",
+      dietary: "veg",
+    },
+    {
+      id: "demo_p8",
+      userId: "demo",
+      name: "Tata Tea Gold (500g)",
+      description: "Rich aroma tea with gently rolled aromatic long leaves.",
+      price: 260,
+      unit: "pcs",
+      stock: 50,
+      imageUrl: "",
+      category: "Beverages",
+      minOrderQty: 1,
+      itemType: "product",
+      dietary: "veg",
+    },
+  ],
+};
+
 async function resolveStoreOwner(
   db: IDatabase,
   storeIdOrSlug: string
@@ -30,6 +163,30 @@ async function resolveStoreOwner(
   if (owner) {
     return { storeId: owner.id, business: null };
   }
+
+  // Graceful Live Demo Store support for demo/store/sample/preview links
+  if (["demo", "store", "sample", "preview"].includes(clean.toLowerCase())) {
+    return {
+      storeId: "demo",
+      business: {
+        id: "demo",
+        userId: "demo",
+        name: DEMO_STORE_PAYLOAD.store.name,
+        phone: DEMO_STORE_PAYLOAD.store.phone,
+        address: DEMO_STORE_PAYLOAD.store.address,
+        slug: "demo",
+        settingsJson: JSON.stringify({
+          upiId: DEMO_STORE_PAYLOAD.store.upiId,
+          gstin: DEMO_STORE_PAYLOAD.store.gstin,
+          deliveryFee: DEMO_STORE_PAYLOAD.store.deliveryFee,
+          coupons: DEMO_STORE_PAYLOAD.store.coupons,
+          isOpen: true,
+        }),
+        createdAt: new Date().toISOString(),
+      } as BusinessProfile,
+    };
+  }
+
   return null;
 }
 
@@ -142,6 +299,16 @@ export function createStorefrontRouter(
         return;
       }
       const { storeId } = resolved;
+      if (storeId === "demo") {
+        res.json({
+          availableCoins: 50,
+          coinValueInInr: 1,
+          totalEarned: 50,
+          totalRedeemed: 0,
+          earnRate: "5%",
+        });
+        return;
+      }
       const phoneDigits = normalizePhoneDigits(String(req.query.phone || "")).slice(-10);
       if (!phoneDigits || phoneDigits.length < 10) {
         res.json({ availableCoins: 0, coinValueInInr: 1 });
@@ -206,10 +373,18 @@ export function createStorefrontRouter(
       const storeIdParam = String(req.params.storeId || "").trim();
       const resolved = await resolveStoreOwner(db, storeIdParam);
       if (!resolved) {
+        if (["demo", "store", "sample", "preview"].includes(storeIdParam.toLowerCase())) {
+          res.json(DEMO_STORE_PAYLOAD);
+          return;
+        }
         res.status(404).json({ error: "Storefront not found" });
         return;
       }
       const { storeId, business } = resolved;
+      if (storeId === "demo") {
+        res.json(DEMO_STORE_PAYLOAD);
+        return;
+      }
 
       const [owner, products] = await Promise.all([
         db.users.findById(storeId),
@@ -258,7 +433,12 @@ export function createStorefrontRouter(
   // Public booked time-slots lookup for a specific date (helps avoid double booking)
   router.get("/:storeId/booked-slots", async (req: Request, res: Response): Promise<void> => {
     try {
-      const resolved = await resolveStoreOwner(db, String(req.params.storeId || "").trim());
+      const storeIdParam = String(req.params.storeId || "").trim();
+      if (["demo", "store", "sample", "preview"].includes(storeIdParam.toLowerCase())) {
+        res.json({ bookedSlots: [] });
+        return;
+      }
+      const resolved = await resolveStoreOwner(db, storeIdParam);
       if (!resolved) {
         res.status(404).json({ error: "Storefront not found" });
         return;
@@ -361,8 +541,25 @@ export function createStorefrontRouter(
         return;
       }
 
-      // Strict UPI Payment Verification
       const isUpiPayment = String(paymentMethod || "").toLowerCase() === "upi";
+
+      if (storeId === "demo") {
+        const demoOrderId = `demo_${Date.now()}`;
+        res.json({
+          order: {
+            id: demoOrderId,
+            userId: "demo",
+            customerName: String(customerName).trim(),
+            customerPhone: phoneDigits,
+            totalAmount: Number(req.body.totalAmount) || 245,
+            status: "pending",
+            paymentStatus: isUpiPayment ? "paid" : "unpaid",
+            createdAt: new Date().toISOString(),
+          },
+          message: "Demo order created successfully! (Live Test Mode)",
+        });
+        return;
+      }
       let cleanUtr = "";
       if (isUpiPayment) {
         cleanUtr = String(paymentUtr || "").trim();
