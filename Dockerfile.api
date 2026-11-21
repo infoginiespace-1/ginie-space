@@ -29,10 +29,12 @@ ENV NODE_ENV=production
 ENV PORT=4000
 ENV WHATSAPP_STORAGE_PATH=/data/whatsapp-sessions
 
-# Create persistent storage directory for WhatsApp credentials
-RUN mkdir -p /data/whatsapp-sessions
+# Create persistent storage directory for WhatsApp credentials and ensure node user has permissions
+RUN mkdir -p /data/whatsapp-sessions /app/uploads && chown -R node:node /data/whatsapp-sessions /app
 
-COPY --from=builder /app /app
+COPY --from=builder --chown=node:node /app /app
+
+USER node
 
 EXPOSE 4000
 

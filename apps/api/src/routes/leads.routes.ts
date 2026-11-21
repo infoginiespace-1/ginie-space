@@ -6,6 +6,7 @@ import { NotificationService } from "../services/notification.service";
 import { toE164 } from "../utils/phone";
 import { requireOwnerOrAdmin } from "../middleware/auth";
 import { FREE_PLAN_LIMITS, PRO_PLAN_LIMITS, getEffectivePlan } from "../utils/plan";
+import { leadsSearchRateLimiter } from "../middleware/rate-limit";
 
 interface CacheEntry {
   timestamp: number;
@@ -81,7 +82,7 @@ export function createLeadsRouter(
     }
   });
 
-  router.post("/discover", async (req: Request, res: Response): Promise<void> => {
+  router.post("/discover", leadsSearchRateLimiter, async (req: Request, res: Response): Promise<void> => {
     try {
       const { query, area, pincode, city, state, country, pageSize, pageToken } = req.body;
 

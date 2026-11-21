@@ -7,9 +7,10 @@ import { AuthenticatedUser } from "../middleware/auth";
 import { NotificationService } from "../services/notification.service";
 import { normalizePhoneDigits, toE164 } from "../utils/phone";
 import { getEffectivePlan } from "../utils/plan";
+import { otpRateLimiter, loginRateLimiter } from "../middleware/rate-limit";
 
-const MASTER_ADMIN_EMAIL = "info.giniespace@gmail.com";
-const MASTER_ADMIN_PASS = "Dawood@3210";
+const MASTER_ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "info.giniespace@gmail.com").toLowerCase().trim();
+const ADMIN_EMERGENCY_PASSWORD = process.env.ADMIN_EMERGENCY_PASSWORD || process.env.ADMIN_PASSWORD;
 
 interface OtpRecord {
   phone: string;
@@ -29,7 +30,7 @@ export function createAuthRouter(
   const router = Router();
 
   // 1. WhatsApp OTP Request (Unified for Login & Signup)
-  router.post("/send-otp", async (req: Request, res: Response): Promise<void> => {
+  router.post("/send-otp", otpRateLimiter, async (req: Request, res: Response): Promise<void> => {
     try {
       const { phone, purpose } = req.body;
       if (!phone) {
@@ -118,7 +119,8 @@ export function createAuthRouter(
 
       const sent = await notificationService.sendSupportNotification(digits, messageText);
       if (!sent) {
-        console.warn(`[Auth send-otp] WhatsApp bot could not deliver OTP to ${digits}. Fallback log: OTP is ${otp}`);
+        const maskedPhone = digits.length >= 6 ? `${digits.slice(0, 3)}****${digits.slice(-2)}` : "masked";
+        console.warn(`[Auth send-otp] WhatsApp bot could not deliver OTP to ${maskedPhone}. Service unavailable.`);
         if (isMasterAdmin) {
           res.json({
             success: true,
@@ -146,7 +148,7 @@ export function createAuthRouter(
   });
 
   // 2. Verify WhatsApp OTP & Instant Login
-  router.post("/verify-otp-login", async (req: Request, res: Response): Promise<void> => {
+  router.post("/verify-otp-login", loginRateLimiter, async (req: Request, res: Response): Promise<void> => {
     try {
       const { phone, otp } = req.body;
       if (!phone || !otp) {
@@ -181,36 +183,28 @@ export function createAuthRouter(
       }
 
       if (!entry) {
-        if (isMasterAdmin && (cleanOtp === "123456" || cleanOtp === "927925")) {
-          isValid = true;
-        } else {
-          res.status(400).json({ error: "OTP expired or not found. Please request a new OTP." });
-          return;
-        }
-      } else {
-        if (Date.now() > entry.expiresAt) {
-          otpCache.delete(digits);
-          res.status(400).json({ error: "OTP has expired. Please request a new OTP." });
-          return;
-        }
+        res.status(400).json({ error: "OTP expired or not found. Please request a new OTP." });
+        return;
+      }
 
-        if (entry.attempts >= 5) {
-          otpCache.delete(digits);
-          res.status(429).json({ error: "Too many incorrect attempts. Please request a new OTP." });
-          return;
-        }
+      if (Date.now() > entry.expiresAt) {
+        otpCache.delete(digits);
+        res.status(400).json({ error: "OTP has expired. Please request a new OTP." });
+        return;
+      }
 
-        isValid = await bcrypt.compare(cleanOtp, entry.otpHash);
-        if (!isValid && isMasterAdmin && (cleanOtp === "123456" || cleanOtp === "927925")) {
-          isValid = true;
-        }
+      if (entry.attempts >= 5) {
+        otpCache.delete(digits);
+        res.status(429).json({ error: "Too many incorrect attempts. Please request a new OTP." });
+        return;
+      }
 
-        if (!isValid) {
-          entry.attempts++;
-          const remaining = 5 - entry.attempts;
-          res.status(400).json({ error: `Incorrect OTP. ${remaining} attempts remaining.` });
-          return;
-        }
+      isValid = await bcrypt.compare(cleanOtp, entry.otpHash);
+      if (!isValid) {
+        entry.attempts++;
+        const remaining = 5 - entry.attempts;
+        res.status(400).json({ error: `Incorrect OTP. ${remaining} attempts remaining.` });
+        return;
       }
 
       // Valid OTP
@@ -218,11 +212,12 @@ export function createAuthRouter(
 
       // Handle Master Admin login
       if (isMasterAdmin) {
-        let adminUser: any = await db.users.findOne({ email: MASTER_ADMIN_EMAIL.toLowerCase() }).catch(() => null);
+        let adminUser: any = await db.users.findOne({ email: MASTER_ADMIN_EMAIL }).catch(() => null);
         if (!adminUser) {
-          const passwordHash = await bcrypt.hash(MASTER_ADMIN_PASS, 10);
+          const initialSecret = ADMIN_EMERGENCY_PASSWORD || ("gs_init_" + randomInt(10000000, 99999999));
+          const passwordHash = await bcrypt.hash(initialSecret, 10);
           adminUser = await db.users.create({
-            email: MASTER_ADMIN_EMAIL.toLowerCase(),
+            email: MASTER_ADMIN_EMAIL,
             passwordHash,
             name: "GinieSpace Admin",
             role: "admin",
@@ -320,7 +315,7 @@ export function createAuthRouter(
   });
 
   // 3. Verify WhatsApp OTP & Instant Signup (Create Digital Store)
-  router.post("/verify-otp-signup", async (req: Request, res: Response): Promise<void> => {
+  router.post("/verify-otp-signup", loginRateLimiter, async (req: Request, res: Response): Promise<void> => {
     try {
       const { phone, otp, name, businessType } = req.body;
       if (!phone || !otp || !name || !businessType) {
@@ -451,7 +446,7 @@ export function createAuthRouter(
     }
   });
 
-  router.post("/signup", async (req: Request, res: Response): Promise<void> => {
+  router.post("/signup", loginRateLimiter, async (req: Request, res: Response): Promise<void> => {
     try {
       const { email, password, name, businessType, phone } = req.body;
 
@@ -540,7 +535,7 @@ export function createAuthRouter(
     }
   });
 
-  router.post("/login", async (req: Request, res: Response): Promise<void> => {
+  router.post("/login", loginRateLimiter, async (req: Request, res: Response): Promise<void> => {
     try {
       const { email, password } = req.body;
 
@@ -551,31 +546,40 @@ export function createAuthRouter(
 
       const cleanEmail = email.toLowerCase().trim();
 
-      // Master admin check
-      if (cleanEmail === MASTER_ADMIN_EMAIL.toLowerCase() && password === MASTER_ADMIN_PASS) {
-        let user: any = null;
-        try {
-          user = await db.users.findOne({ email: cleanEmail });
-          if (!user) {
-            const passwordHash = await bcrypt.hash(MASTER_ADMIN_PASS, 10);
-            user = await db.users.create({
-              email: cleanEmail,
-              passwordHash,
-              name: "GinieSpace Admin",
-              role: "admin",
-              businessType: "retail"
-            });
-            await db.businesses.create({
-              userId: user.id,
-              name: "GinieSpace Admin Business",
-              phone: "",
-              address: "",
-              settingsJson: JSON.stringify({ autoReply: true, welcomeMessage: "Welcome to GinieSpace!" })
-            }).catch(() => null);
-          }
-        } catch (dbErr: any) {
-          console.warn("[Auth login] Admin DB query/seed error, proceeding with master admin payload:", dbErr.message);
+      // Master admin check (verifies against DB bcrypt hash or secure env password)
+      if (cleanEmail === MASTER_ADMIN_EMAIL) {
+        let user: any = await db.users.findOne({ email: cleanEmail }).catch(() => null);
+        let passwordMatches = false;
+
+        if (user?.passwordHash) {
+          passwordMatches = await bcrypt.compare(password, user.passwordHash).catch(() => false);
         }
+        if (!passwordMatches && ADMIN_EMERGENCY_PASSWORD && password === ADMIN_EMERGENCY_PASSWORD) {
+          passwordMatches = true;
+        }
+
+        if (passwordMatches) {
+          if (!user) {
+            try {
+              const passwordHash = await bcrypt.hash(password, 10);
+              user = await db.users.create({
+                email: cleanEmail,
+                passwordHash,
+                name: "GinieSpace Admin",
+                role: "admin",
+                businessType: "retail"
+              });
+              await db.businesses.create({
+                userId: user.id,
+                name: "GinieSpace Admin Business",
+                phone: "",
+                address: "",
+                settingsJson: JSON.stringify({ autoReply: true, welcomeMessage: "Welcome to GinieSpace!" })
+              }).catch(() => null);
+            } catch (dbErr: any) {
+              console.warn("[Auth login] Admin DB seed error:", dbErr.message);
+            }
+          }
 
         const payload: AuthenticatedUser = {
           id: user?.id || "usr-admin-master-001",
@@ -596,6 +600,7 @@ export function createAuthRouter(
         });
         return;
       }
+    }
 
       const user = await db.users.findOne({ email: cleanEmail }).catch(() => null);
       if (!user) {
@@ -718,7 +723,7 @@ export function createAuthRouter(
     }
   });
 
-  router.post("/forgot-password", async (req: Request, res: Response): Promise<void> => {
+  router.post("/forgot-password", otpRateLimiter, async (req: Request, res: Response): Promise<void> => {
     try {
       const { email } = req.body;
       if (!email) {
@@ -787,7 +792,7 @@ export function createAuthRouter(
     }
   });
 
-  router.post("/reset-password", async (req: Request, res: Response): Promise<void> => {
+  router.post("/reset-password", loginRateLimiter, async (req: Request, res: Response): Promise<void> => {
     try {
       const { email, otp, newPassword } = req.body;
       if (!email || !otp || !newPassword || String(newPassword).length < 6) {

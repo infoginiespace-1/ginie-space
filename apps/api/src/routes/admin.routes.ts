@@ -377,27 +377,72 @@ export function createAdminRouter(
     }
   });
 
+function detectImageFormat(buffer: Buffer): "jpg" | "png" | "webp" | null {
+  if (buffer.length < 12) return null;
+  // JPEG: FF D8 FF
+  if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+    return "jpg";
+  }
+  // PNG: 89 50 4E 47 0D 0A 1A 0A
+  if (
+    buffer[0] === 0x89 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x4e &&
+    buffer[3] === 0x47 &&
+    buffer[4] === 0x0d &&
+    buffer[5] === 0x0a &&
+    buffer[6] === 0x1a &&
+    buffer[7] === 0x0a
+  ) {
+    return "png";
+  }
+  // WEBP: RIFF ... WEBP
+  if (
+    buffer[0] === 0x52 &&
+    buffer[1] === 0x49 &&
+    buffer[2] === 0x46 &&
+    buffer[3] === 0x46 &&
+    buffer[8] === 0x57 &&
+    buffer[9] === 0x45 &&
+    buffer[10] === 0x42 &&
+    buffer[11] === 0x50
+  ) {
+    return "webp";
+  }
+  return null;
+}
+
   // 7b. Banner Upload for WhatsApp Broadcast and Templates
   router.post("/upload-banner", async (req: Request, res: Response): Promise<void> => {
     try {
-      const { imageData, fileName } = req.body;
+      const { imageData } = req.body;
       if (!imageData || typeof imageData !== "string") {
         res.status(400).json({ error: "Image data is required" });
         return;
       }
 
       let base64 = imageData;
-      let ext = "jpg";
       if (imageData.startsWith("data:")) {
-        const match = imageData.match(/^data:image\/([a-zA-Z0-9+]+);base64,/);
+        const match = imageData.match(/^data:image\/[a-zA-Z0-9+]+;base64,/);
         if (match) {
-          ext = match[1] === "jpeg" ? "jpg" : match[1];
           base64 = imageData.slice(match[0].length);
         }
       }
 
       const buffer = Buffer.from(base64, "base64");
-      const safeName = (fileName || `banner_${Date.now()}_${randomUUID().slice(0, 6)}.${ext}`).replace(/[^a-zA-Z0-9._-]/g, "_");
+      if (buffer.length > 5 * 1024 * 1024) {
+        res.status(400).json({ error: "Image size exceeds 5MB limit" });
+        return;
+      }
+
+      const detectedExt = detectImageFormat(buffer);
+      if (!detectedExt) {
+        res.status(400).json({ error: "Invalid image format. Only JPEG, PNG, and WebP are allowed." });
+        return;
+      }
+
+      // Always generate a fresh cryptographic UUID filename (never trust client filename)
+      const safeName = `banner_${Date.now()}_${randomUUID().replace(/-/g, "").slice(0, 16)}.${detectedExt}`;
       const uploadsDir = path.join(process.cwd(), "uploads");
       if (!fs.existsSync(uploadsDir)) {
         fs.mkdirSync(uploadsDir, { recursive: true });
@@ -410,6 +455,13 @@ export function createAdminRouter(
       const protocol = req.headers["x-forwarded-proto"] || req.protocol || "https";
       const host = req.get("host") || "giniespace-api.onrender.com";
       const fullUrl = `${protocol}://${host}${imageUrl}`;
+
+      await recordAuditLog(
+        db,
+        (req as any).user?.email || "admin",
+        "UPLOAD_BANNER",
+        `Uploaded banner: ${safeName} (${detectedExt}, ${buffer.length} bytes)`
+      );
 
       res.json({
         success: true,
