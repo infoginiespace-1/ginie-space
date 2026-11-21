@@ -389,6 +389,8 @@ export default function AdminPage() {
   const [selectedTemplateKey, setSelectedTemplateKey] = useState<string>("free-store");
   const [pitchMessageText, setPitchMessageText] = useState(ADMIN_PITCH_TEMPLATES[0].text);
   const [pitchImageUrl, setPitchImageUrl] = useState("");
+  const [uploadingPitchImage, setUploadingPitchImage] = useState(false);
+  const [uploadingChatImage, setUploadingChatImage] = useState(false);
   const [sendingPitchCampaign, setSendingPitchCampaign] = useState(false);
 
   // Load All Data
@@ -1046,6 +1048,54 @@ export default function AdminPage() {
       message.error("Failed to upload image: " + (err.message || "Unknown error"));
     } finally {
       setUploadingBroadcastImage(false);
+    }
+    return false;
+  };
+
+  // Upload banner for WhatsApp Lead Pitching & Outreach
+  const handlePitchImageUpload = async (file: File) => {
+    try {
+      setUploadingPitchImage(true);
+      const dataUrl = await compressImageFile(file);
+      const res = await api.post("/api/admin/upload-banner", {
+        imageData: dataUrl,
+        fileName: file.name,
+      });
+      if (res.data?.imageUrl) {
+        setPitchImageUrl(res.data.imageUrl);
+        message.success("Banner image uploaded successfully!");
+      } else {
+        setPitchImageUrl(dataUrl);
+        message.success("Banner image loaded!");
+      }
+    } catch (err: any) {
+      message.error("Failed to upload banner: " + (err.message || "Unknown error"));
+    } finally {
+      setUploadingPitchImage(false);
+    }
+    return false;
+  };
+
+  // Upload attachment for Admin WhatsApp Live Chat
+  const handleChatImageUpload = async (file: File) => {
+    try {
+      setUploadingChatImage(true);
+      const dataUrl = await compressImageFile(file);
+      const res = await api.post("/api/admin/upload-banner", {
+        imageData: dataUrl,
+        fileName: file.name,
+      });
+      if (res.data?.imageUrl) {
+        setChatImageUrl(res.data.imageUrl);
+        message.success("Chat attachment uploaded successfully!");
+      } else {
+        setChatImageUrl(dataUrl);
+        message.success("Chat image loaded!");
+      }
+    } catch (err: any) {
+      message.error("Failed to upload image: " + (err.message || "Unknown error"));
+    } finally {
+      setUploadingChatImage(false);
     }
     return false;
   };
@@ -2983,15 +3033,93 @@ export default function AdminPage() {
                           </div>
 
                           <div style={{ marginBottom: 20 }}>
-                            <Text strong style={{ display: "block", marginBottom: 6 }}>
-                              Optional Banner Image URL (WhatsApp Media):
-                            </Text>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                              <Text strong>
+                                🖼️ Promotional Banner Image (WhatsApp Media - Optional):
+                              </Text>
+                              {pitchImageUrl && (
+                                <Button
+                                  size="small"
+                                  type="link"
+                                  danger
+                                  icon={<DeleteOutlined />}
+                                  onClick={() => setPitchImageUrl("")}
+                                  style={{ padding: 0 }}
+                                >
+                                  Remove Banner
+                                </Button>
+                              )}
+                            </div>
+
+                            <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 8, flexWrap: "wrap" }}>
+                              <Upload
+                                accept="image/*"
+                                showUploadList={false}
+                                beforeUpload={handlePitchImageUpload}
+                                disabled={uploadingPitchImage}
+                              >
+                                <Button
+                                  icon={<UploadOutlined />}
+                                  loading={uploadingPitchImage}
+                                  style={{ borderColor: "#10b981", color: "#065f46", fontWeight: 600 }}
+                                >
+                                  Upload Banner From Device
+                                </Button>
+                              </Upload>
+                            </div>
+
+                            {/* Quick 1-Click Presets */}
+                            <div style={{ marginBottom: 10 }}>
+                              <Text type="secondary" style={{ fontSize: 12, display: "block", marginBottom: 6 }}>
+                                ✨ Or select 1-click ready festive banner:
+                              </Text>
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                                {ADMIN_MARKETING_PRESETS.map((p) => {
+                                  const isSelected = pitchImageUrl === p.imageUrl;
+                                  return (
+                                    <Tag
+                                      key={p.id}
+                                      color={isSelected ? "green" : "default"}
+                                      style={{ cursor: "pointer", padding: "3px 10px", fontSize: 12 }}
+                                      onClick={() => setPitchImageUrl(isSelected ? "" : p.imageUrl)}
+                                    >
+                                      {isSelected ? "✓ " : ""}{p.title}
+                                    </Tag>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
                             <Input
-                              placeholder="e.g. https://app.ginie.space/og-catalog.jpg"
+                              placeholder="Or paste image URL: https://app.ginie.space/og-catalog.jpg"
                               value={pitchImageUrl}
                               onChange={(e) => setPitchImageUrl(e.target.value)}
-                              prefix={<PictureOutlined style={{ color: "#94a3b8" }} />}
+                              prefix={<PictureOutlined style={{ color: "#10b981" }} />}
+                              allowClear
                             />
+
+                            {/* Live Thumbnail Preview */}
+                            {pitchImageUrl && (
+                              <div style={{ marginTop: 10, padding: 10, background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0", display: "flex", alignItems: "center", gap: 14 }}>
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={pitchImageUrl}
+                                  alt="Pitch Banner Preview"
+                                  style={{ width: 68, height: 68, objectFit: "cover", borderRadius: 6, border: "1px solid #cbd5e1" }}
+                                  onError={(e) => {
+                                    (e.target as HTMLElement).style.display = "none";
+                                  }}
+                                />
+                                <div>
+                                  <div style={{ fontSize: 13, fontWeight: 600, color: "#065f46" }}>
+                                    ✅ Banner ready to send with outreach WhatsApp message
+                                  </div>
+                                  <div style={{ fontSize: 11, color: "#64748b", maxWidth: 500, wordBreak: "break-all" }}>
+                                    {pitchImageUrl}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
 
                           <Divider />
@@ -3427,22 +3555,64 @@ export default function AdminPage() {
                                 </div>
                               </div>
 
-                              {/* Media Attachment Bar (Optional Banner / Image URL) */}
+                              {/* Media Attachment Bar (Upload Image / Banner / Photo) */}
                               {showMediaInput && (
-                                <div style={{ background: "#f1f5f9", padding: "8px 14px", borderTop: "1px solid #e2e8f0" }}>
+                                <div style={{ background: "#f1f5f9", padding: "10px 14px", borderTop: "1px solid #e2e8f0" }}>
+                                  <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 8, flexWrap: "wrap" }}>
+                                    <Upload
+                                      accept="image/*"
+                                      showUploadList={false}
+                                      beforeUpload={handleChatImageUpload}
+                                      disabled={uploadingChatImage}
+                                    >
+                                      <Button
+                                        size="small"
+                                        icon={<UploadOutlined />}
+                                        loading={uploadingChatImage}
+                                        style={{ borderColor: "#10b981", color: "#065f46", fontWeight: 600 }}
+                                      >
+                                        Upload Photo/Banner From Device
+                                      </Button>
+                                    </Upload>
+                                    {chatImageUrl && (
+                                      <Button
+                                        size="small"
+                                        danger
+                                        type="link"
+                                        icon={<DeleteOutlined />}
+                                        onClick={() => setChatImageUrl("")}
+                                      >
+                                        Remove
+                                      </Button>
+                                    )}
+                                  </div>
                                   <Input
                                     size="small"
-                                    placeholder="Enter image URL to attach (e.g. promotional banner or receipt)..."
+                                    placeholder="Or paste image URL to attach (e.g. receipt or banner)..."
                                     prefix={<PictureOutlined style={{ color: "#25D366" }} />}
                                     value={chatImageUrl}
                                     onChange={(e) => setChatImageUrl(e.target.value)}
                                     allowClear
                                   />
                                   {chatImageUrl && (
-                                    <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 10 }}>
+                                    <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 10, background: "#ffffff", padding: "6px 10px", borderRadius: 6, border: "1px solid #cbd5e1" }}>
                                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                                      <img src={chatImageUrl} alt="Preview" style={{ width: 40, height: 40, objectFit: "cover", borderRadius: 4 }} />
-                                      <Text style={{ fontSize: 11, color: "#047857" }}>Attached Image ready to send</Text>
+                                      <img
+                                        src={chatImageUrl}
+                                        alt="Preview"
+                                        style={{ width: 44, height: 44, objectFit: "cover", borderRadius: 4 }}
+                                        onError={(e) => {
+                                          (e.target as HTMLElement).style.display = "none";
+                                        }}
+                                      />
+                                      <div>
+                                        <Text style={{ fontSize: 11, color: "#047857", fontWeight: 600, display: "block" }}>
+                                          ✅ Photo/Banner attached to message
+                                        </Text>
+                                        <Text style={{ fontSize: 10, color: "#64748b", maxWidth: 300, display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                          {chatImageUrl}
+                                        </Text>
+                                      </div>
                                     </div>
                                   )}
                                 </div>
@@ -4714,13 +4884,95 @@ export default function AdminPage() {
             />
           </div>
 
-          <div>
-            <Text strong style={{ display: "block", marginBottom: 4 }}>Banner Image URL (Optional):</Text>
+          <div style={{ marginTop: 12, marginBottom: 8, padding: 12, background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <Text strong style={{ fontSize: 13, color: "#1e293b" }}>
+                🖼️ WhatsApp Pitch Banner Image (Optional):
+              </Text>
+              {pitchImageUrl && (
+                <Button
+                  size="small"
+                  type="link"
+                  danger
+                  icon={<DeleteOutlined />}
+                  onClick={() => setPitchImageUrl("")}
+                  style={{ padding: 0 }}
+                >
+                  Remove Banner
+                </Button>
+              )}
+            </div>
+
+            <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
+              <Upload
+                accept="image/*"
+                showUploadList={false}
+                beforeUpload={handlePitchImageUpload}
+                disabled={uploadingPitchImage}
+              >
+                <Button
+                  icon={<UploadOutlined />}
+                  loading={uploadingPitchImage}
+                  style={{ borderColor: "#10b981", color: "#065f46", fontWeight: 600 }}
+                >
+                  Upload Banner From Device
+                </Button>
+              </Upload>
+            </div>
+
+            {/* Quick 1-Click Festive Presets */}
+            <div style={{ marginBottom: 10 }}>
+              <Text type="secondary" style={{ fontSize: 11, display: "block", marginBottom: 5 }}>
+                ✨ Ya 1-click me ready-made poster chunein:
+              </Text>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {ADMIN_MARKETING_PRESETS.map((p) => {
+                  const isSelected = pitchImageUrl === p.imageUrl;
+                  return (
+                    <Tag
+                      key={p.id}
+                      color={isSelected ? "green" : "default"}
+                      style={{ cursor: "pointer", padding: "2px 8px", fontSize: 11 }}
+                      onClick={() => setPitchImageUrl(isSelected ? "" : p.imageUrl)}
+                    >
+                      {isSelected ? "✓ " : ""}{p.title}
+                    </Tag>
+                  );
+                })}
+              </div>
+            </div>
+
             <Input
-              placeholder="https://app.ginie.space/og-catalog.jpg"
+              placeholder="Or paste image URL: https://app.ginie.space/og-catalog.jpg"
               value={pitchImageUrl}
               onChange={(e) => setPitchImageUrl(e.target.value)}
+              prefix={<PictureOutlined style={{ color: "#10b981" }} />}
+              allowClear
+              size="middle"
             />
+
+            {/* Live Thumbnail Preview */}
+            {pitchImageUrl && (
+              <div style={{ marginTop: 10, padding: 8, background: "#ffffff", borderRadius: 8, border: "1px solid #cbd5e1", display: "flex", alignItems: "center", gap: 12 }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={pitchImageUrl}
+                  alt="Pitch Banner Preview"
+                  style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 6, border: "1px solid #94a3b8" }}
+                  onError={(e) => {
+                    (e.target as HTMLElement).style.display = "none";
+                  }}
+                />
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "#065f46" }}>
+                    ✅ Banner attached to WhatsApp pitch
+                  </div>
+                  <div style={{ fontSize: 10, color: "#64748b", maxWidth: 450, wordBreak: "break-all" }}>
+                    {pitchImageUrl}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {sendingPitchCampaign && (
