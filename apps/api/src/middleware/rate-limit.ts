@@ -1,6 +1,7 @@
 import rateLimit from "express-rate-limit";
 import { Request, Response } from "express";
 import { normalizePhoneDigits } from "../utils/phone";
+import { getClientIp } from "../utils/ip";
 
 // 1. Strict Limiter for WhatsApp OTP Delivery (Prevents toll fraud & SMS/WA bombing by IP)
 export const otpRateLimiter = rateLimit({
@@ -8,6 +9,7 @@ export const otpRateLimiter = rateLimit({
   max: 10, // Max 10 OTP requests per IP per 15 minutes
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req: Request) => getClientIp(req),
   handler: (_req: Request, res: Response) => {
     res.status(429).json({
       error: "Bahut saari OTP requests bheji gayi hain. Kripya 15 minute baad dobara koshish karein.",
@@ -25,7 +27,7 @@ export const phoneOtpRateLimiter = rateLimit({
   keyGenerator: (req: Request) => {
     const raw = req.body?.phone || "";
     const phone = normalizePhoneDigits(String(raw));
-    return phone ? `phone_otp:${phone}` : (req.ip || "unknown");
+    return phone ? `phone_otp:${phone}` : getClientIp(req);
   },
   handler: (_req: Request, res: Response) => {
     res.status(429).json({
@@ -41,6 +43,7 @@ export const loginRateLimiter = rateLimit({
   max: 15, // Max 15 attempts per IP per 15 minutes
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req: Request) => getClientIp(req),
   handler: (_req: Request, res: Response) => {
     res.status(429).json({
       error: "Bahut saare login attempts hue hain. Suraksha ke liye aapka request kuch der ke liye pause kiya gaya hai.",
@@ -59,7 +62,7 @@ export const phoneLoginRateLimiter = rateLimit({
     const phone = normalizePhoneDigits(String(req.body?.phone || ""));
     const email = String(req.body?.email || "").toLowerCase().trim();
     const identifier = phone || email;
-    return identifier ? `account_login:${identifier}` : (req.ip || "unknown");
+    return identifier ? `account_login:${identifier}` : getClientIp(req);
   },
   handler: (_req: Request, res: Response) => {
     res.status(429).json({
@@ -75,6 +78,7 @@ export const leadsSearchRateLimiter = rateLimit({
   max: 30, // Max 30 discovery searches per IP per hour
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req: Request) => getClientIp(req),
   handler: (_req: Request, res: Response) => {
     res.status(429).json({
       error: "Hourly lead discovery limit reached. Please wait for the next hour window.",
@@ -89,6 +93,7 @@ export const globalApiRateLimiter = rateLimit({
   max: 300, // Max 300 requests per IP per minute
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req: Request) => getClientIp(req),
   handler: (_req: Request, res: Response) => {
     res.status(429).json({
       error: "Server busy. Too many requests. Please slow down.",

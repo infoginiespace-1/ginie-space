@@ -38,7 +38,7 @@ export function createCustomersRouter(db: IDatabase, io: Server): Router {
         return;
       }
       if (req.user?.role !== "admin" && customer.userId !== req.user!.id) {
-        res.status(403).json({ error: "Access denied" });
+        res.status(404).json({ error: "Customer not found" });
         return;
       }
       res.json({ customer });
@@ -55,7 +55,7 @@ export function createCustomersRouter(db: IDatabase, io: Server): Router {
         return;
       }
       if (req.user?.role !== "admin" && customer.userId !== req.user!.id) {
-        res.status(403).json({ error: "Access denied" });
+        res.status(404).json({ error: "Customer not found" });
         return;
       }
 
@@ -105,7 +105,7 @@ export function createCustomersRouter(db: IDatabase, io: Server): Router {
         return;
       }
       if (req.user?.role !== "admin" && customer.userId !== req.user!.id) {
-        res.status(403).json({ error: "Access denied" });
+        res.status(404).json({ error: "Customer not found" });
         return;
       }
 
@@ -204,7 +204,7 @@ export function createCustomersRouter(db: IDatabase, io: Server): Router {
         return;
       }
       if (req.user?.role !== "admin" && existing.userId !== req.user!.id) {
-        res.status(403).json({ error: "Access denied" });
+        res.status(404).json({ error: "Customer not found" });
         return;
       }
 
@@ -238,7 +238,7 @@ export function createCustomersRouter(db: IDatabase, io: Server): Router {
         return;
       }
       if (req.user?.role !== "admin" && existing.userId !== req.user!.id) {
-        res.status(403).json({ error: "Access denied" });
+        res.status(404).json({ error: "Customer not found" });
         return;
       }
 

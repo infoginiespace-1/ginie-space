@@ -8,14 +8,14 @@ const { createDatabase } = require("../packages/sheets-db/dist/index.js");
  * Decrypts and restores tables from an encrypted backup snapshot.
  */
 async function main() {
-  const spreadsheetId = process.env.GOOGLE_SHEET_ID;
+  const spreadsheetId = process.env.TARGET_GOOGLE_SHEET_ID || process.env.GOOGLE_SHEET_ID;
   const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-  const secretKey = process.env.DATA_ENCRYPTION_KEY || process.env.BACKUP_ENCRYPTION_KEY || process.env.JWT_SECRET;
+  const secretKey = process.env.DATA_ENCRYPTION_KEY || process.env.BACKUP_ENCRYPTION_KEY;
   const backupFilePath = process.argv[2] || path.join(process.cwd(), "backups", "latest.enc.json");
   const isConfirm = process.argv.includes("--confirm");
 
   if (!secretKey) {
-    console.error("Error: DATA_ENCRYPTION_KEY, BACKUP_ENCRYPTION_KEY, or JWT_SECRET is required to decrypt the backup.");
+    console.error("Error: DATA_ENCRYPTION_KEY or BACKUP_ENCRYPTION_KEY is required to decrypt the backup (strictly decoupled from JWT_SECRET).");
     process.exit(1);
   }
 

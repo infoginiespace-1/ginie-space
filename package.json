@@ -10,6 +10,8 @@
     "build": "npm run build --workspaces",
     "init:db": "npm run init-db --workspace=@giniespace/sheets-db",
     "lint": "npm run lint --workspaces",
+    "scan:secrets": "node scripts/scan-secrets.js",
+    "test:idor": "node scripts/test-idor-live.js",
     "index:submit": "node scripts/auto-index.js"
   },
   "devDependencies": {

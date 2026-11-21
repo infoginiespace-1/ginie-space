@@ -26,6 +26,7 @@ import { createAnalyticsRouter } from "./routes/analytics.routes";
 import { AnalyticsService } from "./services/analytics.service";
 import { NotificationService } from "./services/notification.service";
 import { startDailyReportScheduler, startChatRetentionScheduler } from "./services/scheduler.service";
+import { getClientIp } from "./utils/ip";
 
 // Global resilience handlers against non-fatal Baileys / WebSocket crypto noise errors
 process.on("uncaughtException", (err: any) => {
@@ -53,14 +54,13 @@ async function bootstrap() {
   const app = express();
   const server = http.createServer(app);
 
-  // Trust Cloudflare and Render reverse proxies for accurate client IP in rate limiters
-  app.set("trust proxy", 1);
+  // Trust proxy for multi-tier reverse proxies (Cloudflare + Render internal routers)
+  app.set("trust proxy", true);
 
   const allowedOrigins = [
     "https://app.ginie.space",
     "https://ginie.space",
     "https://www.ginie.space",
-    "https://giniespace-web.onrender.com",
     ...(process.env.NODE_ENV !== "production"
       ? ["http://localhost:3000", "http://127.0.0.1:3000"]
       : []),
@@ -75,7 +75,7 @@ async function bootstrap() {
     cors({
       origin: (origin, callback) => {
         if (!origin) return callback(null, true);
-        if (allowedOrigins.includes(origin) || origin.endsWith(".ginie.space") || origin.endsWith(".onrender.com")) {
+        if (allowedOrigins.includes(origin) || origin.endsWith(".ginie.space")) {
           return callback(null, true);
         }
         return callback(new Error("CORS request blocked from unauthorized origin"));
@@ -122,10 +122,10 @@ async function bootstrap() {
     }
   };
 
-  const decryptSessionData = (cipherText: string, primarySecret: string, fallbackSecret?: string): string => {
+  const decryptSessionData = (cipherText: string, secret: string): string => {
     try {
       if (!cipherText || !cipherText.startsWith("enc:v1:")) {
-        // Plaintext fallback for backward compatibility
+        // Plaintext fallback for initial unencrypted setup
         return cipherText;
       }
       const parts = cipherText.split(":");
@@ -136,31 +136,14 @@ async function bootstrap() {
       const authTag = Buffer.from(parts[3], "base64");
       const encryptedData = parts[4];
 
-      const tryDecrypt = (sec: string): string | null => {
-        try {
-          const key = crypto.createHash("sha256").update(sec).digest();
-          const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
-          decipher.setAuthTag(authTag);
-          let dec = decipher.update(encryptedData, "base64", "utf8");
-          dec += decipher.final("utf8");
-          return dec;
-        } catch {
-          return null;
-        }
-      };
-
-      const primary = tryDecrypt(primarySecret);
-      if (primary !== null) return primary;
-
-      if (fallbackSecret && fallbackSecret !== primarySecret) {
-        const fallback = tryDecrypt(fallbackSecret);
-        if (fallback !== null) return fallback;
-      }
-
-      console.error("[Crypto] Decryption failed with both primary and fallback keys");
-      return cipherText;
+      const key = crypto.createHash("sha256").update(secret).digest();
+      const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
+      decipher.setAuthTag(authTag);
+      let dec = decipher.update(encryptedData, "base64", "utf8");
+      dec += decipher.final("utf8");
+      return dec;
     } catch (err: any) {
-      console.error("[Crypto] Decryption error (returning raw):", err.message);
+      console.error("[Crypto] Decryption error (DATA_ENCRYPTION_KEY required):", err.message);
       return cipherText;
     }
   };
@@ -171,7 +154,7 @@ async function bootstrap() {
       try {
         const session = await db.whatsappSessions.findOne({ userId });
         if (!session?.credentialsZip) return null;
-        return decryptSessionData(session.credentialsZip, config.dataEncryptionKey, config.jwtSecret);
+        return decryptSessionData(session.credentialsZip, config.dataEncryptionKey);
       } catch (err: any) {
         console.warn(`[AuthProvider] loadAuthState error for ${userId}:`, err.message);
         return null;
@@ -252,6 +235,20 @@ async function bootstrap() {
   // Health Check
   app.get("/api/health", (_req, res) => {
     res.json({ status: "healthy", timestamp: new Date().toISOString() });
+  });
+
+  // Client IP Resolution Diagnostic Route (for Cloudflare / Render proxy audit)
+  app.get("/api/debug-ip", (req, res) => {
+    const clientIp = getClientIp(req);
+    console.log(`[ClientIpAudit] req.ip: ${req.ip} | cf-connecting-ip: ${req.headers["cf-connecting-ip"]} | x-forwarded-for: ${req.headers["x-forwarded-for"]} | resolved: ${clientIp}`);
+    res.json({
+      clientIp,
+      reqIp: req.ip,
+      cfConnectingIp: req.headers["cf-connecting-ip"] || null,
+      xRealIp: req.headers["x-real-ip"] || null,
+      xForwardedFor: req.headers["x-forwarded-for"] || null,
+      trustProxy: app.get("trust proxy"),
+    });
   });
 
   // Auth Routes, Public Storefront, Marketing Kit & Public Analytics (Public)

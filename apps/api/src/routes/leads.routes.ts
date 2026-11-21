@@ -235,7 +235,7 @@ export function createLeadsRouter(
         return;
       }
       if (req.user?.role !== "admin" && lead.userId !== req.user!.id) {
-        res.status(403).json({ error: "Access denied" });
+        res.status(404).json({ error: "Lead not found" });
         return;
       }
 
@@ -296,7 +296,7 @@ export function createLeadsRouter(
         return;
       }
       if (req.user?.role !== "admin" && existing.userId !== req.user!.id) {
-        res.status(403).json({ error: "Access denied" });
+        res.status(404).json({ error: "Lead not found" });
         return;
       }
 
@@ -320,7 +320,7 @@ export function createLeadsRouter(
         return;
       }
       if (req.user?.role !== "admin" && existing.userId !== req.user!.id) {
-        res.status(403).json({ error: "Access denied" });
+        res.status(404).json({ error: "Lead not found" });
         return;
       }
       const { notes, followUpDate, status } = req.body;
@@ -346,7 +346,7 @@ export function createLeadsRouter(
         return;
       }
       if (req.user?.role !== "admin" && existing.userId !== req.user!.id) {
-        res.status(403).json({ error: "Access denied" });
+        res.status(404).json({ error: "Lead not found" });
         return;
       }
       await db.leads.delete((req.params.id as string));

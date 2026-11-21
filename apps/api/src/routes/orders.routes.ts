@@ -59,7 +59,7 @@ export function createOrdersRouter(
         return;
       }
       if (req.user?.role !== "admin" && order.userId !== req.user!.id) {
-        res.status(403).json({ error: "Access denied" });
+        res.status(404).json({ error: "Order not found" });
         return;
       }
       res.json({ order });
@@ -221,7 +221,7 @@ export function createOrdersRouter(
         return;
       }
       if (req.user?.role !== "admin" && existing.userId !== req.user!.id) {
-        res.status(403).json({ error: "Access denied" });
+        res.status(404).json({ error: "Order not found" });
         return;
       }
 
@@ -304,7 +304,7 @@ export function createOrdersRouter(
         return;
       }
       if (req.user?.role !== "admin" && existing.userId !== req.user!.id) {
-        res.status(403).json({ error: "Access denied" });
+        res.status(404).json({ error: "Order not found" });
         return;
       }
 
@@ -337,7 +337,7 @@ export function createOrdersRouter(
         return;
       }
       if (req.user?.role !== "admin" && order.userId !== req.user!.id) {
-        res.status(403).json({ error: "Access denied" });
+        res.status(404).json({ error: "Order not found" });
         return;
       }
 
@@ -439,7 +439,7 @@ export function createOrdersRouter(
         return;
       }
       if (req.user?.role !== "admin" && order.userId !== req.user!.id) {
-        res.status(403).json({ error: "Access denied" });
+        res.status(404).json({ error: "Order not found" });
         return;
       }
 
@@ -502,7 +502,7 @@ export function createOrdersRouter(
         return;
       }
       if (req.user?.role !== "admin" && existing.userId !== req.user!.id) {
-        res.status(403).json({ error: "Access denied" });
+        res.status(404).json({ error: "Order not found" });
         return;
       }
 
@@ -552,7 +552,7 @@ export function createOrdersRouter(
         return;
       }
       if (req.user?.role !== "admin" && order.userId !== req.user!.id) {
-        res.status(403).json({ error: "Access denied" });
+        res.status(404).json({ error: "Order not found" });
         return;
       }
 
@@ -586,7 +586,7 @@ export function createOrdersRouter(
         return;
       }
       if (req.user?.role !== "admin" && order.userId !== req.user!.id) {
-        res.status(403).json({ error: "Access denied" });
+        res.status(404).json({ error: "Order not found" });
         return;
       }
 
@@ -665,7 +665,7 @@ export function createOrdersRouter(
         return;
       }
       if (req.user?.role !== "admin" && existing.userId !== req.user!.id) {
-        res.status(403).json({ error: "Access denied" });
+        res.status(404).json({ error: "Order not found" });
         return;
       }
 

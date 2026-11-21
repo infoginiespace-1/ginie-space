@@ -2,6 +2,20 @@
 
 All notable changes to the GinieSpace platform will be documented in this file.
 
+## [Security & Multi-Tenant Hardening V2] - 2026-11-21
+
+### Strict Cryptographic & Access Control Hardening
+- **Zero Fallback Encryption Decoupling:** Permanently removed `JWT_SECRET` and `WHATSAPP_SESSION_SECRET` fallback parameters from `decryptSessionData`, `authProvider`, and `env.ts`. `DATA_ENCRYPTION_KEY` is strictly required in production for WhatsApp session credentials and database backups.
+- **Proxy-Aware Real Client IP Resolution:** Implemented `getClientIp(req)` in `apps/api/src/utils/ip.ts` prioritizing `CF-Connecting-IP`, `X-Real-IP`, and `X-Forwarded-For`. Express configured with `app.set("trust proxy", true)`. All rate limiters (`globalApiRateLimiter`, `loginRateLimiter`, `otpRateLimiter`, `phoneOtpRateLimiter`, `phoneLoginRateLimiter`) now key by the verified visitor IP. Added `/api/debug-ip` diagnostic endpoint.
+- **Origin Lockdown:** Removed `*.onrender.com` from CORS whitelist in `apps/api/src/server.ts`. Cross-origin access is strictly restricted to Cloudflare-routed domains (`*.ginie.space`) and local development.
+- **404 Anti-Enumeration Obfuscation:** Replaced HTTP 403 Forbidden with **HTTP 404 Not Found** across customer, order, product, and lead single-resource lookups so attackers cannot determine whether an entity ID exists in the database.
+- **Expanded Real HTTP IDOR Test Suite (`scripts/test-idor-live.js`):** Executed a 16-vector live HTTP audit testing staff role privilege escalation, admin route barriers, storefront data leak prevention, and cross-tenant anti-enumeration (16/16 PASSED).
+- **Static Secret Scanner (`scripts/scan-secrets.js`):** Added automated regex/entropy scanner targeting Google API keys, RSA/EC private keys, GitHub PATs, and AWS credentials (`npm run scan:secrets`).
+- **Public & Internal Documentation Separation:** Transformed public `SECURITY.md` into a standard, concise disclosure policy. Shifted internal architecture, environment variables, and disaster recovery runbooks into private `docs/INTERNAL_SECURITY_ARCHITECTURE.md`. Redacted all mock keys and replaced absolutist overclaims with objective engineering language.
+- **Hardened OTP Specifications:** Reduced OTP expiry to strict 5-minute window (`5 * 60 * 1000` ms). Confirmed 5-attempt lockout, single-active OTP per phone, bcrypt hashing in memory/persistence, and single-use immediate invalidation.
+
+---
+
 ## [Security & Multi-Tenant Hardening Release] - 2026-11-21
 
 ### Critical Security & Architecture Fixes

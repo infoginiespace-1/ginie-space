@@ -55,7 +55,7 @@ export function createProductsRouter(db: IDatabase, io: Server): Router {
         return;
       }
       if (req.user?.role !== "admin" && product.userId !== req.user!.id) {
-        res.status(403).json({ error: "Access denied" });
+        res.status(404).json({ error: "Product not found" });
         return;
       }
       res.json({ product });
@@ -425,7 +425,7 @@ export function createProductsRouter(db: IDatabase, io: Server): Router {
         return;
       }
       if (req.user?.role !== "admin" && existing.userId !== req.user!.id) {
-        res.status(403).json({ error: "Access denied" });
+        res.status(404).json({ error: "Product not found" });
         return;
       }
 
@@ -473,7 +473,7 @@ export function createProductsRouter(db: IDatabase, io: Server): Router {
         return;
       }
       if (req.user?.role !== "admin" && existing.userId !== req.user!.id) {
-        res.status(403).json({ error: "Access denied" });
+        res.status(404).json({ error: "Product not found" });
         return;
       }
 

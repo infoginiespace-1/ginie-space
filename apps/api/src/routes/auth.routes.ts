@@ -80,7 +80,7 @@ export function createAuthRouter(
       // Generate 6-digit OTP
       const otp = String(randomInt(100000, 999999));
       const otpHash = await bcrypt.hash(otp, 8);
-      const expiresAt = now + 10 * 60 * 1000; // 10 minutes
+      const expiresAt = now + 5 * 60 * 1000; // 5 minutes strict expiry
 
       // Save in memory cache
       otpCache.set(digits, {
@@ -209,6 +209,9 @@ export function createAuthRouter(
 
       // Valid OTP
       otpCache.delete(digits);
+      db.settings.findOne({ userId: `otp_${digits}`, key: "active_auth_otp" }).then((s) => {
+        if (s) db.settings.delete(s.id).catch(() => {});
+      }).catch(() => {});
 
       // Handle Master Admin login
       if (isMasterAdmin) {
@@ -369,15 +372,28 @@ export function createAuthRouter(
         return;
       }
 
+      if (entry.attempts >= 5) {
+        otpCache.delete(digits);
+        res.status(429).json({ error: "Too many incorrect attempts. Please request a new OTP." });
+        return;
+      }
+
       const isValid = await bcrypt.compare(cleanOtp, entry.otpHash);
       if (!isValid) {
         entry.attempts++;
-        res.status(400).json({ error: "Incorrect OTP. Please check your WhatsApp and try again." });
+        const remaining = 5 - entry.attempts;
+        res.status(400).json({ error: `Incorrect OTP. ${remaining > 0 ? remaining : 0} attempts remaining.` });
         return;
       }
 
       // Valid OTP
       otpCache.delete(digits);
+      db.settings.findOne({ userId: `otp_${digits}`, key: "active_auth_otp" }).then((s) => {
+        if (s) db.settings.delete(s.id).catch(() => {});
+      }).catch(() => {});
+      db.settings.findOne({ userId: `otp_${digits}`, key: "active_auth_otp" }).then((s) => {
+        if (s) db.settings.delete(s.id).catch(() => {});
+      }).catch(() => {});
 
       // Check if account already exists
       const allBusinesses = await db.businesses.findMany().catch(() => []);
@@ -770,7 +786,7 @@ export function createAuthRouter(
 
       const otp = String(randomInt(100000, 999999));
       const otpHash = await bcrypt.hash(otp, 8);
-      const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+      const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes strict expiry
       const payload = JSON.stringify({ otpHash, expiresAt });
 
       const existingSetting = await db.settings

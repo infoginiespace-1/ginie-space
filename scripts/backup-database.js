@@ -10,7 +10,7 @@ const { createDatabase } = require("../packages/sheets-db/dist/index.js");
 async function main() {
   const spreadsheetId = process.env.GOOGLE_SHEET_ID;
   const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-  const secretKey = process.env.DATA_ENCRYPTION_KEY || process.env.BACKUP_ENCRYPTION_KEY || process.env.JWT_SECRET;
+  const secretKey = process.env.DATA_ENCRYPTION_KEY || process.env.BACKUP_ENCRYPTION_KEY;
 
   if (!spreadsheetId || !serviceAccountJson) {
     console.error("Error: GOOGLE_SHEET_ID and GOOGLE_SERVICE_ACCOUNT_JSON are required in environment.");
@@ -18,7 +18,7 @@ async function main() {
   }
 
   if (!secretKey) {
-    console.error("Error: DATA_ENCRYPTION_KEY, BACKUP_ENCRYPTION_KEY, or JWT_SECRET is required.");
+    console.error("Error: DATA_ENCRYPTION_KEY or BACKUP_ENCRYPTION_KEY is required (strictly decoupled from JWT_SECRET).");
     process.exit(1);
   }
 
