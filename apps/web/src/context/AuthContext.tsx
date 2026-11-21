@@ -25,7 +25,9 @@ interface AuthContextType {
   token: string | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  loginWithOtp: (phone: string, otp: string) => Promise<void>;
   signup: (name: string, email: string, password: string, businessType: BusinessType, phone?: string) => Promise<void>;
+  signupWithOtp: (phone: string, otp: string, name: string, businessType: BusinessType) => Promise<void>;
   updateUserLocal: (patch: Partial<User>) => void;
   refreshUser: () => Promise<void>;
   logout: () => void;
@@ -107,6 +109,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     getSocket();
   };
 
+  const loginWithOtp = async (phone: string, otp: string) => {
+    const res = await api.post("/api/auth/verify-otp-login", { phone, otp });
+    const { token: receivedToken, user: receivedUser } = res.data;
+
+    localStorage.setItem("giniespace_token", receivedToken);
+    localStorage.setItem("giniespace_user", JSON.stringify(receivedUser));
+
+    setToken(receivedToken);
+    setUser(receivedUser);
+    getSocket();
+  };
+
+  const signupWithOtp = async (
+    phone: string,
+    otp: string,
+    name: string,
+    businessType: BusinessType
+  ) => {
+    const res = await api.post("/api/auth/verify-otp-signup", {
+      phone,
+      otp,
+      name,
+      businessType,
+    });
+    const { token: receivedToken, user: receivedUser } = res.data;
+
+    localStorage.setItem("giniespace_token", receivedToken);
+    localStorage.setItem("giniespace_user", JSON.stringify(receivedUser));
+
+    setToken(receivedToken);
+    setUser(receivedUser);
+    getSocket();
+  };
+
   const signup = async (
     name: string,
     email: string,
@@ -152,7 +188,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, signup, updateUserLocal, refreshUser, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        loading,
+        login,
+        loginWithOtp,
+        signup,
+        signupWithOtp,
+        updateUserLocal,
+        refreshUser,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

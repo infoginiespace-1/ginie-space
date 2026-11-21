@@ -951,27 +951,43 @@ export default function SettingsPage() {
             </div>
           </Card>
 
-          {/* Change Password Card */}
+          {/* Account Security & WhatsApp Authentication Card */}
           <Card
             title={
               <Space>
-                <LockOutlined style={{ color: "#1677ff" }} />
-                <span>Security &amp; Password</span>
+                <WhatsAppOutlined style={{ color: "#25D366" }} />
+                <span>Account Security &amp; WhatsApp Login</span>
               </Space>
             }
             style={{ borderRadius: 12, marginBottom: 20 }}
           >
-            <Form form={passwordForm} layout="vertical" onFinish={handleChangePassword}>
-              <Form.Item name="currentPassword" label="Current Password" rules={[{ required: true }]}>
-                <Input.Password placeholder="Enter current password" />
-              </Form.Item>
-              <Form.Item name="newPassword" label="New Password" rules={[{ required: true, min: 6 }]}>
-                <Input.Password placeholder="Min 6 characters" />
-              </Form.Item>
-              <Button type="primary" htmlType="submit" loading={changingPassword}>
-                Change Password
-              </Button>
-            </Form>
+            <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", padding: "12px 14px", borderRadius: 8, marginBottom: 14 }}>
+              <div style={{ fontWeight: 600, color: "#166534", fontSize: 13, marginBottom: 4 }}>
+                ✅ Passwordless 100% WhatsApp OTP Active
+              </div>
+              <div style={{ fontSize: 12, color: "#15803d", lineHeight: 1.5 }}>
+                Aapka account aapke verified WhatsApp mobile number se protected hai. Login karte waqt GinieSpace Official Support (+91 92792 59690) se instant 6-digit OTP code deliver hota hai.
+              </div>
+            </div>
+
+            {user?.role === "admin" && (
+              <div>
+                <Text type="secondary" style={{ fontSize: 12, display: "block", marginBottom: 8 }}>
+                  Admin Emergency Password:
+                </Text>
+                <Form form={passwordForm} layout="vertical" onFinish={handleChangePassword}>
+                  <Form.Item name="currentPassword" label="Current Password" rules={[{ required: true }]}>
+                    <Input.Password placeholder="Enter current password" />
+                  </Form.Item>
+                  <Form.Item name="newPassword" label="New Password" rules={[{ required: true, min: 6 }]}>
+                    <Input.Password placeholder="Min 6 characters" />
+                  </Form.Item>
+                  <Button type="primary" htmlType="submit" loading={changingPassword}>
+                    Update Master Password
+                  </Button>
+                </Form>
+              </div>
+            )}
           </Card>
         </Col>
 
