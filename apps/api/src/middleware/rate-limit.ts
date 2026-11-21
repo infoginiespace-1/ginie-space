@@ -1,7 +1,8 @@
 import rateLimit from "express-rate-limit";
 import { Request, Response } from "express";
+import { normalizePhoneDigits } from "../utils/phone";
 
-// 1. Strict Limiter for WhatsApp OTP Delivery (Prevents toll fraud & SMS/WA bombing)
+// 1. Strict Limiter for WhatsApp OTP Delivery (Prevents toll fraud & SMS/WA bombing by IP)
 export const otpRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10, // Max 10 OTP requests per IP per 15 minutes
@@ -15,7 +16,26 @@ export const otpRateLimiter = rateLimit({
   },
 });
 
-// 2. Strict Limiter for Login & Verification (Prevents brute force / credential stuffing)
+// 1b. Per-Phone Number OTP Limiter (Prevents bombing a single victim even if attacker uses rotating proxies)
+export const phoneOtpRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Max 5 OTP requests per target phone number per 15 minutes
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req: Request) => {
+    const raw = req.body?.phone || "";
+    const phone = normalizePhoneDigits(String(raw));
+    return phone ? `phone_otp:${phone}` : (req.ip || "unknown");
+  },
+  handler: (_req: Request, res: Response) => {
+    res.status(429).json({
+      error: "Is mobile number par bahut saari OTP requests bheji gayi hain. Suraksha ke liye 15 minute baad koshish karein.",
+      retryAfterMinutes: 15,
+    });
+  },
+});
+
+// 2. Strict Limiter for Login & Verification (Prevents brute force / credential stuffing by IP)
 export const loginRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 15, // Max 15 attempts per IP per 15 minutes
@@ -24,6 +44,26 @@ export const loginRateLimiter = rateLimit({
   handler: (_req: Request, res: Response) => {
     res.status(429).json({
       error: "Bahut saare login attempts hue hain. Suraksha ke liye aapka request kuch der ke liye pause kiya gaya hai.",
+      retryAfterMinutes: 15,
+    });
+  },
+});
+
+// 2b. Per-Phone/Account Login Limiter (Prevents distributed password/OTP guessing against a specific account)
+export const phoneLoginRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Max 5 failed attempts per target account per 15 minutes
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req: Request) => {
+    const phone = normalizePhoneDigits(String(req.body?.phone || ""));
+    const email = String(req.body?.email || "").toLowerCase().trim();
+    const identifier = phone || email;
+    return identifier ? `account_login:${identifier}` : (req.ip || "unknown");
+  },
+  handler: (_req: Request, res: Response) => {
+    res.status(429).json({
+      error: "Is account ke liye bahut saare login attempts hue hain. Suraksha ke liye 15 minute baad dobara koshish karein.",
       retryAfterMinutes: 15,
     });
   },

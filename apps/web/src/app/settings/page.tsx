@@ -180,6 +180,8 @@ export default function SettingsPage() {
   const [ruleModalOpen, setRuleModalOpen] = useState(false);
   const [editingRule, setEditingRule] = useState<AutoReplyCustomRule | null>(null);
   const [ruleKeywordsInput, setRuleKeywordsInput] = useState("");
+  const [ruleImagePreview, setRuleImagePreview] = useState<string>("");
+  const [uploadingRuleImage, setUploadingRuleImage] = useState(false);
   const [savingAutoReply, setSavingAutoReply] = useState(false);
 
   // Live Simulator State
@@ -503,6 +505,7 @@ export default function SettingsPage() {
   const handleOpenAddRuleModal = () => {
     setEditingRule(null);
     setRuleKeywordsInput("");
+    setRuleImagePreview("");
     ruleForm.resetFields();
     ruleForm.setFieldsValue({
       name: "",
@@ -518,6 +521,7 @@ export default function SettingsPage() {
   const handleOpenEditRuleModal = (rule: AutoReplyCustomRule) => {
     setEditingRule(rule);
     setRuleKeywordsInput(rule.keywords.join(", "));
+    setRuleImagePreview(rule.imageUrl || "");
     ruleForm.setFieldsValue({
       name: rule.name,
       keywords: rule.keywords.join(", "),
@@ -527,6 +531,51 @@ export default function SettingsPage() {
       enabled: rule.enabled !== false,
     });
     setRuleModalOpen(true);
+  };
+
+  const handleRuleImageUpload = async (file: File) => {
+    try {
+      setUploadingRuleImage(true);
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new (window as any).Image();
+          img.onload = () => {
+            const canvas = document.createElement("canvas");
+            const maxDim = 960;
+            let width = img.width;
+            let height = img.height;
+            if (width > maxDim || height > maxDim) {
+              if (width > height) {
+                height = Math.round((height * maxDim) / width);
+                width = maxDim;
+              } else {
+                width = Math.round((width * maxDim) / height);
+                height = maxDim;
+              }
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext("2d");
+            if (!ctx) return reject(new Error("Canvas context failed"));
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL("image/jpeg", 0.8));
+          };
+          img.onerror = () => reject(new Error("Image failed to decode"));
+          img.src = e.target?.result as string;
+        };
+        reader.onerror = () => reject(new Error("File reading failed"));
+        reader.readAsDataURL(file);
+      });
+      setRuleImagePreview(dataUrl);
+      ruleForm.setFieldsValue({ imageUrl: dataUrl });
+      message.success("Image attached from device!");
+    } catch (err: any) {
+      message.error(err.message || "Failed to process image");
+    } finally {
+      setUploadingRuleImage(false);
+    }
+    return false;
   };
 
   const handleSaveRuleModal = () => {
@@ -1463,13 +1512,69 @@ export default function SettingsPage() {
             />
           </Form.Item>
 
-          <Form.Item
-            name="imageUrl"
-            label="Optional Photo Attachment URL"
-            extra="Attach a public image (e.g. UPI QR code image, menu photo, or shop picture)"
-          >
-            <Input placeholder="https://example.com/upi-qr.jpg" prefix={<PictureOutlined />} allowClear />
-          </Form.Item>
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+              <Text strong style={{ fontSize: 13 }}>🖼️ Optional Photo Attachment (e.g. UPI QR / Menu / Poster):</Text>
+              {ruleImagePreview && (
+                <Button
+                  size="small"
+                  type="link"
+                  danger
+                  icon={<DeleteOutlined />}
+                  onClick={() => {
+                    setRuleImagePreview("");
+                    ruleForm.setFieldsValue({ imageUrl: "" });
+                  }}
+                  style={{ padding: 0 }}
+                >
+                  Remove Photo
+                </Button>
+              )}
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
+              <Upload
+                accept="image/*"
+                showUploadList={false}
+                beforeUpload={handleRuleImageUpload}
+                disabled={uploadingRuleImage}
+              >
+                <Button icon={<UploadOutlined />} loading={uploadingRuleImage}>
+                  Upload Image from Device
+                </Button>
+              </Upload>
+            </div>
+            <Form.Item name="imageUrl" noStyle>
+              <Input
+                placeholder="Or paste image URL: https://example.com/upi-qr.jpg"
+                prefix={<PictureOutlined style={{ color: "#25D366" }} />}
+                value={ruleImagePreview}
+                onChange={(e) => {
+                  setRuleImagePreview(e.target.value);
+                  ruleForm.setFieldsValue({ imageUrl: e.target.value });
+                }}
+                allowClear
+              />
+            </Form.Item>
+            {ruleImagePreview && (
+              <div style={{ marginTop: 8, padding: 8, background: "#f8fafc", borderRadius: 8, border: "1px solid #cbd5e1", display: "flex", alignItems: "center", gap: 10 }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={ruleImagePreview}
+                  alt="Auto-Reply Preview"
+                  style={{ width: 48, height: 48, objectFit: "cover", borderRadius: 6, border: "1px solid #94a3b8" }}
+                  onError={(e) => {
+                    (e.target as HTMLElement).style.display = "none";
+                  }}
+                />
+                <div style={{ fontSize: 12, color: "#065f46", fontWeight: 600 }}>
+                  ✅ Image attached to WhatsApp automated response
+                </div>
+              </div>
+            )}
+            <div style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}>
+              Jab customer is rule ke keyword bhejega to ye photo unhe message ke sath deliver hogi.
+            </div>
+          </div>
 
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <Text strong>Enable this rule immediately:</Text>

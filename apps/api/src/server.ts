@@ -53,6 +53,9 @@ async function bootstrap() {
   const app = express();
   const server = http.createServer(app);
 
+  // Trust Cloudflare and Render reverse proxies for accurate client IP in rate limiters
+  app.set("trust proxy", 1);
+
   const allowedOrigins = [
     "https://app.ginie.space",
     "https://ginie.space",
@@ -103,7 +106,7 @@ async function bootstrap() {
     console.error("Warning: Database schema auto-initialization error:", err.message);
   });
 
-  // AES-256-GCM Session Encryption at Rest
+  // AES-256-GCM Session Encryption at Rest (Decoupled from JWT_SECRET)
   const encryptSessionData = (plainText: string, secret: string): string => {
     try {
       const key = crypto.createHash("sha256").update(secret).digest();
@@ -119,7 +122,7 @@ async function bootstrap() {
     }
   };
 
-  const decryptSessionData = (cipherText: string, secret: string): string => {
+  const decryptSessionData = (cipherText: string, primarySecret: string, fallbackSecret?: string): string => {
     try {
       if (!cipherText || !cipherText.startsWith("enc:v1:")) {
         // Plaintext fallback for backward compatibility
@@ -132,12 +135,30 @@ async function bootstrap() {
       const iv = Buffer.from(parts[2], "base64");
       const authTag = Buffer.from(parts[3], "base64");
       const encryptedData = parts[4];
-      const key = crypto.createHash("sha256").update(secret).digest();
-      const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
-      decipher.setAuthTag(authTag);
-      let decrypted = decipher.update(encryptedData, "base64", "utf8");
-      decrypted += decipher.final("utf8");
-      return decrypted;
+
+      const tryDecrypt = (sec: string): string | null => {
+        try {
+          const key = crypto.createHash("sha256").update(sec).digest();
+          const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
+          decipher.setAuthTag(authTag);
+          let dec = decipher.update(encryptedData, "base64", "utf8");
+          dec += decipher.final("utf8");
+          return dec;
+        } catch {
+          return null;
+        }
+      };
+
+      const primary = tryDecrypt(primarySecret);
+      if (primary !== null) return primary;
+
+      if (fallbackSecret && fallbackSecret !== primarySecret) {
+        const fallback = tryDecrypt(fallbackSecret);
+        if (fallback !== null) return fallback;
+      }
+
+      console.error("[Crypto] Decryption failed with both primary and fallback keys");
+      return cipherText;
     } catch (err: any) {
       console.error("[Crypto] Decryption error (returning raw):", err.message);
       return cipherText;
@@ -150,7 +171,7 @@ async function bootstrap() {
       try {
         const session = await db.whatsappSessions.findOne({ userId });
         if (!session?.credentialsZip) return null;
-        return decryptSessionData(session.credentialsZip, config.jwtSecret);
+        return decryptSessionData(session.credentialsZip, config.dataEncryptionKey, config.jwtSecret);
       } catch (err: any) {
         console.warn(`[AuthProvider] loadAuthState error for ${userId}:`, err.message);
         return null;
@@ -160,7 +181,7 @@ async function bootstrap() {
       try {
         const existing = await db.whatsappSessions.findOne({ userId });
         const now = new Date().toISOString();
-        const encryptedData = encryptSessionData(authDataZip, config.jwtSecret);
+        const encryptedData = encryptSessionData(authDataZip, config.dataEncryptionKey);
         if (existing) {
           await db.whatsappSessions.update(existing.id, {
             status: "connected",
@@ -211,7 +232,7 @@ async function bootstrap() {
       for (const sess of savedSessions) {
         if (sess.credentialsZip && sess.credentialsZip.length > 20) {
           if (!sess.credentialsZip.startsWith("enc:v1:")) {
-            const encrypted = encryptSessionData(sess.credentialsZip, config.jwtSecret);
+            const encrypted = encryptSessionData(sess.credentialsZip, config.dataEncryptionKey);
             db.whatsappSessions.update(sess.id, { credentialsZip: encrypted }).catch(() => {});
           }
           console.log(`[Boot] Restoring session for ${sess.userId} (${sess.phoneNumber || "unnamed"})...`);

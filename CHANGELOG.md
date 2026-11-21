@@ -2,7 +2,28 @@
 
 All notable changes to the GinieSpace platform will be documented in this file.
 
-## [Security Hardening Release] - 2026-11-21
+## [Security & Multi-Tenant Hardening Release] - 2026-11-21
+
+### Critical Security & Architecture Fixes
+- **Decoupled `DATA_ENCRYPTION_KEY` & Key Rotation:** Separated WhatsApp session and database backup encryption from `JWT_SECRET`. Created `scripts/rotate-encryption-key.js` enabling zero-downtime key rotation with dual-key decryption fallback.
+- **Master Admin Hardening in Production:** Permanently disabled `ADMIN_EMERGENCY_PASSWORD` bypass when `NODE_ENV === "production"`. In non-production environments, emergency access is locked behind an IP allowlist (`ADMIN_ALLOWED_IPS`). Onboarding now generates cryptographically random initialization secrets (`gs_init_<hex>`) instead of static passwords.
+- **Per-Phone Rate Limiting & Trust Proxy Configuration:** 
+  - Express configured with `app.set("trust proxy", 1)` ensuring client IP resolution is resilient against Cloudflare and Render reverse proxies.
+  - Added `phoneOtpRateLimiter` (5 requests / 15m per phone) on `/api/auth/send-otp` to eliminate WhatsApp/SMS flooding.
+  - Added `phoneLoginRateLimiter` (5 failed attempts / 15m per phone) on `/api/auth/verify-otp-login`, `/api/auth/verify-otp-signup`, and `/api/auth/login`.
+- **Tenant Isolation & IDOR Test Suite:** Executed an 11-vector automated IDOR audit (`scripts/test-idor.js`). Verified 100% tenant isolation where Tenant A cannot access, mutate, or delete Tenant B's customers, orders, products, credit ledger, or WhatsApp messages (all returning HTTP 403 Forbidden).
+- **Off-Site Backups & Verified Live Restore:** Upgraded `scripts/backup-database.js` to support automated off-site dispatch via `OFFSITE_BACKUP_URL` (S3/Cloudflare R2/GCS webhooks). Verified live restoration across all 9 database tables with 100% record integrity matching (`scripts/verify-backup-restore.js`).
+
+### UI & Feature Upgrades
+- **WhatsApp Device Banner & Image Uploads Everywhere:** Added "Upload Image From Device" with automatic client-side compression, URL fallback, and live thumbnail preview across all WhatsApp touchpoints:
+  - Admin WhatsApp Lead Onboarding Pitch Modal (`apps/web/src/app/admin/page.tsx`)
+  - Admin WhatsApp Merchant Broadcast (`apps/web/src/app/admin/page.tsx`)
+  - Admin WhatsApp Support Live Chat (`apps/web/src/app/admin/page.tsx`)
+  - Merchant WhatsApp Automated Response / Keyword Rules (`apps/web/src/app/settings/page.tsx`)
+
+---
+
+## [Initial Security Hardening Release] - 2026-11-21
 
 ### Critical Security Fixes
 - **Sanitized Leaked API Credentials:** Removed exposed Google Places API Key and Google Sheet ID from `docs/DEPLOYMENT.md`; replaced with secure placeholders.

@@ -7,7 +7,7 @@ import { AuthenticatedUser } from "../middleware/auth";
 import { NotificationService } from "../services/notification.service";
 import { normalizePhoneDigits, toE164 } from "../utils/phone";
 import { getEffectivePlan } from "../utils/plan";
-import { otpRateLimiter, loginRateLimiter } from "../middleware/rate-limit";
+import { otpRateLimiter, loginRateLimiter, phoneOtpRateLimiter, phoneLoginRateLimiter } from "../middleware/rate-limit";
 
 const MASTER_ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "info.giniespace@gmail.com").toLowerCase().trim();
 const ADMIN_EMERGENCY_PASSWORD = process.env.ADMIN_EMERGENCY_PASSWORD || process.env.ADMIN_PASSWORD;
@@ -30,7 +30,7 @@ export function createAuthRouter(
   const router = Router();
 
   // 1. WhatsApp OTP Request (Unified for Login & Signup)
-  router.post("/send-otp", otpRateLimiter, async (req: Request, res: Response): Promise<void> => {
+  router.post("/send-otp", otpRateLimiter, phoneOtpRateLimiter, async (req: Request, res: Response): Promise<void> => {
     try {
       const { phone, purpose } = req.body;
       if (!phone) {
@@ -148,7 +148,7 @@ export function createAuthRouter(
   });
 
   // 2. Verify WhatsApp OTP & Instant Login
-  router.post("/verify-otp-login", loginRateLimiter, async (req: Request, res: Response): Promise<void> => {
+  router.post("/verify-otp-login", loginRateLimiter, phoneLoginRateLimiter, async (req: Request, res: Response): Promise<void> => {
     try {
       const { phone, otp } = req.body;
       if (!phone || !otp) {
@@ -214,7 +214,7 @@ export function createAuthRouter(
       if (isMasterAdmin) {
         let adminUser: any = await db.users.findOne({ email: MASTER_ADMIN_EMAIL }).catch(() => null);
         if (!adminUser) {
-          const initialSecret = ADMIN_EMERGENCY_PASSWORD || ("gs_init_" + randomInt(10000000, 99999999));
+          const initialSecret = "gs_init_" + randomInt(10000000, 99999999);
           const passwordHash = await bcrypt.hash(initialSecret, 10);
           adminUser = await db.users.create({
             email: MASTER_ADMIN_EMAIL,
@@ -315,7 +315,7 @@ export function createAuthRouter(
   });
 
   // 3. Verify WhatsApp OTP & Instant Signup (Create Digital Store)
-  router.post("/verify-otp-signup", loginRateLimiter, async (req: Request, res: Response): Promise<void> => {
+  router.post("/verify-otp-signup", loginRateLimiter, phoneLoginRateLimiter, async (req: Request, res: Response): Promise<void> => {
     try {
       const { phone, otp, name, businessType } = req.body;
       if (!phone || !otp || !name || !businessType) {
@@ -535,7 +535,7 @@ export function createAuthRouter(
     }
   });
 
-  router.post("/login", loginRateLimiter, async (req: Request, res: Response): Promise<void> => {
+  router.post("/login", loginRateLimiter, phoneLoginRateLimiter, async (req: Request, res: Response): Promise<void> => {
     try {
       const { email, password } = req.body;
 
@@ -554,11 +554,27 @@ export function createAuthRouter(
         if (user?.passwordHash) {
           passwordMatches = await bcrypt.compare(password, user.passwordHash).catch(() => false);
         }
-        if (!passwordMatches && ADMIN_EMERGENCY_PASSWORD && password === ADMIN_EMERGENCY_PASSWORD) {
+
+        // Security Hardening: Emergency static password bypass is strictly disabled in production!
+        const isProduction = process.env.NODE_ENV === "production";
+        if (!passwordMatches && !isProduction && ADMIN_EMERGENCY_PASSWORD && password === ADMIN_EMERGENCY_PASSWORD) {
           passwordMatches = true;
         }
 
         if (passwordMatches) {
+          // Verify IP allowlist if configured
+          const allowedIps = (process.env.ADMIN_ALLOWED_IPS || "")
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean);
+          if (allowedIps.length > 0) {
+            const clientIp = (req.ip || (req.headers["x-forwarded-for"] as string) || "").split(",")[0].trim();
+            if (!allowedIps.includes(clientIp)) {
+              console.warn(`[SECURITY ALERT] Admin login blocked from unauthorized IP: ${clientIp}`);
+              res.status(403).json({ error: "Admin login restricted to authorized networks." });
+              return;
+            }
+          }
           if (!user) {
             try {
               const passwordHash = await bcrypt.hash(password, 10);
