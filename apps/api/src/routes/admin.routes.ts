@@ -541,6 +541,8 @@ export function createAdminRouter(
         };
       });
 
+      merchants.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+
       res.json({ merchants });
     } catch (err: any) {
       res.status(500).json({ error: err.message || "Failed to load merchants list" });
@@ -1146,6 +1148,8 @@ export function createAdminRouter(
           registeredMerchant,
         };
       });
+
+      enriched.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
 
       res.json({
         leads: enriched,

@@ -19,6 +19,32 @@ export function createOrdersRouter(
     try {
       const filter = req.user?.role === "admin" ? undefined : { userId: req.user!.id };
       const orders = await db.orders.findMany(filter);
+
+      const sortMode = String(req.query.sort || "priority");
+      orders.sort((a, b) => {
+        if (sortMode === "latest") {
+          return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+        }
+        if (sortMode === "amount") {
+          return (Number(b.totalAmount) || 0) - (Number(a.totalAmount) || 0);
+        }
+        if (sortMode === "oldest") {
+          return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+        }
+        // Default: "priority" (Action Required first: pending, processing, confirmed, completed, cancelled)
+        const statusPriority: Record<string, number> = {
+          pending: 1,
+          processing: 2,
+          confirmed: 3,
+          completed: 4,
+          cancelled: 5,
+        };
+        const prioA = statusPriority[String(a.status).toLowerCase()] || 99;
+        const prioB = statusPriority[String(b.status).toLowerCase()] || 99;
+        if (prioA !== prioB) return prioA - prioB;
+        return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+      });
+
       res.json({ orders });
     } catch {
       res.status(500).json({ error: "Could not load orders" });

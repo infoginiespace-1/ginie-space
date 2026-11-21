@@ -72,6 +72,8 @@ export default function CustomersPage() {
   const [reminderUpiUri, setReminderUpiUri] = useState<string | null>(null);
   const [searchText, setSearchText] = useState("");
   const [tagFilter, setTagFilter] = useState<string>("all");
+  const [customerSortBy, setCustomerSortBy] = useState<"latest" | "alpha_asc" | "highest_due" | "oldest">("latest");
+  const [sourceFilter, setSourceFilter] = useState<"all" | "leads" | "manual">("all");
   const [selectedCustomerKeys, setSelectedCustomerKeys] = useState<React.Key[]>([]);
   const [broadcastModalOpen, setBroadcastModalOpen] = useState(false);
   const [broadcastTemplate, setBroadcastTemplate] = useState(
@@ -324,14 +326,30 @@ export default function CustomersPage() {
       title: "Name",
       dataIndex: "name",
       key: "name",
-      render: (name: string, record: Customer) => (
-        <div>
-          <a onClick={() => openCustomerLedger(record)} style={{ fontWeight: 600, color: "#15803d" }}>
-            {name}
-          </a>
-          {record.tags && <div><Text type="secondary" style={{ fontSize: 11 }}>{record.tags}</Text></div>}
-        </div>
-      ),
+      render: (name: string, record: Customer) => {
+        const isLead = String(record.tags || "").toLowerCase().includes("lead");
+        return (
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <a onClick={() => openCustomerLedger(record)} style={{ fontWeight: 600, color: "#15803d" }}>
+                {name}
+              </a>
+              {isLead && (
+                <Tag color="cyan" style={{ fontSize: 10, padding: "0 6px", borderRadius: 4 }}>
+                  🎯 Lead Converted
+                </Tag>
+              )}
+            </div>
+            {record.tags && (
+              <div>
+                <Text type="secondary" style={{ fontSize: 11 }}>
+                  {record.tags}
+                </Text>
+              </div>
+            )}
+          </div>
+        );
+      },
     },
     {
       title: "Phone (WhatsApp)",
@@ -445,11 +463,19 @@ export default function CustomersPage() {
 
   const totalMarketDue = Object.values(dueByPhone).reduce((acc, v) => acc + (Number(v) || 0), 0);
   const customersWithDueCount = customers.filter((c) => (dueByPhone[normalizePhone(c.phone)] || 0) > 0).length;
+  const leadCustomersCount = customers.filter((c) =>
+    String(c.tags || "").toLowerCase().includes("lead")
+  ).length;
 
   const filteredCustomers = customers
     .filter((c) => {
       const due = dueByPhone[normalizePhone(c.phone)] || 0;
       if (viewMode === "khata" && due <= 0) return false;
+
+      const isLead = String(c.tags || "").toLowerCase().includes("lead");
+      if (sourceFilter === "leads" && !isLead) return false;
+      if (sourceFilter === "manual" && isLead) return false;
+
       const matchesTag =
         tagFilter === "all" ||
         String(c.tags || "")
@@ -466,12 +492,19 @@ export default function CustomersPage() {
       );
     })
     .sort((a, b) => {
-      if (viewMode === "khata") {
+      if (viewMode === "khata" || customerSortBy === "highest_due") {
         const dueA = dueByPhone[normalizePhone(a.phone)] || 0;
         const dueB = dueByPhone[normalizePhone(b.phone)] || 0;
-        return dueB - dueA;
+        if (dueB !== dueA) return dueB - dueA;
       }
-      return 0;
+      if (customerSortBy === "alpha_asc") {
+        return (a.name || "").localeCompare(b.name || "");
+      }
+      if (customerSortBy === "oldest") {
+        return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+      }
+      // default "latest" (newest registered / converted leads at top)
+      return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
     });
 
   return (
@@ -565,6 +598,63 @@ export default function CustomersPage() {
       </Row>
 
       <Card style={{ borderRadius: 12 }}>
+        {/* Quick Filter Strip & Sorting Bar */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
+          <Space wrap size={[8, 8]}>
+            <Button
+              size="small"
+              type={sourceFilter === "all" && viewMode === "all" ? "primary" : "default"}
+              onClick={() => {
+                setSourceFilter("all");
+                setViewMode("all");
+              }}
+              style={sourceFilter === "all" && viewMode === "all" ? { background: "#059669", borderColor: "#059669" } : undefined}
+            >
+              All Directory ({customers.length})
+            </Button>
+            <Button
+              size="small"
+              type={sourceFilter === "leads" ? "primary" : "default"}
+              onClick={() => {
+                setSourceFilter("leads");
+                setViewMode("all");
+              }}
+              style={sourceFilter === "leads" ? { background: "#0284c7", borderColor: "#0284c7", fontWeight: 600 } : undefined}
+            >
+              🎯 Converted from Leads ({leadCustomersCount})
+            </Button>
+            <Button
+              size="small"
+              type={viewMode === "khata" ? "primary" : "default"}
+              onClick={() => {
+                setViewMode("khata");
+                setSourceFilter("all");
+              }}
+              danger={customersWithDueCount > 0}
+              style={viewMode === "khata" ? { fontWeight: 600 } : undefined}
+            >
+              📒 Digital Khata / Udhaar ({customersWithDueCount})
+            </Button>
+          </Space>
+
+          <Space wrap align="center">
+            <Typography.Text type="secondary" style={{ fontSize: 13, fontWeight: 500 }}>
+              Sort:
+            </Typography.Text>
+            <Select
+              value={customerSortBy}
+              onChange={setCustomerSortBy}
+              style={{ minWidth: 210 }}
+              options={[
+                { value: "latest", label: "🕒 Recently Added (Newest)" },
+                { value: "alpha_asc", label: "🔤 Alphabetical (A-Z)" },
+                { value: "highest_due", label: "💰 Highest Udhaar Due" },
+                { value: "oldest", label: "⏳ Oldest First" },
+              ]}
+            />
+          </Space>
+        </div>
+
         <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap", justifyContent: "space-between", alignItems: "center" }}>
           <Segmented
             value={viewMode}

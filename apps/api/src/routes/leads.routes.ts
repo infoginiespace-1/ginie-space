@@ -187,6 +187,7 @@ export function createLeadsRouter(
     try {
       const filter = req.user?.role === "admin" ? undefined : { userId: req.user!.id };
       const leads = await db.leads.findMany(filter);
+      leads.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
       res.json({ leads });
     } catch {
       res.status(500).json({ error: "Could not load saved leads" });

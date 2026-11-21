@@ -91,6 +91,8 @@ export default function LeadsPage() {
   const [discoveredLeads, setDiscoveredLeads] = useState<DiscoveredLead[]>([]);
   const [savedLeads, setSavedLeads] = useState<SavedLead[]>([]);
   const [savedStatusFilter, setSavedStatusFilter] = useState<string>("all");
+  const [savedSearchText, setSavedSearchText] = useState("");
+  const [savedSortBy, setSavedSortBy] = useState<"latest" | "name" | "rating" | "followup">("latest");
   const [loadingSaved, setLoadingSaved] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [convertingId, setConvertingId] = useState<string | null>(null);
@@ -657,15 +659,23 @@ export default function LeadsPage() {
             label: `Saved Leads (${savedLeads.length})`,
             children: (
               <Card style={{ borderRadius: 12 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 8 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
                   <Text type="secondary">
                     Select saved leads with valid phone numbers to send personalized WhatsApp outreach (3s safe delay).
                   </Text>
                   <Space wrap>
+                    <Input
+                      prefix={<SearchOutlined style={{ color: "#94a3b8" }} />}
+                      placeholder="Search saved leads..."
+                      allowClear
+                      value={savedSearchText}
+                      onChange={(e) => setSavedSearchText(e.target.value)}
+                      style={{ width: 220 }}
+                    />
                     <Select
                       value={savedStatusFilter}
                       onChange={setSavedStatusFilter}
-                      style={{ width: 170 }}
+                      style={{ width: 150 }}
                       options={[
                         { value: "all", label: "All Statuses" },
                         { value: "followup_due", label: "Follow-Up Due" },
@@ -675,21 +685,39 @@ export default function LeadsPage() {
                         { value: "archived", label: "Archived" },
                       ]}
                     />
+                    <Select
+                      value={savedSortBy}
+                      onChange={setSavedSortBy}
+                      style={{ width: 185 }}
+                      options={[
+                        { value: "latest", label: "🕒 Recently Added (Newest)" },
+                        { value: "name", label: "🔤 Name (A-Z)" },
+                        { value: "rating", label: "⭐ Rating (High to Low)" },
+                        { value: "followup", label: "📅 Follow-Up Date" },
+                      ]}
+                    />
                     <Button
                       icon={<DownloadOutlined />}
                       onClick={() => {
-                        const todayStr = new Date().toISOString().slice(0, 10);
                         downloadCsv(
                           "giniespace-leads.csv",
                           ["ID", "Name", "Phone", "Address", "Website", "Rating", "Category", "Status", "FollowUpDate", "Notes"],
                           savedLeads
-                            .filter((l) =>
-                              savedStatusFilter === "all"
-                                ? true
-                                : savedStatusFilter === "followup_due"
-                                ? Boolean(l.followUpDate && l.followUpDate <= todayStr && l.status !== "converted")
-                                : l.status === savedStatusFilter
-                            )
+                            .filter((l) => {
+                              const todayStr = new Date().toISOString().slice(0, 10);
+                              if (savedStatusFilter === "followup_due") {
+                                if (!Boolean(l.followUpDate && l.followUpDate <= todayStr && l.status !== "converted")) return false;
+                              } else if (savedStatusFilter !== "all" && l.status !== savedStatusFilter) {
+                                return false;
+                              }
+                              if (!savedSearchText.trim()) return true;
+                              const q = savedSearchText.toLowerCase().trim();
+                              return (
+                                l.name.toLowerCase().includes(q) ||
+                                (l.phone || "").toLowerCase().includes(q) ||
+                                (l.category || "").toLowerCase().includes(q)
+                              );
+                            })
                             .map((l) => [l.id, l.name, l.phone, l.address, l.website, l.rating, l.category, l.status, l.followUpDate, l.notes])
                         );
                       }}
@@ -710,19 +738,40 @@ export default function LeadsPage() {
                         setCampaignModalOpen(true);
                       }}
                     >
-                      Bulk WhatsApp Campaign ({selectedLeadKeys.length})
+                      Bulk WhatsApp ({selectedLeadKeys.length})
                     </Button>
                   </Space>
                 </div>
                 <Table
-                  dataSource={savedLeads.filter((l) => {
-                    const todayStr = new Date().toISOString().slice(0, 10);
-                    if (savedStatusFilter === "all") return true;
-                    if (savedStatusFilter === "followup_due") {
-                      return Boolean(l.followUpDate && l.followUpDate <= todayStr && l.status !== "converted");
-                    }
-                    return l.status === savedStatusFilter;
-                  })}
+                  dataSource={savedLeads
+                    .filter((l) => {
+                      const todayStr = new Date().toISOString().slice(0, 10);
+                      if (savedStatusFilter === "followup_due") {
+                        if (!Boolean(l.followUpDate && l.followUpDate <= todayStr && l.status !== "converted")) return false;
+                      } else if (savedStatusFilter !== "all" && l.status !== savedStatusFilter) {
+                        return false;
+                      }
+                      if (!savedSearchText.trim()) return true;
+                      const q = savedSearchText.toLowerCase().trim();
+                      return (
+                        l.name.toLowerCase().includes(q) ||
+                        (l.phone || "").toLowerCase().includes(q) ||
+                        (l.category || "").toLowerCase().includes(q) ||
+                        (l.address || "").toLowerCase().includes(q)
+                      );
+                    })
+                    .sort((a, b) => {
+                      if (savedSortBy === "name") {
+                        return (a.name || "").localeCompare(b.name || "");
+                      }
+                      if (savedSortBy === "rating") {
+                        return (Number(b.rating) || 0) - (Number(a.rating) || 0);
+                      }
+                      if (savedSortBy === "followup") {
+                        return (a.followUpDate || "9999-99-99").localeCompare(b.followUpDate || "9999-99-99");
+                      }
+                      return new Date((b as any).createdAt || 0).getTime() - new Date((a as any).createdAt || 0).getTime();
+                    })}
                   columns={savedColumns}
                   rowKey="id"
                   loading={loadingSaved}

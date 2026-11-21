@@ -256,6 +256,7 @@ export default function AdminPage() {
   const [leadsFilter, setLeadsFilter] = useState<"all" | "active" | "disabled">("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "suspended">("all");
   const [typeFilter, setTypeFilter] = useState<"all" | "retail" | "wholesale" | "services">("all");
+  const [merchantSortBy, setMerchantSortBy] = useState<"latest" | "revenue" | "orders" | "products" | "name">("latest");
   const [selectedMerchant, setSelectedMerchant] = useState<MerchantItem | null>(null);
   const [merchantDrawerOpen, setMerchantDrawerOpen] = useState(false);
 
@@ -1043,23 +1044,40 @@ export default function AdminPage() {
 
   // Filtered Merchants
   const filteredMerchants = useMemo(() => {
-    return merchants.filter((m) => {
-      if (leadsFilter === "active" && !m.leadsEnabled) return false;
-      if (leadsFilter === "disabled" && m.leadsEnabled) return false;
-      if (statusFilter !== "all" && m.status !== statusFilter) return false;
-      if (typeFilter !== "all" && m.businessType !== typeFilter) return false;
+    return merchants
+      .filter((m) => {
+        if (leadsFilter === "active" && !m.leadsEnabled) return false;
+        if (leadsFilter === "disabled" && m.leadsEnabled) return false;
+        if (statusFilter !== "all" && m.status !== statusFilter) return false;
+        if (typeFilter !== "all" && m.businessType !== typeFilter) return false;
 
-      if (!searchTerm.trim()) return true;
-      const q = searchTerm.toLowerCase().trim();
-      return (
-        m.name?.toLowerCase().includes(q) ||
-        m.email?.toLowerCase().includes(q) ||
-        m.business?.name?.toLowerCase().includes(q) ||
-        m.business?.phone?.includes(q) ||
-        m.business?.slug?.toLowerCase().includes(q)
-      );
-    });
-  }, [merchants, searchTerm, leadsFilter, statusFilter, typeFilter]);
+        if (!searchTerm.trim()) return true;
+        const q = searchTerm.toLowerCase().trim();
+        return (
+          m.name?.toLowerCase().includes(q) ||
+          m.email?.toLowerCase().includes(q) ||
+          m.business?.name?.toLowerCase().includes(q) ||
+          m.business?.phone?.includes(q) ||
+          m.business?.slug?.toLowerCase().includes(q)
+        );
+      })
+      .sort((a, b) => {
+        if (merchantSortBy === "revenue") {
+          return (Number(b.counts?.revenue) || 0) - (Number(a.counts?.revenue) || 0);
+        }
+        if (merchantSortBy === "orders") {
+          return (Number(b.counts?.orders) || 0) - (Number(a.counts?.orders) || 0);
+        }
+        if (merchantSortBy === "products") {
+          return (Number(b.counts?.products) || 0) - (Number(a.counts?.products) || 0);
+        }
+        if (merchantSortBy === "name") {
+          return (a.name || "").localeCompare(b.name || "");
+        }
+        // default "latest"
+        return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+      });
+  }, [merchants, searchTerm, leadsFilter, statusFilter, typeFilter, merchantSortBy]);
 
   // Target count for selected broadcast segment
   const broadcastTargetCount = useMemo(() => {
@@ -1744,8 +1762,8 @@ export default function AdminPage() {
                 <div>
                   {/* Filters Bar */}
                   <Card styles={{ body: { padding: isMobile ? 12 : 20 } }} style={{ marginBottom: 16, borderRadius: 12 }}>
-                    <Row gutter={isMobile ? [8, 10] : [16, 12]} align="middle">
-                      <Col xs={24} md={8}>
+                    <Row gutter={isMobile ? [8, 10] : [12, 12]} align="middle">
+                      <Col xs={24} md={7}>
                         <Input
                           placeholder="Search store name, phone, owner, email..."
                           prefix={<SearchOutlined style={{ color: "#8c8c8c" }} />}
@@ -1754,7 +1772,7 @@ export default function AdminPage() {
                           allowClear
                         />
                       </Col>
-                      <Col xs={12} md={5}>
+                      <Col xs={12} md={4}>
                         <Select
                           style={{ width: "100%" }}
                           value={leadsFilter}
@@ -1766,33 +1784,47 @@ export default function AdminPage() {
                           ]}
                         />
                       </Col>
-                        <Col xs={12} md={5}>
-                          <Select
-                            style={{ width: "100%" }}
-                            value={statusFilter}
-                            onChange={setStatusFilter}
-                            options={[
-                              { value: "all", label: "All Statuses" },
-                              { value: "active", label: "Active Only" },
-                              { value: "suspended", label: "Suspended Only" },
-                            ]}
-                          />
-                        </Col>
-                        <Col xs={24} md={6}>
-                          <Select
-                            style={{ width: "100%" }}
-                            value={typeFilter}
-                            onChange={setTypeFilter}
-                            options={[
-                              { value: "all", label: "All Business Types" },
-                              { value: "retail", label: "Retail / Dukaan" },
-                              { value: "wholesale", label: "Wholesale / B2B" },
-                              { value: "services", label: "Services / Freelance" },
-                            ]}
-                          />
-                        </Col>
-                      </Row>
-                    </Card>
+                      <Col xs={12} md={4}>
+                        <Select
+                          style={{ width: "100%" }}
+                          value={statusFilter}
+                          onChange={setStatusFilter}
+                          options={[
+                            { value: "all", label: "All Statuses" },
+                            { value: "active", label: "Active Only" },
+                            { value: "suspended", label: "Suspended Only" },
+                          ]}
+                        />
+                      </Col>
+                      <Col xs={12} md={4}>
+                        <Select
+                          style={{ width: "100%" }}
+                          value={typeFilter}
+                          onChange={setTypeFilter}
+                          options={[
+                            { value: "all", label: "All Business Types" },
+                            { value: "retail", label: "Retail / Dukaan" },
+                            { value: "wholesale", label: "Wholesale / B2B" },
+                            { value: "services", label: "Services / Freelance" },
+                          ]}
+                        />
+                      </Col>
+                      <Col xs={12} md={5}>
+                        <Select
+                          style={{ width: "100%" }}
+                          value={merchantSortBy}
+                          onChange={setMerchantSortBy}
+                          options={[
+                            { value: "latest", label: "🕒 Latest Registered" },
+                            { value: "revenue", label: "💰 Highest Revenue" },
+                            { value: "orders", label: "📦 Most Orders" },
+                            { value: "products", label: "🏷️ Most Products" },
+                            { value: "name", label: "🔤 Name (A-Z)" },
+                          ]}
+                        />
+                      </Col>
+                    </Row>
+                  </Card>
 
                     {/* Merchants View */}
                     {isMobile ? (

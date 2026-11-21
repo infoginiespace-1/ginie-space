@@ -11,6 +11,19 @@ export function createCustomersRouter(db: IDatabase, io: Server): Router {
     try {
       const filter = req.user?.role === "admin" ? undefined : { userId: req.user!.id };
       const customers = await db.customers.findMany(filter);
+
+      const sortMode = String(req.query.sort || "latest");
+      customers.sort((a, b) => {
+        if (sortMode === "alpha") {
+          return String(a.name || "").localeCompare(String(b.name || ""));
+        }
+        if (sortMode === "oldest") {
+          return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+        }
+        // Default: latest added / converted customer first
+        return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+      });
+
       res.json({ customers });
     } catch {
       res.status(500).json({ error: "Could not load customers" });

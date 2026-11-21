@@ -446,6 +446,7 @@ export default function OrdersPage() {
   }>({ name: "GinieSpace Store" });
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [orderSortBy, setOrderSortBy] = useState<"priority" | "latest" | "highest_amount" | "scheduled" | "oldest">("priority");
   const [invoiceOrder, setInvoiceOrder] = useState<Order | null>(null);
   const [invoiceQrUrl, setInvoiceQrUrl] = useState<string | null>(null);
 
@@ -1056,22 +1057,58 @@ export default function OrdersPage() {
   ];
 
   const todayStr = new Date().toISOString().slice(0, 10);
-  const filteredOrders = orders.filter((o) => {
-    const matchesStatus = statusFilter === "all" || o.status === statusFilter;
-    const matchesSchedule =
-      scheduleFilter === "all" ||
-      (scheduleFilter === "today" && String(o.bookingDate || "") === todayStr) ||
-      (scheduleFilter === "upcoming" && Boolean(o.bookingDate) && String(o.bookingDate) >= todayStr) ||
-      (scheduleFilter === "renewals" && Boolean(o.nextRenewalDate));
-    const q = searchText.trim().toLowerCase();
-    const matchesSearch =
-      !q ||
-      o.customerName.toLowerCase().includes(q) ||
-      o.customerPhone.toLowerCase().includes(q) ||
-      (o.assignedStaff || "").toLowerCase().includes(q) ||
-      o.id.toLowerCase().includes(q);
-    return matchesStatus && matchesSchedule && matchesSearch;
-  });
+  const pendingOrdersCount = orders.filter((o) => o.status === "pending").length;
+  const todayOrdersCount = orders.filter((o) => String(o.bookingDate || o.createdAt || "").slice(0, 10) === todayStr).length;
+
+  const filteredOrders = orders
+    .filter((o) => {
+      const matchesStatus = statusFilter === "all" || o.status === statusFilter;
+      const matchesSchedule =
+        scheduleFilter === "all" ||
+        (scheduleFilter === "today" && String(o.bookingDate || "") === todayStr) ||
+        (scheduleFilter === "upcoming" && Boolean(o.bookingDate) && String(o.bookingDate) >= todayStr) ||
+        (scheduleFilter === "renewals" && Boolean(o.nextRenewalDate));
+      const q = searchText.trim().toLowerCase();
+      const matchesSearch =
+        !q ||
+        o.customerName.toLowerCase().includes(q) ||
+        o.customerPhone.toLowerCase().includes(q) ||
+        (o.assignedStaff || "").toLowerCase().includes(q) ||
+        o.id.toLowerCase().includes(q);
+      return matchesStatus && matchesSchedule && matchesSearch;
+    })
+    .sort((a, b) => {
+      if (orderSortBy === "latest") {
+        return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+      }
+      if (orderSortBy === "oldest") {
+        return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+      }
+      if (orderSortBy === "highest_amount") {
+        return (Number(b.totalAmount) || 0) - (Number(a.totalAmount) || 0);
+      }
+      if (orderSortBy === "scheduled") {
+        const dateA = a.bookingDate || a.createdAt || "";
+        const dateB = b.bookingDate || b.createdAt || "";
+        return dateA.localeCompare(dateB);
+      }
+      // "priority" (Smart Priority: Pending/Processing first, then confirmed/dispatched, then delivered/completed, cancelled)
+      const priorityWeight: Record<string, number> = {
+        pending: 10,
+        processing: 9,
+        confirmed: 7,
+        dispatched: 5,
+        completed: 3,
+        delivered: 3,
+        cancelled: 1,
+      };
+      const weightA = priorityWeight[a.status?.toLowerCase()] || 4;
+      const weightB = priorityWeight[b.status?.toLowerCase()] || 4;
+      if (weightA !== weightB) {
+        return weightB - weightA;
+      }
+      return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+    });
 
   const handlePrintInvoiceWindow = (order: Order) => {
     const win = window.open("", "_blank", "width=820,height=900");
@@ -1332,6 +1369,73 @@ export default function OrdersPage() {
         </Card>
       ) : (
       <Card style={{ borderRadius: 12 }}>
+        {/* Quick Filter Status Pills & Sorting Bar */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
+          <Space wrap size={[8, 8]}>
+            <Button
+              size="small"
+              type={statusFilter === "all" && scheduleFilter === "all" ? "primary" : "default"}
+              onClick={() => {
+                setStatusFilter("all");
+                setScheduleFilter("all");
+              }}
+              style={statusFilter === "all" && scheduleFilter === "all" ? { background: "#059669", borderColor: "#059669" } : undefined}
+            >
+              All Orders ({orders.length})
+            </Button>
+            <Button
+              size="small"
+              type={statusFilter === "pending" ? "primary" : "default"}
+              onClick={() => {
+                setStatusFilter("pending");
+                setScheduleFilter("all");
+              }}
+              danger={pendingOrdersCount > 0}
+              style={statusFilter === "pending" ? { fontWeight: 600 } : undefined}
+            >
+              🚨 Pending ({pendingOrdersCount})
+            </Button>
+            <Button
+              size="small"
+              type={scheduleFilter === "today" ? "primary" : "default"}
+              onClick={() => {
+                setScheduleFilter("today");
+                setStatusFilter("all");
+              }}
+            >
+              📅 Today ({todayOrdersCount})
+            </Button>
+            <Button
+              size="small"
+              type={statusFilter === "delivered" ? "primary" : "default"}
+              onClick={() => {
+                setStatusFilter("delivered");
+                setScheduleFilter("all");
+              }}
+            >
+              ✅ Delivered
+            </Button>
+          </Space>
+
+          <Space wrap align="center">
+            <Typography.Text type="secondary" style={{ fontSize: 13, fontWeight: 500 }}>
+              Sort:
+            </Typography.Text>
+            <Select
+              value={orderSortBy}
+              onChange={setOrderSortBy}
+              style={{ minWidth: 200 }}
+              options={[
+                { value: "priority", label: "⚡ Action Priority (Pending First)" },
+                { value: "latest", label: "🕒 Latest First (Newest)" },
+                { value: "highest_amount", label: "💰 Highest Amount" },
+                { value: "scheduled", label: "📅 Scheduled Slot" },
+                { value: "oldest", label: "⏳ Oldest First" },
+              ]}
+            />
+          </Space>
+        </div>
+
         <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
           <Input
             prefix={<SearchOutlined style={{ color: "#94a3b8" }} />}
