@@ -23,6 +23,8 @@ import {
   Statistic,
   Row,
   Col,
+  Grid,
+  Pagination,
 } from "antd";
 import {
   PlusOutlined,
@@ -58,6 +60,13 @@ interface Customer {
 }
 
 export default function CustomersPage() {
+  const screens = Grid.useBreakpoint();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  const isMobile = mounted ? (screens.md === false || (typeof window !== "undefined" && window.innerWidth < 768)) : false;
+  const [mobilePage, setMobilePage] = useState(1);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
@@ -686,21 +695,198 @@ export default function CustomersPage() {
             />
           </div>
         </div>
-        <Table
-          dataSource={filteredCustomers}
-          columns={columns}
-          rowKey="id"
-          loading={loading}
-          pagination={{ pageSize: 10 }}
-          scroll={{ x: 850 }}
-          rowSelection={{
-            selectedRowKeys: selectedCustomerKeys,
-            onChange: (keys) => setSelectedCustomerKeys(keys),
-            getCheckboxProps: (record: Customer) => ({
-              disabled: !record.phone,
-            }),
-          }}
-        />
+        {isMobile ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {filteredCustomers.length === 0 ? (
+              <div style={{ padding: "40px 0", textAlign: "center", color: "#94a3b8" }}>
+                No customers found.
+              </div>
+            ) : (
+              filteredCustomers
+                .slice((mobilePage - 1) * 10, mobilePage * 10)
+                .map((record) => {
+                  const due = dueByPhone[normalizePhone(record.phone)] || 0;
+                  const phoneDigits = String(record.phone || "").replace(/[^0-9]/g, "");
+
+                  return (
+                    <div
+                      key={record.id}
+                      style={{
+                        background: "#ffffff",
+                        borderRadius: 12,
+                        border: "1px solid #e2e8f0",
+                        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
+                        padding: 14,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 10,
+                      }}
+                    >
+                      {/* Top Row: Name, Tag & Due Pill */}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, fontSize: 14, color: "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {record.name}
+                          </div>
+                          {record.tags && (
+                            <div style={{ marginTop: 2 }}>
+                              <Tag color="cyan" style={{ margin: 0, fontSize: 10, padding: "0 6px", borderRadius: 4 }}>
+                                {record.tags}
+                              </Tag>
+                            </div>
+                          )}
+                        </div>
+
+                        {due > 0 ? (
+                          <Tag color="red" style={{ margin: 0, fontWeight: 700, fontSize: 11, borderRadius: 4 }}>
+                            ₹{due.toLocaleString("en-IN")} Due
+                          </Tag>
+                        ) : (
+                          <Tag color="green" style={{ margin: 0, fontSize: 11, borderRadius: 4 }}>
+                            Settled
+                          </Tag>
+                        )}
+                      </div>
+
+                      {/* Middle Row: Phone & Direct Call / Chat */}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ fontSize: 13, color: "#475569" }}>
+                          {record.phone ? `+${phoneDigits}` : <span style={{ color: "#94a3b8" }}>No phone</span>}
+                        </div>
+
+                        <div style={{ display: "flex", gap: 6 }}>
+                          {record.phone && (
+                            <a
+                              href={`https://wa.me/${phoneDigits}?text=Hello%20${encodeURIComponent(record.name)}...`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                width: 34,
+                                height: 34,
+                                borderRadius: 8,
+                                background: "#dcfce7",
+                                color: "#15803d",
+                                textDecoration: "none",
+                                fontSize: 16,
+                              }}
+                              title="Chat on WhatsApp"
+                            >
+                              <MessageOutlined />
+                            </a>
+                          )}
+                          {record.phone && (
+                            <a
+                              href={`tel:${phoneDigits}`}
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                width: 34,
+                                height: 34,
+                                borderRadius: 8,
+                                background: "#f1f5f9",
+                                color: "#475569",
+                                textDecoration: "none",
+                                fontSize: 14,
+                              }}
+                              title="Call Customer"
+                            >
+                              📞
+                            </a>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Notes / Details */}
+                      {record.notes && (
+                        <div style={{ fontSize: 11, color: "#64748b", background: "#f8fafc", padding: "6px 8px", borderRadius: 6 }}>
+                          📝 {record.notes}
+                        </div>
+                      )}
+
+                      {/* Bottom Row: Actions */}
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", borderTop: "1px dashed #e2e8f0", paddingTop: 8 }}>
+                        {due > 0 && (
+                          <Button
+                            type="primary"
+                            icon={<CreditCardOutlined />}
+                            size="small"
+                            onClick={() => {
+                              setSettleCustomer(record);
+                              setSettleAmount(due);
+                              setSettlePaymentMode("cash");
+                              setSettleNotes("");
+                            }}
+                            style={{ background: "#059669", borderColor: "#059669", fontWeight: 600, borderRadius: 6 }}
+                          >
+                            Settle Due
+                          </Button>
+                        )}
+                        <Button
+                          icon={<AccountBookOutlined />}
+                          size="small"
+                          onClick={() => openCustomerLedger(record)}
+                          style={{ borderRadius: 6 }}
+                        >
+                          Khata
+                        </Button>
+                        <Button
+                          size="small"
+                          icon={<EditOutlined />}
+                          onClick={() => openEditCustomer(record)}
+                          style={{ borderRadius: 6 }}
+                        />
+                        <Popconfirm
+                          title="Delete this customer?"
+                          onConfirm={() => handleDeleteCustomer(record.id)}
+                          okText="Delete"
+                          cancelText="Cancel"
+                        >
+                          <Button
+                            size="small"
+                            danger
+                            icon={<DeleteOutlined />}
+                            style={{ borderRadius: 6 }}
+                          />
+                        </Popconfirm>
+                      </div>
+                    </div>
+                  );
+                })
+            )}
+
+            {filteredCustomers.length > 10 && (
+              <div style={{ display: "flex", justifyContent: "center", marginTop: 8 }}>
+                <Pagination
+                  current={mobilePage}
+                  pageSize={10}
+                  total={filteredCustomers.length}
+                  onChange={(p) => setMobilePage(p)}
+                  size="small"
+                />
+              </div>
+            )}
+          </div>
+        ) : (
+          <Table
+            dataSource={filteredCustomers}
+            columns={columns}
+            rowKey="id"
+            loading={loading}
+            pagination={{ pageSize: 10 }}
+            scroll={{ x: 850 }}
+            rowSelection={{
+              selectedRowKeys: selectedCustomerKeys,
+              onChange: (keys) => setSelectedCustomerKeys(keys),
+              getCheckboxProps: (record: Customer) => ({
+                disabled: !record.phone,
+              }),
+            }}
+          />
+        )}
       </Card>
 
       <Modal

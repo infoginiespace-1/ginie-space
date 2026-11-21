@@ -259,22 +259,48 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <Drawer
         title={null}
         placement="left"
-        width={250}
+        width={270}
         onClose={() => setMobileMenuOpen(false)}
         open={isMobile && mobileMenuOpen}
-        styles={{ body: { padding: 0 } }}
+        styles={{
+          body: {
+            padding: 0,
+            display: "flex",
+            flexDirection: "column",
+            height: "100%",
+          },
+        }}
       >
-        {sidebarHeader}
-        <Menu
-          mode="inline"
-          selectedKeys={[pathname]}
-          items={menuItems}
-          onClick={({ key }) => {
-            setMobileMenuOpen(false);
-            router.push(key);
-          }}
-          style={{ borderRight: 0 }}
-        />
+        <div style={{ flex: 1, overflowY: "auto" }}>
+          {sidebarHeader}
+          <Menu
+            mode="inline"
+            selectedKeys={[pathname]}
+            items={menuItems}
+            onClick={({ key }) => {
+              setMobileMenuOpen(false);
+              router.push(key);
+            }}
+            style={{ borderRight: 0 }}
+          />
+        </div>
+
+        <div style={{ padding: "14px 18px", borderTop: "1px solid #f0f0f0", background: "#fafafa" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+            <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginRight: 8 }}>
+              <div style={{ fontWeight: 600, fontSize: 13, color: "#1e293b" }}>{user?.name || "Merchant"}</div>
+              <div style={{ fontSize: 11, color: "#64748b", textOverflow: "ellipsis", overflow: "hidden" }}>
+                {user?.email || (user?.role === "admin" ? "Platform Admin" : "Store Owner")}
+              </div>
+            </div>
+            <Tag color={user?.role === "admin" ? "purple" : user?.role === "staff" ? "cyan" : "blue"}>
+              {user?.role === "admin" ? "Admin" : user?.role === "staff" ? "Staff" : "Store"}
+            </Tag>
+          </div>
+          <Button danger block icon={<LogoutOutlined />} onClick={logout} size="middle" style={{ borderRadius: 8 }}>
+            Log out
+          </Button>
+        </div>
       </Drawer>
 
       <Layout>
@@ -417,11 +443,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   }
                 >
                   <Badge count={pendingOrdersCount + unreadChatsCount + lowStockItems.length} size="small">
-                    <Button size="small" icon={<BellOutlined />} aria-label="Notifications" style={{ border: "none" }} />
+                    <Button size="middle" icon={<BellOutlined />} aria-label="Notifications" style={{ border: "none", background: "#f8fafc" }} />
                   </Badge>
                 </Popover>
-
-                <Button size="small" icon={<LogoutOutlined />} onClick={logout} aria-label="Logout" style={{ border: "none" }} />
               </div>
             </div>
           ) : (
@@ -564,8 +588,168 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         )}
 
-        <Content style={{ padding: isMobile ? 12 : 24, background: "#f8fafc" }}>{children}</Content>
+        <Content
+          style={{
+            padding: isMobile ? "12px 12px calc(76px + env(safe-area-inset-bottom, 0px)) 12px" : 24,
+            background: "#f8fafc",
+            minHeight: "calc(100vh - 64px)",
+          }}
+        >
+          {children}
+        </Content>
       </Layout>
+
+      {/* Mobile Native Bottom Navigation Dock */}
+      {isMobile && (
+        <nav
+          className="no-print"
+          style={{
+            position: "fixed",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: "calc(58px + env(safe-area-inset-bottom, 0px))",
+            paddingBottom: "env(safe-area-inset-bottom, 0px)",
+            background: "#ffffff",
+            borderTop: "1px solid #e2e8f0",
+            boxShadow: "0 -4px 16px rgba(15, 23, 42, 0.08)",
+            display: "flex",
+            alignItems: "stretch",
+            justifyContent: "space-around",
+            zIndex: 1000,
+            userSelect: "none",
+          }}
+        >
+          {/* Tab 1: Home / Dashboard */}
+          <button
+            type="button"
+            onClick={() => router.push("/dashboard")}
+            style={{
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "transparent",
+              border: "none",
+              padding: "4px 2px",
+              cursor: "pointer",
+              color: pathname === "/dashboard" ? "#059669" : "#64748b",
+              fontWeight: pathname === "/dashboard" ? 700 : 500,
+              transition: "color 0.15s ease",
+            }}
+          >
+            <DashboardOutlined style={{ fontSize: 20 }} />
+            <span style={{ fontSize: 10, marginTop: 3, lineHeight: 1.1 }}>Home</span>
+          </button>
+
+          {/* Tab 2: Live Inbox */}
+          <button
+            type="button"
+            onClick={() => router.push("/inbox")}
+            style={{
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "transparent",
+              border: "none",
+              padding: "4px 2px",
+              cursor: "pointer",
+              color: pathname === "/inbox" ? "#059669" : "#64748b",
+              fontWeight: pathname === "/inbox" ? 700 : 500,
+              transition: "color 0.15s ease",
+            }}
+          >
+            <Badge count={unreadChatsCount} size="small" offset={[4, -2]}>
+              <MessageOutlined style={{ fontSize: 20, color: pathname === "/inbox" ? "#059669" : "#64748b" }} />
+            </Badge>
+            <span style={{ fontSize: 10, marginTop: 3, lineHeight: 1.1 }}>Inbox</span>
+          </button>
+
+          {/* Tab 3: Orders & Sales */}
+          <button
+            type="button"
+            onClick={() => router.push("/orders")}
+            style={{
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "transparent",
+              border: "none",
+              padding: "4px 2px",
+              cursor: "pointer",
+              color: pathname === "/orders" ? "#059669" : "#64748b",
+              fontWeight: pathname === "/orders" ? 700 : 500,
+              transition: "color 0.15s ease",
+            }}
+          >
+            <Badge count={pendingOrdersCount} size="small" color="#fa8c16" offset={[4, -2]}>
+              <ShoppingOutlined style={{ fontSize: 20, color: pathname === "/orders" ? "#059669" : "#64748b" }} />
+            </Badge>
+            <span style={{ fontSize: 10, marginTop: 3, lineHeight: 1.1 }}>
+              {isServiceBiz ? "Bookings" : "Orders"}
+            </span>
+          </button>
+
+          {/* Tab 4: Catalog & Items */}
+          <button
+            type="button"
+            onClick={() => router.push("/products")}
+            style={{
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "transparent",
+              border: "none",
+              padding: "4px 2px",
+              cursor: "pointer",
+              color: pathname === "/products" ? "#059669" : "#64748b",
+              fontWeight: pathname === "/products" ? 700 : 500,
+              transition: "color 0.15s ease",
+            }}
+          >
+            <AppstoreOutlined style={{ fontSize: 20 }} />
+            <span style={{ fontSize: 10, marginTop: 3, lineHeight: 1.1 }}>
+              {isServiceBiz ? "Services" : "Catalog"}
+            </span>
+          </button>
+
+          {/* Tab 5: Menu / More */}
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(true)}
+            style={{
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "transparent",
+              border: "none",
+              padding: "4px 2px",
+              cursor: "pointer",
+              color:
+                mobileMenuOpen || ["/customers", "/marketing", "/leads", "/settings", "/admin"].includes(pathname)
+                  ? "#059669"
+                  : "#64748b",
+              fontWeight:
+                mobileMenuOpen || ["/customers", "/marketing", "/leads", "/settings", "/admin"].includes(pathname)
+                  ? 700
+                  : 500,
+              transition: "color 0.15s ease",
+            }}
+          >
+            <MenuOutlined style={{ fontSize: 20 }} />
+            <span style={{ fontSize: 10, marginTop: 3, lineHeight: 1.1 }}>Menu</span>
+          </button>
+        </nav>
+      )}
 
       {/* Floating Official GinieSpace WhatsApp Support Button */}
       <Tooltip title="Official GinieSpace Support (+91 9279259690)" placement="left">
@@ -576,24 +760,24 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           rel="noopener noreferrer"
           style={{
             position: "fixed",
-            right: 20,
-            bottom: 20,
+            right: isMobile ? 14 : 20,
+            bottom: isMobile ? "calc(68px + env(safe-area-inset-bottom, 0px))" : 20,
             zIndex: 999,
             background: "#25D366",
             color: "#fff",
             borderRadius: 999,
-            padding: "10px 16px",
+            padding: isMobile ? "8px 12px" : "10px 16px",
             boxShadow: "0 8px 20px rgba(37, 211, 102, 0.35)",
             display: "flex",
             alignItems: "center",
-            gap: 8,
+            gap: 6,
             fontWeight: 600,
-            fontSize: 13,
+            fontSize: isMobile ? 12 : 13,
             textDecoration: "none",
           }}
         >
-          <WhatsAppOutlined style={{ fontSize: 18 }} />
-          {!isMobile && <span>Support Help</span>}
+          <WhatsAppOutlined style={{ fontSize: isMobile ? 16 : 18 }} />
+          <span>Support</span>
         </a>
       </Tooltip>
 

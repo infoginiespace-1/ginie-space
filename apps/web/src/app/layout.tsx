@@ -3,6 +3,7 @@ import { AntdRegistry } from "@ant-design/nextjs-registry";
 import { ConfigProvider } from "antd";
 import { AuthProvider } from "../context/AuthContext";
 import { AnalyticsTracker } from "../components/AnalyticsTracker";
+import { PWAInstallPrompt } from "../components/PWAInstallPrompt";
 import React from "react";
 
 export const metadata: Metadata = {
@@ -63,6 +64,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -84,6 +86,12 @@ export default function RootLayout({
                 box-sizing: border-box;
                 -webkit-font-smoothing: antialiased;
                 -moz-osx-font-smoothing: grayscale;
+                -webkit-tap-highlight-color: transparent;
+                overscroll-behavior-y: contain;
+              }
+              @keyframes slideDown {
+                from { transform: translate(-50%, -100%); opacity: 0; }
+                to { transform: translate(-50%, 0); opacity: 1; }
               }
               *, *::before, *::after {
                 box-sizing: inherit;
@@ -388,6 +396,7 @@ export default function RootLayout({
           >
             <AuthProvider>
               <AnalyticsTracker />
+              <PWAInstallPrompt />
               {children}
             </AuthProvider>
           </ConfigProvider>

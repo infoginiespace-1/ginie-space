@@ -19,6 +19,8 @@ import {
   Upload,
   Alert,
   Segmented,
+  Grid,
+  Pagination,
 } from "antd";
 import {
   PlusOutlined,
@@ -165,6 +167,13 @@ async function readAndFitJpgForSheets(file: File): Promise<string> {
 
 export default function ProductsPage() {
   const { user } = useAuth();
+  const screens = Grid.useBreakpoint();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  const isMobile = mounted ? (screens.md === false || (typeof window !== "undefined" && window.innerWidth < 768)) : false;
+  const [mobilePage, setMobilePage] = useState(1);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -308,6 +317,19 @@ export default function ProductsPage() {
       loadProducts();
     } catch {
       message.error("Failed to delete item");
+    }
+  };
+
+  const handleQuickStock = async (product: Product, delta: number) => {
+    const newStock = Math.max(0, Number(product.stock || 0) + delta);
+    try {
+      await api.put(`/api/products/${product.id}`, { ...product, stock: newStock });
+      setProducts((prev) =>
+        prev.map((p) => (p.id === product.id ? { ...p, stock: newStock } : p))
+      );
+      message.success(`Stock updated: ${newStock} (${product.name})`);
+    } catch {
+      message.error("Could not update stock");
     }
   };
 
@@ -773,8 +795,8 @@ export default function ProductsPage() {
             />
           </div>
         </div>
-        <Table
-          dataSource={products.filter((p) => {
+        {(() => {
+          const filteredProducts = products.filter((p) => {
             const matchesStock =
               stockFilter === "all" || (p.itemType !== "service" && Number(p.stock) <= 5);
             const matchesType =
@@ -787,13 +809,170 @@ export default function ProductsPage() {
               (p.description || "").toLowerCase().includes(q) ||
               (p.category || "").toLowerCase().includes(q);
             return matchesStock && matchesType && matchesCat && matchesSearch;
-          })}
-          columns={columns}
-          rowKey="id"
-          loading={loading}
-          pagination={{ pageSize: 10 }}
-          scroll={{ x: 850 }}
-        />
+          });
+
+          if (isMobile) {
+            return (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {filteredProducts.length === 0 ? (
+                  <div style={{ padding: "40px 0", textAlign: "center", color: "#94a3b8" }}>
+                    No items found matching filters.
+                  </div>
+                ) : (
+                  filteredProducts
+                    .slice((mobilePage - 1) * 10, mobilePage * 10)
+                    .map((product) => {
+                      const isService = product.itemType === "service";
+                      const stockNum = Number(product.stock || 0);
+
+                      return (
+                        <div
+                          key={product.id}
+                          style={{
+                            background: "#ffffff",
+                            borderRadius: 12,
+                            border: "1px solid #e2e8f0",
+                            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
+                            padding: 12,
+                            display: "flex",
+                            gap: 12,
+                            alignItems: "center",
+                          }}
+                        >
+                          {/* Left: Thumbnail */}
+                          <div
+                            style={{
+                              width: 58,
+                              height: 58,
+                              borderRadius: 10,
+                              background: "#f1f5f9",
+                              flexShrink: 0,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              overflow: "hidden",
+                              border: "1px solid #e2e8f0",
+                            }}
+                          >
+                            {product.imageUrl ? (
+                              <img
+                                src={product.imageUrl}
+                                alt={product.name}
+                                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                onError={(e) => {
+                                  (e.target as HTMLElement).style.display = "none";
+                                }}
+                              />
+                            ) : (
+                              <ShopOutlined style={{ fontSize: 24, color: "#94a3b8" }} />
+                            )}
+                          </div>
+
+                          {/* Middle: Details */}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 600, fontSize: 13, color: "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {product.name}
+                            </div>
+
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
+                              <span style={{ fontSize: 14, fontWeight: 700, color: "#059669" }}>
+                                ₹{product.price}
+                              </span>
+                              <span style={{ fontSize: 11, color: "#64748b" }}>/ {product.unit}</span>
+                              {product.category && (
+                                <Tag style={{ margin: 0, fontSize: 10, padding: "0 4px", borderRadius: 4 }}>
+                                  {product.category}
+                                </Tag>
+                              )}
+                            </div>
+
+                            {/* Stock pill / stepper */}
+                            {!isService && (
+                              <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
+                                <Tag
+                                  color={stockNum <= 0 ? "error" : stockNum <= 5 ? "warning" : "success"}
+                                  style={{ margin: 0, fontSize: 10, padding: "0 6px", borderRadius: 4 }}
+                                >
+                                  {stockNum <= 0 ? "Out of Stock" : `${stockNum} in stock`}
+                                </Tag>
+                                <div style={{ display: "inline-flex", alignItems: "center", gap: 2, background: "#f1f5f9", borderRadius: 6, padding: "1px 4px" }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleQuickStock(product, -1)}
+                                    style={{ border: "none", background: "transparent", cursor: "pointer", fontWeight: 700, padding: "0 6px", fontSize: 14, color: "#334155" }}
+                                    title="Decrease stock"
+                                  >
+                                    −
+                                  </button>
+                                  <span style={{ fontSize: 11, fontWeight: 600, minWidth: 16, textAlign: "center" }}>{stockNum}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleQuickStock(product, +1)}
+                                    style={{ border: "none", background: "transparent", cursor: "pointer", fontWeight: 700, padding: "0 6px", fontSize: 14, color: "#334155" }}
+                                    title="Increase stock"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Right: Actions */}
+                          <div style={{ display: "flex", flexDirection: "column", gap: 6, flexShrink: 0 }}>
+                            <Button
+                              size="middle"
+                              icon={<EditOutlined />}
+                              onClick={() => openEditModal(product)}
+                              style={{ borderRadius: 6 }}
+                              title="Edit item"
+                            />
+                            <Popconfirm
+                              title="Delete this item?"
+                              onConfirm={() => handleDeleteProduct(product.id)}
+                              okText="Delete"
+                              cancelText="Cancel"
+                            >
+                              <Button
+                                size="middle"
+                                danger
+                                icon={<DeleteOutlined />}
+                                style={{ borderRadius: 6 }}
+                                title="Delete item"
+                              />
+                            </Popconfirm>
+                          </div>
+                        </div>
+                      );
+                    })
+                )}
+
+                {filteredProducts.length > 10 && (
+                  <div style={{ display: "flex", justifyContent: "center", marginTop: 8 }}>
+                    <Pagination
+                      current={mobilePage}
+                      pageSize={10}
+                      total={filteredProducts.length}
+                      onChange={(p) => setMobilePage(p)}
+                      size="small"
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          return (
+            <Table
+              dataSource={filteredProducts}
+              columns={columns}
+              rowKey="id"
+              loading={loading}
+              pagination={{ pageSize: 10 }}
+              scroll={{ x: 850 }}
+            />
+          );
+        })()}
       </Card>
 
       <Modal

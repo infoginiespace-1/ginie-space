@@ -22,6 +22,8 @@ import {
   Row,
   Col,
   Statistic,
+  Grid,
+  Pagination,
 } from "antd";
 import {
   PlusOutlined,
@@ -197,6 +199,13 @@ interface OrderLineItem {
 
 export default function OrdersPage() {
   const { user } = useAuth();
+  const screens = Grid.useBreakpoint();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  const isMobile = mounted ? (screens.md === false || (typeof window !== "undefined" && window.innerWidth < 768)) : false;
+  const [mobilePage, setMobilePage] = useState(1);
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<CatalogProduct[]>([]);
   const [customers, setCustomers] = useState<CustomerOption[]>([]);
@@ -1470,14 +1479,223 @@ export default function OrdersPage() {
             ]}
           />
         </div>
-        <Table
-          dataSource={filteredOrders}
-          columns={columns}
-          rowKey="id"
-          loading={loading}
-          pagination={{ pageSize: 10 }}
-          scroll={{ x: 1000 }}
-        />
+        {isMobile ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {filteredOrders.length === 0 ? (
+              <div style={{ padding: "40px 0", textAlign: "center", color: "#94a3b8" }}>
+                No orders found matching filters.
+              </div>
+            ) : (
+              filteredOrders
+                .slice((mobilePage - 1) * 10, mobilePage * 10)
+                .map((record) => {
+                  const orderIdDisplay = record.id.length > 8 ? `#${record.id.slice(-6).toUpperCase()}` : `#${record.id}`;
+                  let items: any[] = [];
+                  try {
+                    items = JSON.parse(record.itemsJson || "[]");
+                  } catch {
+                    items = [];
+                  }
+                  const statusColors: Record<string, string> = {
+                    pending: "warning",
+                    confirmed: "processing",
+                    dispatched: "purple",
+                    delivered: "success",
+                    cancelled: "error",
+                  };
+                  const phone = String(record.customerPhone || "").replace(/[^0-9]/g, "");
+
+                  return (
+                    <div
+                      key={record.id}
+                      style={{
+                        background: "#ffffff",
+                        borderRadius: 12,
+                        border: "1px solid #e2e8f0",
+                        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
+                        padding: 14,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 10,
+                      }}
+                    >
+                      {/* Row 1: Order ID, Timestamp & Status Pill */}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ fontWeight: 700, fontSize: 14, color: "#0f172a" }}>{orderIdDisplay}</span>
+                          <span style={{ fontSize: 11, color: "#64748b" }}>
+                            {new Date(record.createdAt).toLocaleDateString([], { day: "2-digit", month: "short" })}{" "}
+                            {new Date(record.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                        </div>
+                        <Tag
+                          color={statusColors[record.status] || "default"}
+                          style={{ margin: 0, fontWeight: 600, textTransform: "capitalize", borderRadius: 4 }}
+                        >
+                          {record.status}
+                        </Tag>
+                      </div>
+
+                      {/* Row 2: Customer Name, Phone, Address */}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 600, fontSize: 13, color: "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {record.customerName || "Customer"}
+                          </div>
+                          {record.customerPhone && (
+                            <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>
+                              +{phone}
+                            </div>
+                          )}
+                          {record.deliveryAddress && (
+                            <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2, lineHeight: 1.3 }}>
+                              📍 {record.deliveryAddress}
+                            </div>
+                          )}
+                          {record.bookingDate && (
+                            <div style={{ fontSize: 11, color: "#0284c7", marginTop: 2 }}>
+                              📅 {record.bookingDate} {record.timeSlot ? `(${record.timeSlot})` : ""}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Quick Communication CTA Buttons */}
+                        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                          {record.customerPhone && (
+                            <a
+                              href={`https://wa.me/${phone}?text=Hello%20${encodeURIComponent(record.customerName || "")}%2C%20regarding%20your%20order%20${orderIdDisplay}...`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                width: 34,
+                                height: 34,
+                                borderRadius: 8,
+                                background: "#dcfce7",
+                                color: "#15803d",
+                                textDecoration: "none",
+                                fontSize: 16,
+                              }}
+                              title="Chat on WhatsApp"
+                            >
+                              <WhatsAppOutlined />
+                            </a>
+                          )}
+                          {record.customerPhone && (
+                            <a
+                              href={`tel:${phone}`}
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                width: 34,
+                                height: 34,
+                                borderRadius: 8,
+                                background: "#f1f5f9",
+                                color: "#475569",
+                                textDecoration: "none",
+                                fontSize: 14,
+                              }}
+                              title="Call Customer"
+                            >
+                              📞
+                            </a>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Row 3: Items list preview */}
+                      {items.length > 0 && (
+                        <div style={{ background: "#f8fafc", padding: "8px 10px", borderRadius: 8, fontSize: 12 }}>
+                          {items.map((it: any, idx: number) => (
+                            <div key={idx} style={{ color: "#334155", lineHeight: 1.4 }}>
+                              • <strong>{it.name}</strong> × {it.quantity} {it.unit || ""} {it.price ? `(₹${it.price * it.quantity})` : ""}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Row 4: Total Amount & Payment Tag */}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px dashed #e2e8f0", paddingTop: 8 }}>
+                        <div>
+                          <span style={{ fontSize: 11, color: "#64748b" }}>Total: </span>
+                          <span style={{ fontSize: 16, fontWeight: 700, color: "#059669" }}>₹{record.totalAmount}</span>
+                        </div>
+                        <Tag color={record.paymentStatus === "paid" ? "green" : "orange"} style={{ margin: 0, fontSize: 11, borderRadius: 4 }}>
+                          {record.paymentStatus === "paid" ? "PAID" : record.paymentStatus === "partial" ? `PARTIAL (₹${record.paidAmount || 0})` : "UNPAID"}
+                        </Tag>
+                      </div>
+
+                      {/* Row 5: Action Controls */}
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 2 }}>
+                        <Select
+                          size="middle"
+                          value={record.status}
+                          onChange={(val) => handleStatusChange(record.id, val)}
+                          style={{ flex: 1, minWidth: 120 }}
+                          options={[
+                            { value: "pending", label: "Pending" },
+                            { value: "confirmed", label: "Confirmed" },
+                            { value: "dispatched", label: "Dispatched" },
+                            { value: "delivered", label: "Delivered" },
+                            { value: "cancelled", label: "Cancelled" },
+                          ]}
+                        />
+                        <Button
+                          size="middle"
+                          icon={<PrinterOutlined />}
+                          onClick={() => setInvoiceOrder(record)}
+                          style={{ borderRadius: 6, fontWeight: 600 }}
+                        >
+                          Invoice
+                        </Button>
+                        {record.status !== "cancelled" && (
+                          <Button
+                            size="middle"
+                            icon={<CarOutlined />}
+                            onClick={() => {
+                              setDispatchOrder(record);
+                              setDispatchResult(null);
+                              dispatchForm.setFieldsValue({
+                                riderName: record.assignedStaff || "",
+                                riderPhone: "",
+                              });
+                            }}
+                            style={{ borderRadius: 6, color: "#0284c7", borderColor: "#7dd3fc" }}
+                          >
+                            Rider
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+            )}
+
+            {filteredOrders.length > 10 && (
+              <div style={{ display: "flex", justifyContent: "center", marginTop: 8 }}>
+                <Pagination
+                  current={mobilePage}
+                  pageSize={10}
+                  total={filteredOrders.length}
+                  onChange={(p) => setMobilePage(p)}
+                  size="small"
+                />
+              </div>
+            )}
+          </div>
+        ) : (
+          <Table
+            dataSource={filteredOrders}
+            columns={columns}
+            rowKey="id"
+            loading={loading}
+            pagination={{ pageSize: 10 }}
+            scroll={{ x: 1000 }}
+          />
+        )}
       </Card>
       )}
 

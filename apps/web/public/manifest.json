@@ -2,11 +2,14 @@
   "name": "GinieSpace — WhatsApp Business Hub",
   "short_name": "GinieSpace",
   "description": "Manage WhatsApp Inbox, Catalog, Orders, Khata, Leads & Digital Storefront.",
+  "id": "/?source=pwa",
   "start_url": "/dashboard",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#25D366",
   "orientation": "portrait-primary",
+  "categories": ["business", "shopping", "productivity", "finance"],
   "icons": [
     {
       "src": "/logo-512.png",
@@ -25,6 +28,36 @@
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Live Inbox",
+      "short_name": "Inbox",
+      "description": "View real-time WhatsApp customer chats",
+      "url": "/inbox",
+      "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Orders & Sales",
+      "short_name": "Orders",
+      "description": "Check orders and receipts",
+      "url": "/orders",
+      "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Catalog & Items",
+      "short_name": "Catalog",
+      "description": "Manage items and pricing",
+      "url": "/products",
+      "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Customer Directory",
+      "short_name": "Customers",
+      "description": "View customers and khata",
+      "url": "/customers",
+      "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
     }
   ]
 }
