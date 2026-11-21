@@ -611,46 +611,48 @@ export default function DashboardPage() {
                 All Orders
               </Button>
             }
-            style={{ borderRadius: 12 }}
+            style={{ borderRadius: 12, maxWidth: "100%", overflow: "hidden" }}
           >
-            <Table
-              dataSource={recentOrders}
-              rowKey="id"
-              loading={loading}
-              pagination={false}
-              size="small"
-              scroll={{ x: 450 }}
-              columns={[
-                {
-                  title: "Customer",
-                  dataIndex: "customerName",
-                  key: "customerName",
-                  render: (name: string) => <Text strong>{name}</Text>,
-                },
-                {
-                  title: "Amount",
-                  dataIndex: "totalAmount",
-                  key: "totalAmount",
-                  render: (amt: number) => <Text strong>₹{Number(amt || 0).toLocaleString("en-IN")}</Text>,
-                },
-                {
-                  title: "Status",
-                  dataIndex: "status",
-                  key: "status",
-                  render: (s: string) => <Tag color={statusColor(s)}>{(s || "pending").toUpperCase()}</Tag>,
-                },
-                {
-                  title: "Date",
-                  dataIndex: "createdAt",
-                  key: "createdAt",
-                  render: (d: string) => (
-                    <Text type="secondary" style={{ fontSize: 12 }}>
-                      {d ? new Date(d).toLocaleDateString() : "-"}
-                    </Text>
-                  ),
-                },
-              ]}
-            />
+            <div className="table-responsive-wrapper">
+              <Table
+                dataSource={recentOrders}
+                rowKey="id"
+                loading={loading}
+                pagination={false}
+                size="small"
+                scroll={{ x: 450 }}
+                columns={[
+                  {
+                    title: "Customer",
+                    dataIndex: "customerName",
+                    key: "customerName",
+                    render: (name: string) => <Text strong>{name}</Text>,
+                  },
+                  {
+                    title: "Amount",
+                    dataIndex: "totalAmount",
+                    key: "totalAmount",
+                    render: (amt: number) => <Text strong>₹{Number(amt || 0).toLocaleString("en-IN")}</Text>,
+                  },
+                  {
+                    title: "Status",
+                    dataIndex: "status",
+                    key: "status",
+                    render: (s: string) => <Tag color={statusColor(s)}>{(s || "pending").toUpperCase()}</Tag>,
+                  },
+                  {
+                    title: "Date",
+                    dataIndex: "createdAt",
+                    key: "createdAt",
+                    render: (d: string) => (
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        {d ? new Date(d).toLocaleDateString() : "-"}
+                      </Text>
+                    ),
+                  },
+                ]}
+              />
+            </div>
           </Card>
         </Col>
 
@@ -667,41 +669,43 @@ export default function DashboardPage() {
                 Catalog
               </Button>
             }
-            style={{ borderRadius: 12 }}
+            style={{ borderRadius: 12, maxWidth: "100%", overflow: "hidden" }}
           >
-            <Table
-              dataSource={lowStockProducts}
-              rowKey="id"
-              loading={loading}
-              pagination={false}
-              size="small"
-              scroll={{ x: 450 }}
-              locale={{ emptyText: "All catalog products have healthy stock!" }}
-              columns={[
-                {
-                  title: "Product",
-                  dataIndex: "name",
-                  key: "name",
-                  render: (name: string) => <Text strong>{name}</Text>,
-                },
-                {
-                  title: "Stock Left",
-                  dataIndex: "stock",
-                  key: "stock",
-                  render: (stock: number, record: any) => (
-                    <Tag color={Number(stock) === 0 ? "red" : "orange"}>
-                      {stock} {record.unit || "units"}
-                    </Tag>
-                  ),
-                },
-                {
-                  title: "Price",
-                  dataIndex: "price",
-                  key: "price",
-                  render: (p: number) => `₹${p}`,
-                },
-              ]}
-            />
+            <div className="table-responsive-wrapper">
+              <Table
+                dataSource={lowStockProducts}
+                rowKey="id"
+                loading={loading}
+                pagination={false}
+                size="small"
+                scroll={{ x: 450 }}
+                locale={{ emptyText: "All catalog products have healthy stock!" }}
+                columns={[
+                  {
+                    title: "Product",
+                    dataIndex: "name",
+                    key: "name",
+                    render: (name: string) => <Text strong>{name}</Text>,
+                  },
+                  {
+                    title: "Stock Left",
+                    dataIndex: "stock",
+                    key: "stock",
+                    render: (stock: number, record: any) => (
+                      <Tag color={Number(stock) === 0 ? "red" : "orange"}>
+                        {stock} {record.unit || "units"}
+                      </Tag>
+                    ),
+                  },
+                  {
+                    title: "Price",
+                    dataIndex: "price",
+                    key: "price",
+                    render: (p: number) => `₹${p}`,
+                  },
+                ]}
+              />
+            </div>
           </Card>
         </Col>
       </Row>
@@ -720,22 +724,24 @@ export default function DashboardPage() {
                 Catalog
               </Button>
             }
-            style={{ borderRadius: 12 }}
+            style={{ borderRadius: 12, maxWidth: "100%", overflow: "hidden" }}
           >
-            <Table
-              dataSource={topProducts}
-              rowKey="name"
-              loading={loading}
-              pagination={false}
-              size="small"
-              scroll={{ x: 400 }}
-              locale={{ emptyText: "Itemized order sales will appear here automatically." }}
-              columns={[
-                { title: "Product", dataIndex: "name", key: "name", render: (n: string) => <Text strong>{n}</Text> },
-                { title: "Units Sold", dataIndex: "qty", key: "qty", render: (q: number) => <Tag color="blue">{q}</Tag> },
-                { title: "Revenue", dataIndex: "revenue", key: "revenue", render: (r: number) => <Text strong style={{ color: "#16a34a" }}>₹{r.toLocaleString("en-IN")}</Text> },
-              ]}
-            />
+            <div className="table-responsive-wrapper">
+              <Table
+                dataSource={topProducts}
+                rowKey="name"
+                loading={loading}
+                pagination={false}
+                size="small"
+                scroll={{ x: 400 }}
+                locale={{ emptyText: "Itemized order sales will appear here automatically." }}
+                columns={[
+                  { title: "Product", dataIndex: "name", key: "name", render: (n: string) => <Text strong>{n}</Text> },
+                  { title: "Units Sold", dataIndex: "qty", key: "qty", render: (q: number) => <Tag color="blue">{q}</Tag> },
+                  { title: "Revenue", dataIndex: "revenue", key: "revenue", render: (r: number) => <Text strong style={{ color: "#16a34a" }}>₹{r.toLocaleString("en-IN")}</Text> },
+                ]}
+              />
+            </div>
           </Card>
         </Col>
 
@@ -752,32 +758,34 @@ export default function DashboardPage() {
                 Directory
               </Button>
             }
-            style={{ borderRadius: 12 }}
+            style={{ borderRadius: 12, maxWidth: "100%", overflow: "hidden" }}
           >
-            <Table
-              dataSource={topCustomers}
-              rowKey={(r) => `${r.phone}_${r.name}`}
-              loading={loading}
-              pagination={false}
-              size="small"
-              scroll={{ x: 400 }}
-              locale={{ emptyText: "Repeat buyer rankings appear as orders come in." }}
-              columns={[
-                {
-                  title: "Customer",
-                  dataIndex: "name",
-                  key: "name",
-                  render: (n: string, r: any) => (
-                    <div>
-                      <div style={{ fontWeight: 600 }}>{n}</div>
-                      {r.phone && <Text type="secondary" style={{ fontSize: 11 }}>+{String(r.phone).replace(/^\+/, "")}</Text>}
-                    </div>
-                  ),
-                },
-                { title: "Orders", dataIndex: "ordersCount", key: "ordersCount", render: (c: number) => <Tag color="green">{c}</Tag> },
-                { title: "Total Spent", dataIndex: "totalSpent", key: "totalSpent", render: (s: number) => <Text strong>₹{s.toLocaleString("en-IN")}</Text> },
-              ]}
-            />
+            <div className="table-responsive-wrapper">
+              <Table
+                dataSource={topCustomers}
+                rowKey={(r) => `${r.phone}_${r.name}`}
+                loading={loading}
+                pagination={false}
+                size="small"
+                scroll={{ x: 400 }}
+                locale={{ emptyText: "Repeat buyer rankings appear as orders come in." }}
+                columns={[
+                  {
+                    title: "Customer",
+                    dataIndex: "name",
+                    key: "name",
+                    render: (n: string, r: any) => (
+                      <div>
+                        <div style={{ fontWeight: 600 }}>{n}</div>
+                        {r.phone && <Text type="secondary" style={{ fontSize: 11 }}>+{String(r.phone).replace(/^\+/, "")}</Text>}
+                      </div>
+                    ),
+                  },
+                  { title: "Orders", dataIndex: "ordersCount", key: "ordersCount", render: (c: number) => <Tag color="green">{c}</Tag> },
+                  { title: "Total Spent", dataIndex: "totalSpent", key: "totalSpent", render: (s: number) => <Text strong>₹{s.toLocaleString("en-IN")}</Text> },
+                ]}
+              />
+            </div>
           </Card>
         </Col>
       </Row>

@@ -1627,7 +1627,14 @@ export default function AdminPage() {
       <Tabs
         activeKey={activeTab}
         onChange={setActiveTab}
-        tabBarStyle={{ overflowX: "auto", whiteSpace: "nowrap", marginBottom: 18 }}
+        tabBarStyle={{
+          overflowX: "auto",
+          whiteSpace: "nowrap",
+          marginBottom: 18,
+          maxWidth: "100%",
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
+        }}
         items={[
           // ==========================================
           // MODULE 1: PLATFORM OVERVIEW & TRAFFIC
@@ -1640,18 +1647,20 @@ export default function AdminPage() {
               </span>
             ),
             children: (
-              <div>
+              <div style={{ maxWidth: "100%", overflowX: "hidden" }}>
                 {/* Module Sub-Switch */}
-                <div style={{ marginBottom: 18, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
-                  <Segmented
-                    value={overviewSubView}
-                    onChange={(val) => setOverviewSubView(val as "kpis" | "analytics")}
-                    options={[
-                      { label: "📊 Overview KPIs & Stores", value: "kpis" },
-                      { label: "🌐 Web Traffic & Google SEO", value: "analytics" },
-                    ]}
-                    size={isMobile ? "small" : "middle"}
-                  />
+                <div style={{ marginBottom: 18, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, maxWidth: "100%" }}>
+                  <div className="mobile-swipe-segmented" style={{ maxWidth: "100%", overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+                    <Segmented
+                      value={overviewSubView}
+                      onChange={(val) => setOverviewSubView(val as "kpis" | "analytics")}
+                      options={[
+                        { label: "📊 Overview KPIs & Stores", value: "kpis" },
+                        { label: "🌐 Web Traffic & Google SEO", value: "analytics" },
+                      ]}
+                      size={isMobile ? "small" : "middle"}
+                    />
+                  </div>
                   {overviewSubView === "kpis" && (
                     <Text type="secondary" style={{ fontSize: 12 }}>
                       Live Platform Metrics · {analytics?.overview?.totalMerchants || merchants.length} Active Businesses
@@ -1794,9 +1803,10 @@ export default function AdminPage() {
                             </Space>
                           }
                           styles={{ body: { padding: isMobile ? 10 : 20 } }}
-                          style={{ borderRadius: 12 }}
+                          style={{ borderRadius: 12, maxWidth: "100%", overflow: "hidden" }}
                         >
-                          <Table
+                          <div className="table-responsive-wrapper">
+                            <Table
                             dataSource={analytics?.topMerchants || []}
                             rowKey="userId"
                             pagination={false}
@@ -1863,7 +1873,8 @@ export default function AdminPage() {
                               },
                             ]}
                           />
-                        </Card>
+                        </div>
+                      </Card>
                       </div>
                     )}
                   </div>
@@ -2210,8 +2221,9 @@ export default function AdminPage() {
                         )}
                       />
                     ) : (
-                      <Card style={{ borderRadius: 12 }}>
-                        <Table
+                      <Card style={{ borderRadius: 12, maxWidth: "100%", overflow: "hidden" }}>
+                        <div className="table-responsive-wrapper">
+                          <Table
                           dataSource={filteredMerchants}
                           rowKey="id"
                           loading={loadingMerchants}
@@ -2365,7 +2377,8 @@ export default function AdminPage() {
                             },
                           ]}
                         />
-                      </Card>
+                      </div>
+                    </Card>
                     )}
                   </div>
               </div>
@@ -2441,17 +2454,19 @@ export default function AdminPage() {
                 </Row>
 
                 {/* Sub-view Segmented */}
-                <div style={{ marginBottom: 18, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
-                  <Segmented
-                    value={leadSubView}
-                    onChange={(val) => setLeadSubView(val as "discover" | "crm" | "pitch-center")}
-                    options={[
-                      { label: "🔍 Discover Potential Merchants", value: "discover" },
-                      { label: `📋 Merchant Pipeline CRM (${adminSavedLeads.length})`, value: "crm" },
-                      { label: "📢 WhatsApp Outreach & Templates", value: "pitch-center" },
-                    ]}
-                    size={isMobile ? "small" : "middle"}
-                  />
+                <div style={{ marginBottom: 18, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, maxWidth: "100%" }}>
+                  <div className="mobile-swipe-segmented" style={{ maxWidth: "100%", overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+                    <Segmented
+                      value={leadSubView}
+                      onChange={(val) => setLeadSubView(val as "discover" | "crm" | "pitch-center")}
+                      options={[
+                        { label: "🔍 Discover Potential Merchants", value: "discover" },
+                        { label: `📋 Merchant Pipeline CRM (${adminSavedLeads.length})`, value: "crm" },
+                        { label: "📢 WhatsApp Outreach & Templates", value: "pitch-center" },
+                      ]}
+                      size={isMobile ? "small" : "middle"}
+                    />
+                  </div>
                   <Space wrap>
                     {leadSubView === "crm" && (
                       <Button icon={<DownloadOutlined />} onClick={() => exportLeadsToCsv(adminSavedLeads, "giniespace-merchant-crm.csv")} size={isMobile ? "small" : "middle"}>
@@ -2634,9 +2649,10 @@ export default function AdminPage() {
                         )
                       }
                       styles={{ body: { padding: isMobile ? 10 : 18 } }}
-                      style={{ borderRadius: 12 }}
+                      style={{ borderRadius: 12, maxWidth: "100%", overflow: "hidden" }}
                     >
-                      <Table
+                      <div className="table-responsive-wrapper">
+                        <Table
                         dataSource={discoveredMerchantLeads}
                         rowKey="id"
                         loading={adminSearchingLeads}
@@ -2771,6 +2787,7 @@ export default function AdminPage() {
                           },
                         ]}
                       />
+                    </div>
 
                       {leadsNextPageToken && (
                         <div style={{ textAlign: "center", marginTop: 18 }}>
@@ -2844,9 +2861,10 @@ export default function AdminPage() {
                         </Space>
                       }
                       styles={{ body: { padding: isMobile ? 10 : 18 } }}
-                      style={{ borderRadius: 12 }}
+                      style={{ borderRadius: 12, maxWidth: "100%", overflow: "hidden" }}
                     >
-                      <Table
+                      <div className="table-responsive-wrapper">
+                        <Table
                         dataSource={adminSavedLeads.filter((l) => {
                           if (leadStatusFilter !== "all" && l.status !== leadStatusFilter) return false;
                           if (leadCrmSearch) {
@@ -2981,7 +2999,8 @@ export default function AdminPage() {
                           },
                         ]}
                       />
-                    </Card>
+                    </div>
+                  </Card>
                   </div>
                 )}
 
@@ -3222,49 +3241,51 @@ export default function AdminPage() {
               </span>
             ),
             children: (
-              <div>
+              <div style={{ maxWidth: "100%", overflowX: "hidden" }}>
                 {/* Module Sub-Switch */}
-                <div style={{ marginBottom: 18, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
-                  <Segmented
-                    value={whatsappSubView}
-                    onChange={(val) => setWhatsappSubView(val as "live-chat" | "broadcast" | "marketing-templates" | "bot-settings")}
-                    options={[
-                      {
-                        label: (
-                          <span>
-                            💬 Live Support & Merchant Chat
-                            {pendingRepliesCount > 0 && (
-                              <Badge count={pendingRepliesCount} style={{ marginLeft: 6, backgroundColor: "#ef4444" }} />
-                            )}
-                          </span>
-                        ),
-                        value: "live-chat",
-                      },
-                      { label: "📢 Campaigns & Broadcast", value: "broadcast" },
-                      {
-                        label: (
-                          <Space size={4}>
-                            <PictureOutlined style={{ color: "#10b981" }} />
-                            <span>🎨 Marketing Kit & Templates</span>
-                            {customCreatives.length > 0 && (
-                              <Badge count={customCreatives.length} style={{ marginLeft: 4, backgroundColor: "#10b981" }} />
-                            )}
-                          </Space>
-                        ),
-                        value: "marketing-templates",
-                      },
-                      {
-                        label: (
-                          <Space size={4}>
-                            <SafetyCertificateOutlined style={{ color: supportStatus === "connected" ? "#25D366" : "#ef4444" }} />
-                            <span>Official Bot (+91 92792 59690)</span>
-                          </Space>
-                        ),
-                        value: "bot-settings",
-                      },
-                    ]}
-                    size={isMobile ? "small" : "middle"}
-                  />
+                <div style={{ marginBottom: 18, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, maxWidth: "100%" }}>
+                  <div className="mobile-swipe-segmented" style={{ maxWidth: "100%", overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+                    <Segmented
+                      value={whatsappSubView}
+                      onChange={(val) => setWhatsappSubView(val as "live-chat" | "broadcast" | "marketing-templates" | "bot-settings")}
+                      options={[
+                        {
+                          label: (
+                            <span>
+                              💬 Live Support & Merchant Chat
+                              {pendingRepliesCount > 0 && (
+                                <Badge count={pendingRepliesCount} style={{ marginLeft: 6, backgroundColor: "#ef4444" }} />
+                              )}
+                            </span>
+                          ),
+                          value: "live-chat",
+                        },
+                        { label: "📢 Campaigns & Broadcast", value: "broadcast" },
+                        {
+                          label: (
+                            <Space size={4}>
+                              <PictureOutlined style={{ color: "#10b981" }} />
+                              <span>🎨 Marketing Kit & Templates</span>
+                              {customCreatives.length > 0 && (
+                                <Badge count={customCreatives.length} style={{ marginLeft: 4, backgroundColor: "#10b981" }} />
+                              )}
+                            </Space>
+                          ),
+                          value: "marketing-templates",
+                        },
+                        {
+                          label: (
+                            <Space size={4}>
+                              <SafetyCertificateOutlined style={{ color: supportStatus === "connected" ? "#25D366" : "#ef4444" }} />
+                              <span>Official Bot (+91 92792 59690)</span>
+                            </Space>
+                          ),
+                          value: "bot-settings",
+                        },
+                      ]}
+                      size={isMobile ? "small" : "middle"}
+                    />
+                  </div>
 
                   {/* Status Indicator Pill */}
                   <Tag
@@ -3665,24 +3686,26 @@ export default function AdminPage() {
                     </Card>
                   </div>
                 ) : whatsappSubView === "broadcast" ? (
-                  <div>
+                  <div style={{ maxWidth: "100%", overflowX: "hidden" }}>
                     {/* CAMPAIGNS & BROADCAST */}
                     <Card
                       title={
-                        <Space>
+                        <Space style={{ maxWidth: "100%", overflow: "hidden" }}>
                           <NotificationOutlined style={{ color: "#25D366" }} />
-                          <span>Bulk WhatsApp Broadcast Campaigns (+91 92792 59690)</span>
+                          <span style={{ fontSize: isMobile ? 14 : 16, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {isMobile ? "WhatsApp Broadcast (+91 92792 59690)" : "Bulk WhatsApp Broadcast Campaigns (+91 92792 59690)"}
+                          </span>
                         </Space>
                       }
-                      styles={{ body: { padding: isMobile ? 14 : 24 } }}
-                      style={{ borderRadius: 12 }}
+                      styles={{ body: { padding: isMobile ? 12 : 24 } }}
+                      style={{ borderRadius: 12, maxWidth: "100%", overflow: "hidden" }}
                     >
-                      <Paragraph type="secondary" style={{ fontSize: 13, marginBottom: 16 }}>
+                      <Paragraph type="secondary" style={{ fontSize: isMobile ? 12 : 13, marginBottom: 16 }}>
                         Official GinieSpace bot (+91 9279259690) se sabhi merchants ko ek saath personalized message, festive offers ya branded banner image bhejein. Message me <code>{"{{name}}"}</code> merchant ke real name se replace ho jayega.
                       </Paragraph>
 
                       {/* 1-CLICK CAMPAIGN PRESET CARDS */}
-                      <div style={{ marginBottom: 20, background: "#f8fafc", padding: "16px 14px", borderRadius: 10, border: "1px solid #e2e8f0" }}>
+                      <div style={{ marginBottom: 20, background: "#f8fafc", padding: isMobile ? "12px 10px" : "16px 14px", borderRadius: 10, border: "1px solid #e2e8f0", maxWidth: "100%", overflow: "hidden" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
                           <div>
                             <Text strong style={{ fontSize: 13, color: "#065f46" }}>
@@ -3701,7 +3724,7 @@ export default function AdminPage() {
                             🎨 Manage Marketing Kit
                           </Button>
                         </div>
-                        <Row gutter={[10, 10]}>
+                        <Row gutter={isMobile ? [8, 8] : [10, 10]}>
                           {allMarketingPresets.map((p: any) => {
                             const isSelected = broadcastImageUrl === p.imageUrl;
                             return (
@@ -3749,7 +3772,7 @@ export default function AdminPage() {
                         </Row>
                       </div>
 
-                      <Row gutter={[24, 24]}>
+                      <Row gutter={isMobile ? [12, 12] : [24, 24]}>
                         <Col xs={24} lg={14}>
                           <Form layout="vertical">
                             <Form.Item label="Target Audience Segment">
@@ -3908,7 +3931,7 @@ export default function AdminPage() {
                     </Card>
                   </div>
                 ) : whatsappSubView === "marketing-templates" ? (
-                  <div>
+                  <div style={{ maxWidth: "100%", overflowX: "hidden" }}>
                     {/* MARKETING KIT & WHATSAPP TEMPLATES STUDIO */}
                     <Card
                       title={
@@ -3928,8 +3951,8 @@ export default function AdminPage() {
                           </Button>
                         </div>
                       }
-                      styles={{ body: { padding: isMobile ? 14 : 20 } }}
-                      style={{ borderRadius: 12, marginBottom: 20 }}
+                      styles={{ body: { padding: isMobile ? 12 : 20 } }}
+                      style={{ borderRadius: 12, marginBottom: 20, maxWidth: "100%", overflow: "hidden" }}
                     >
                       <Paragraph type="secondary" style={{ fontSize: 13, marginBottom: 18 }}>
                         Yahan se aap merchants ke liye naye festival posters, marketing banners aur WhatsApp pitch templates create aur upload kar sakte hain. Aapke dwara banaye gaye templates turant sabhi merchants ke <strong>Marketing Kit</strong> page par live ho jate hain, aur unhe direct 1-click WhatsApp Broadcast me bhi bhej sakte hain.
@@ -4164,9 +4187,9 @@ export default function AdminPage() {
                     </Card>
                   </div>
                 ) : (
-                  <div>
+                  <div style={{ maxWidth: "100%", overflowX: "hidden" }}>
                     {/* BOT CONNECTION & NOTIFICATION RULES */}
-                    <Row gutter={isMobile ? [14, 14] : [20, 20]} style={{ marginBottom: 20 }}>
+                    <Row gutter={isMobile ? [10, 10] : [20, 20]} style={{ marginBottom: 20 }}>
                       {/* Connection Card */}
                       <Col xs={24} lg={12}>
                         <Card
@@ -4400,7 +4423,7 @@ export default function AdminPage() {
               </span>
             ),
             children: (
-              <div>
+              <div style={{ maxWidth: "100%", overflowX: "hidden" }}>
                 <Row gutter={isMobile ? [14, 14] : [24, 24]}>
                   {/* Announcement Banner Creator */}
                   <Col xs={24} lg={12}>
@@ -4550,41 +4573,43 @@ export default function AdminPage() {
                         </Button>
                       }
                       styles={{ body: { padding: isMobile ? 10 : 20 } }}
-                      style={{ borderRadius: 12 }}
+                      style={{ borderRadius: 12, maxWidth: "100%", overflow: "hidden" }}
                     >
-                      <Table
-                        dataSource={auditLogs}
-                        rowKey="id"
-                        loading={loadingAuditLogs}
-                        scroll={{ x: 750 }}
-                        pagination={{ pageSize: 8, size: "small" }}
-                        locale={{ emptyText: "No admin actions recorded yet." }}
-                        columns={[
-                          {
-                            title: "Timestamp",
-                            dataIndex: "timestamp",
-                            key: "timestamp",
-                            render: (ts: string) => (ts ? new Date(ts).toLocaleString() : "-"),
-                          },
-                          {
-                            title: "Admin",
-                            dataIndex: "adminEmail",
-                            key: "admin",
-                            render: (email: string) => <Tag color="purple">{email}</Tag>,
-                          },
-                          {
-                            title: "Action",
-                            dataIndex: "action",
-                            key: "action",
-                            render: (act: string) => <Tag color="blue">{act}</Tag>,
-                          },
-                          {
-                            title: "Details",
-                            dataIndex: "details",
-                            key: "details",
-                          },
-                        ]}
-                      />
+                      <div className="table-responsive-wrapper">
+                        <Table
+                          dataSource={auditLogs}
+                          rowKey="id"
+                          loading={loadingAuditLogs}
+                          scroll={{ x: 750 }}
+                          pagination={{ pageSize: 8, size: "small" }}
+                          locale={{ emptyText: "No admin actions recorded yet." }}
+                          columns={[
+                            {
+                              title: "Timestamp",
+                              dataIndex: "timestamp",
+                              key: "timestamp",
+                              render: (ts: string) => (ts ? new Date(ts).toLocaleString() : "-"),
+                            },
+                            {
+                              title: "Admin",
+                              dataIndex: "adminEmail",
+                              key: "admin",
+                              render: (email: string) => <Tag color="purple">{email}</Tag>,
+                            },
+                            {
+                              title: "Action",
+                              dataIndex: "action",
+                              key: "action",
+                              render: (act: string) => <Tag color="blue">{act}</Tag>,
+                            },
+                            {
+                              title: "Details",
+                              dataIndex: "details",
+                              key: "details",
+                            },
+                          ]}
+                        />
+                      </div>
                     </Card>
                   </Col>
                 </Row>

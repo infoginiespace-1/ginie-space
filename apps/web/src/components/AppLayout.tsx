@@ -242,7 +242,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <Layout style={{ minHeight: "100vh" }}>
+    <Layout style={{ minHeight: "100vh", maxWidth: "100vw", overflowX: "hidden", width: "100%" }}>
       {!isMobile && (
         <Sider className="no-print" width={240} theme="light" style={{ borderRight: "1px solid #f0f0f0" }}>
           {sidebarHeader}
@@ -303,7 +303,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </Drawer>
 
-      <Layout>
+      <Layout style={{ maxWidth: "100%", width: "100%", overflowX: "hidden" }}>
         <Header
           className="no-print"
           style={{
@@ -590,9 +590,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
         <Content
           style={{
-            padding: isMobile ? "12px 12px calc(76px + env(safe-area-inset-bottom, 0px)) 12px" : 24,
+            padding: isMobile ? "12px 10px calc(76px + env(safe-area-inset-bottom, 0px)) 10px" : 24,
             background: "#f8fafc",
             minHeight: "calc(100vh - 64px)",
+            maxWidth: "100%",
+            width: "100%",
+            overflowX: "hidden",
+            boxSizing: "border-box",
           }}
         >
           {children}

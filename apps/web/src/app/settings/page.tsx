@@ -1091,13 +1091,14 @@ export default function SettingsPage() {
                       </div>
                     </div>
 
-                    <Table
-                      dataSource={customRules}
-                      rowKey="id"
-                      pagination={false}
-                      scroll={{ x: 650 }}
-                      size="small"
-                      columns={[
+                    <div className="table-responsive-wrapper">
+                      <Table
+                        dataSource={customRules}
+                        rowKey="id"
+                        pagination={false}
+                        scroll={{ x: 650 }}
+                        size="small"
+                        columns={[
                         {
                           title: "Rule Name",
                           key: "name",
@@ -1179,6 +1180,7 @@ export default function SettingsPage() {
                         },
                       ]}
                     />
+                  </div>
                   </div>
 
                   <Divider style={{ margin: "20px 0" }} />
