@@ -1,4 +1,6 @@
 import http from "http";
+import fs from "fs";
+import path from "path";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -17,6 +19,7 @@ import { createWhatsAppRouter } from "./routes/whatsapp.routes";
 import { createSettingsRouter } from "./routes/settings.routes";
 import { createAdminRouter } from "./routes/admin.routes";
 import { createStorefrontRouter } from "./routes/storefront.routes";
+import { createMarketingRouter } from "./routes/marketing.routes";
 import { createAnalyticsRouter } from "./routes/analytics.routes";
 import { AnalyticsService } from "./services/analytics.service";
 import { NotificationService } from "./services/notification.service";
@@ -55,7 +58,15 @@ async function bootstrap() {
       credentials: true,
     })
   );
-  app.use(express.json({ limit: "256kb" }));
+  app.use(express.json({ limit: "10mb" }));
+  app.use(express.urlencoded({ limit: "10mb", extended: true }));
+
+  // Uploads directory for static media & marketing banners
+  const uploadsDir = path.join(process.cwd(), "uploads");
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+  app.use("/uploads", express.static(uploadsDir));
 
   // Database Abstraction Layer (Google Sheets)
   const db = createDatabase({
@@ -151,9 +162,10 @@ async function bootstrap() {
     res.json({ status: "healthy", timestamp: new Date().toISOString() });
   });
 
-  // Auth Routes, Public Storefront & Public Analytics (Public)
+  // Auth Routes, Public Storefront, Marketing Kit & Public Analytics (Public)
   app.use("/api/auth", createAuthRouter(db, config.jwtSecret, notificationService));
   app.use("/api/storefront", createStorefrontRouter(db, io, notificationService, waManager));
+  app.use("/api/marketing", createMarketingRouter(db));
   app.use("/api/analytics", createAnalyticsRouter(analyticsService));
 
   // Protected Business Routes

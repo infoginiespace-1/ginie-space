@@ -36,7 +36,7 @@ const { Title, Text, Paragraph } = Typography;
 
 interface CreativePost {
   id: string;
-  category: "festival" | "growth" | "feature" | "national";
+  category: "festival" | "growth" | "feature" | "national" | "offer";
   title: string;
   badge: string;
   badgeColor: string;
@@ -44,6 +44,7 @@ interface CreativePost {
   downloadFilename: string;
   headline: string;
   subhead: string;
+  isCustom?: boolean;
   getCustomerMessage: (bizName: string, storeUrl: string, phone: string, offerText: string) => string;
 }
 
@@ -177,6 +178,8 @@ export default function MarketingPage() {
   const [storeSlug, setStoreSlug] = useState("");
   const [bizName, setBizName] = useState("");
   const [bizPhone, setBizPhone] = useState("");
+  const [adminCreatives, setAdminCreatives] = useState<any[]>([]);
+  const [downloadingPoster, setDownloadingPoster] = useState(false);
 
   useEffect(() => {
     api
@@ -190,6 +193,16 @@ export default function MarketingPage() {
         }
       })
       .catch(() => {});
+
+    // Fetch Admin Uploaded Marketing Creatives
+    api
+      .get("/api/marketing/creatives")
+      .then((res) => {
+        if (Array.isArray(res.data?.creatives)) {
+          setAdminCreatives(res.data.creatives);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const businessName = bizName || (user as any)?.businessName || user?.name || "Apni Dukan";
@@ -199,10 +212,43 @@ export default function MarketingPage() {
     ? `${window.location.origin}/shop/${activeSlug}`
     : `https://app.ginie.space/shop/${activeSlug}`;
 
+  const mappedAdminPosts: CreativePost[] = useMemo(() => {
+    return adminCreatives.map((c) => ({
+      id: c.id,
+      category: (c.category || "festival") as any,
+      title: c.title,
+      badge: c.badge || "⭐ SPECIAL OFFER",
+      badgeColor: c.badgeColor || "gold",
+      imageUrl: c.imageUrl,
+      downloadFilename: c.downloadFilename || `GinieSpace_${c.title.replace(/[^a-zA-Z0-9]/g, "_")}.jpg`,
+      headline: c.headline || c.title,
+      subhead: c.subhead || "",
+      isCustom: true,
+      getCustomerMessage: (bizName, storeUrl, phone, offer) => {
+        let text = c.templateText || "";
+        if (text) {
+          text = text
+            .replace(/\{bizName\}|\{businessName\}/g, bizName)
+            .replace(/\{storeUrl\}/g, storeUrl)
+            .replace(/\{phone\}/g, phone)
+            .replace(/\{offer\}/g, offer ? `🎁 *त्योहार स्पेशल ऑफर:* ${offer}\n\n` : "");
+          return text;
+        }
+        return `🎉 *${c.title}*\n\nनमस्ते!\n${bizName} की तरफ से खास पेशकश!\n\n` +
+          (offer ? `🎁 *ऑफर:* ${offer}\n\n` : "") +
+          `👉 *हमारा ऑनलाइन स्टोर देखें:* ${storeUrl}\n\nघर बैठे ऑर्डर करें!\n*${bizName}*\n📞 ${phone}`;
+      },
+    }));
+  }, [adminCreatives]);
+
+  const allPosts = useMemo(() => {
+    return [...mappedAdminPosts, ...CREATIVE_POSTS];
+  }, [mappedAdminPosts]);
+
   const filteredPosts = useMemo(() => {
-    if (activeTab === "all") return CREATIVE_POSTS;
-    return CREATIVE_POSTS.filter((p) => p.category === activeTab);
-  }, [activeTab]);
+    if (activeTab === "all") return allPosts;
+    return allPosts.filter((p) => p.category === activeTab);
+  }, [activeTab, allPosts]);
 
   const handleCopyMessage = (post: CreativePost) => {
     const text = post.getCustomerMessage(businessName, storeUrl, phone, customOffer);
@@ -223,6 +269,27 @@ export default function MarketingPage() {
   const handleOpenPreview = (post: CreativePost) => {
     setSelectedPost(post);
     setPreviewModalOpen(true);
+  };
+
+  const handleDownloadImage = async (imageUrl: string, filename: string) => {
+    try {
+      setDownloadingPoster(true);
+      const res = await fetch(imageUrl);
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = filename || "GinieSpace_Marketing_Poster.jpg";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(objectUrl);
+      message.success("Poster download ho gaya!");
+    } catch {
+      window.open(imageUrl, "_blank");
+    } finally {
+      setDownloadingPoster(false);
+    }
   };
 
   return (
@@ -327,11 +394,12 @@ export default function MarketingPage() {
           activeKey={activeTab}
           onChange={setActiveTab}
           items={[
-            { key: "all", label: "🌟 All Posts (सभी पोस्ट्स)" },
+            { key: "all", label: `🌟 All Posts (${allPosts.length})` },
             { key: "festival", label: "🪔 Festivals (दीपावली, ईद, होली)" },
             { key: "growth", label: "📈 New Year & Khata (नया साल व बहीखाता)" },
             { key: "national", label: "🇮🇳 Swadeshi (आत्मनिर्भर भारत)" },
             { key: "feature", label: "⚡ WhatsApp Dukan & 0% UPI" },
+            { key: "offer", label: "🎁 Special Offers (छूट व स्कीम्स)" },
           ]}
           style={{ marginBottom: 16 }}
         />
@@ -364,6 +432,20 @@ export default function MarketingPage() {
                     >
                       {post.badge}
                     </Tag>
+                    {post.isCustom && (
+                      <Tag
+                        color="cyan"
+                        style={{
+                          position: "absolute",
+                          top: 12,
+                          right: 12,
+                          fontWeight: 700,
+                          boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+                        }}
+                      >
+                        NEW
+                      </Tag>
+                    )}
                     <div
                       style={{
                         position: "absolute",
@@ -410,8 +492,7 @@ export default function MarketingPage() {
                     <Tooltip title="Download 1080x1080 HD image for Instagram/Status">
                       <Button
                         icon={<DownloadOutlined />}
-                        href={post.imageUrl}
-                        download={post.downloadFilename}
+                        onClick={() => handleDownloadImage(post.imageUrl, post.downloadFilename)}
                         style={{ borderColor: "#cbd5e1" }}
                       />
                     </Tooltip>
@@ -491,8 +572,9 @@ export default function MarketingPage() {
             <Button
               key="download"
               icon={<DownloadOutlined />}
-              href={selectedPost?.imageUrl}
-              download={selectedPost?.downloadFilename}
+              onClick={() => {
+                if (selectedPost) handleDownloadImage(selectedPost.imageUrl, selectedPost.downloadFilename);
+              }}
             >
               Download HD
             </Button>,

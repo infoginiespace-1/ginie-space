@@ -34,6 +34,7 @@ import {
   Avatar,
   Rate,
   AutoComplete,
+  Upload,
 } from "antd";
 import {
   UserOutlined,
@@ -76,6 +77,9 @@ import {
   SettingOutlined,
   PictureOutlined,
   ArrowLeftOutlined,
+  UploadOutlined,
+  PlusOutlined,
+  EditOutlined,
 } from "@ant-design/icons";
 import { api } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
@@ -243,7 +247,7 @@ export default function AdminPage() {
 
   // Sub-view toggles inside modules
   const [overviewSubView, setOverviewSubView] = useState<"kpis" | "analytics">("kpis");
-  const [whatsappSubView, setWhatsappSubView] = useState<"live-chat" | "broadcast" | "bot-settings">("live-chat");
+  const [whatsappSubView, setWhatsappSubView] = useState<"live-chat" | "broadcast" | "marketing-templates" | "bot-settings">("live-chat");
 
   // Analytics & KPIs
   const [analytics, setAnalytics] = useState<any>(null);
@@ -293,6 +297,26 @@ export default function AdminPage() {
   const [broadcastText, setBroadcastText] = useState("");
   const [broadcastImageUrl, setBroadcastImageUrl] = useState("");
   const [sendingBroadcast, setSendingBroadcast] = useState(false);
+  const [uploadingBroadcastImage, setUploadingBroadcastImage] = useState(false);
+
+  // Marketing Creatives & Templates Studio State
+  const [customCreatives, setCustomCreatives] = useState<any[]>([]);
+  const [loadingCreatives, setLoadingCreatives] = useState(false);
+  const [creativeModalOpen, setCreativeModalOpen] = useState(false);
+  const [savingCreative, setSavingCreative] = useState(false);
+  const [editingCreativeId, setEditingCreativeId] = useState<string | null>(null);
+  const [creativeTitle, setCreativeTitle] = useState("");
+  const [creativeBadge, setCreativeBadge] = useState("⭐ SPECIAL OFFER");
+  const [creativeBadgeColor, setCreativeBadgeColor] = useState("gold");
+  const [creativeCategory, setCreativeCategory] = useState<"festival" | "growth" | "national" | "feature" | "offer">("festival");
+  const [creativeImageUrl, setCreativeImageUrl] = useState("");
+  const [creativeImageData, setCreativeImageData] = useState("");
+  const [creativeHeadline, setCreativeHeadline] = useState("");
+  const [creativeSubhead, setCreativeSubhead] = useState("");
+  const [creativeTemplateText, setCreativeTemplateText] = useState("");
+  const [creativeSegment, setCreativeSegment] = useState<"all" | "retail" | "wholesale" | "services">("all");
+  const [creativePreviewOpen, setCreativePreviewOpen] = useState(false);
+  const [previewCreativeItem, setPreviewCreativeItem] = useState<any | null>(null);
 
   // Platform Announcement State
   const [announcement, setAnnouncement] = useState({
@@ -672,6 +696,7 @@ export default function AdminPage() {
     loadAuditLogs();
     loadWebAnalytics();
     loadAdminLeads();
+    loadMarketingCreatives();
 
     // Load Support WA Status
     api.get("/api/admin/whatsapp/status")
@@ -961,6 +986,211 @@ export default function AdminPage() {
       setSendingBroadcast(false);
     }
   };
+
+  // Helper: Client-Side Image Compression using HTML5 Canvas
+  const compressImageFile = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new (window as any).Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const maxDim = 960;
+          let width = img.width;
+          let height = img.height;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) {
+            resolve(e.target?.result as string);
+            return;
+          }
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.82);
+          resolve(compressedDataUrl);
+        };
+        img.onerror = () => resolve(e.target?.result as string);
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // Upload one-off banner for WhatsApp Broadcast
+  const handleBroadcastImageUpload = async (file: File) => {
+    try {
+      setUploadingBroadcastImage(true);
+      const dataUrl = await compressImageFile(file);
+      const res = await api.post("/api/admin/upload-banner", {
+        imageData: dataUrl,
+        fileName: file.name,
+      });
+      if (res.data?.imageUrl) {
+        setBroadcastImageUrl(res.data.imageUrl);
+        message.success("Banner image uploaded successfully!");
+      } else {
+        setBroadcastImageUrl(dataUrl);
+        message.success("Banner image loaded!");
+      }
+    } catch (err: any) {
+      message.error("Failed to upload image: " + (err.message || "Unknown error"));
+    } finally {
+      setUploadingBroadcastImage(false);
+    }
+    return false;
+  };
+
+  // Marketing Creatives Studio Handlers
+  const loadMarketingCreatives = async () => {
+    try {
+      setLoadingCreatives(true);
+      const res = await api.get("/api/admin/marketing-creatives");
+      setCustomCreatives(Array.isArray(res.data?.creatives) ? res.data.creatives : []);
+    } catch (err: any) {
+      console.warn("Failed to load marketing creatives:", err.message);
+    } finally {
+      setLoadingCreatives(false);
+    }
+  };
+
+  const resetCreativeForm = () => {
+    setEditingCreativeId(null);
+    setCreativeTitle("");
+    setCreativeBadge("⭐ SPECIAL OFFER");
+    setCreativeBadgeColor("gold");
+    setCreativeCategory("festival");
+    setCreativeImageUrl("");
+    setCreativeImageData("");
+    setCreativeHeadline("");
+    setCreativeSubhead("");
+    setCreativeTemplateText("");
+    setCreativeSegment("all");
+  };
+
+  const handleOpenNewCreative = () => {
+    resetCreativeForm();
+    setCreativeModalOpen(true);
+  };
+
+  const handleEditCreative = (c: any) => {
+    setEditingCreativeId(c.id);
+    setCreativeTitle(c.title || "");
+    setCreativeBadge(c.badge || "⭐ SPECIAL OFFER");
+    setCreativeBadgeColor(c.badgeColor || "gold");
+    setCreativeCategory(c.category || "festival");
+    setCreativeImageUrl(c.imageUrl || "");
+    setCreativeImageData("");
+    setCreativeHeadline(c.headline || "");
+    setCreativeSubhead(c.subhead || "");
+    setCreativeTemplateText(c.templateText || "");
+    setCreativeSegment(c.targetSegment || "all");
+    setCreativeModalOpen(true);
+  };
+
+  const handleCreativeImageUpload = async (file: File) => {
+    try {
+      const dataUrl = await compressImageFile(file);
+      setCreativeImageData(dataUrl);
+      setCreativeImageUrl(dataUrl);
+      message.success("Creative banner image loaded! Preview updated.");
+    } catch (err: any) {
+      message.error("Failed to process image: " + (err.message || ""));
+    }
+    return false;
+  };
+
+  const handleSaveCreative = async () => {
+    if (!creativeTitle.trim()) {
+      message.warning("Please enter creative title");
+      return;
+    }
+    if (!creativeImageUrl && !creativeImageData) {
+      message.warning("Please upload a banner image or enter image URL");
+      return;
+    }
+    if (!creativeTemplateText.trim()) {
+      message.warning("Please enter WhatsApp template text");
+      return;
+    }
+
+    try {
+      setSavingCreative(true);
+      const res = await api.post("/api/admin/marketing-creatives", {
+        id: editingCreativeId || undefined,
+        title: creativeTitle.trim(),
+        badge: creativeBadge.trim() || "⭐ SPECIAL OFFER",
+        badgeColor: creativeBadgeColor,
+        category: creativeCategory,
+        imageUrl: creativeImageUrl.trim() || undefined,
+        imageData: creativeImageData || undefined,
+        headline: (creativeHeadline || creativeTitle).trim(),
+        subhead: creativeSubhead.trim(),
+        templateText: creativeTemplateText.trim(),
+        targetSegment: creativeSegment,
+      });
+
+      if (res.data?.success) {
+        message.success("Marketing Creative successfully published! All merchants can now use it in Marketing Kit.");
+        setCreativeModalOpen(false);
+        resetCreativeForm();
+        loadMarketingCreatives();
+        loadAuditLogs();
+      }
+    } catch (err: any) {
+      message.error(err.message || "Failed to save marketing creative");
+    } finally {
+      setSavingCreative(false);
+    }
+  };
+
+  const handleDeleteCreative = async (id: string) => {
+    try {
+      await api.delete(`/api/admin/marketing-creatives/${id}`);
+      message.success("Marketing template deleted successfully");
+      loadMarketingCreatives();
+      loadAuditLogs();
+    } catch (err: any) {
+      message.error(err.message || "Failed to delete template");
+    }
+  };
+
+  const handleUseCreativeInBroadcast = (c: any) => {
+    setBroadcastImageUrl(c.imageUrl || "");
+    let text = c.templateText || "";
+    text = text.replace(/\{bizName\}|\{businessName\}/g, "{{name}}")
+               .replace(/\{storeUrl\}/g, "https://app.ginie.space")
+               .replace(/\{phone\}/g, "+91 92792 59690")
+               .replace(/\{offer\}/g, "Festive Special Offer!");
+    setBroadcastText(text);
+    if (c.targetSegment) {
+      setBroadcastSegment(c.targetSegment);
+    }
+    setWhatsappSubView("broadcast");
+    message.success(`Loaded "${c.title}" into WhatsApp Broadcast!`);
+  };
+
+  const allMarketingPresets = useMemo(() => {
+    const customMapped = customCreatives.map((c) => ({
+      id: c.id,
+      title: c.title,
+      tag: c.badge || "Admin Custom",
+      segment: (c.targetSegment || "all") as any,
+      imageUrl: c.imageUrl,
+      text: c.templateText || "",
+      isCustom: true,
+    }));
+    return [...customMapped, ...ADMIN_MARKETING_PRESETS];
+  }, [customCreatives]);
 
   // Announcement Handler
   const handleSaveAnnouncement = async () => {
@@ -2869,7 +3099,7 @@ export default function AdminPage() {
                 <div style={{ marginBottom: 18, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
                   <Segmented
                     value={whatsappSubView}
-                    onChange={(val) => setWhatsappSubView(val as "live-chat" | "broadcast" | "bot-settings")}
+                    onChange={(val) => setWhatsappSubView(val as "live-chat" | "broadcast" | "marketing-templates" | "bot-settings")}
                     options={[
                       {
                         label: (
@@ -2883,6 +3113,18 @@ export default function AdminPage() {
                         value: "live-chat",
                       },
                       { label: "📢 Campaigns & Broadcast", value: "broadcast" },
+                      {
+                        label: (
+                          <Space size={4}>
+                            <PictureOutlined style={{ color: "#10b981" }} />
+                            <span>🎨 Marketing Kit & Templates</span>
+                            {customCreatives.length > 0 && (
+                              <Badge count={customCreatives.length} style={{ marginLeft: 4, backgroundColor: "#10b981" }} />
+                            )}
+                          </Space>
+                        ),
+                        value: "marketing-templates",
+                      },
                       {
                         label: (
                           <Space size={4}>
@@ -3271,24 +3513,40 @@ export default function AdminPage() {
 
                       {/* 1-CLICK CAMPAIGN PRESET CARDS */}
                       <div style={{ marginBottom: 20, background: "#f8fafc", padding: "16px 14px", borderRadius: 10, border: "1px solid #e2e8f0" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                          <Text strong style={{ fontSize: 13, color: "#065f46" }}>
-                            ⚡ 1-Click Festive & Marketing Presets (त्योहार व ऑफर्स):
-                          </Text>
-                          <Text type="secondary" style={{ fontSize: 11 }}>
-                            Tap any preset to auto-fill banner, copy & segment
-                          </Text>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
+                          <div>
+                            <Text strong style={{ fontSize: 13, color: "#065f46" }}>
+                              ⚡ 1-Click Festive & Marketing Presets (त्योहार व ऑफर्स):
+                            </Text>
+                            <Text type="secondary" style={{ fontSize: 11, display: "block" }}>
+                              Tap any preset to auto-fill banner, copy & segment
+                            </Text>
+                          </div>
+                          <Button
+                            size="small"
+                            icon={<PictureOutlined />}
+                            onClick={() => setWhatsappSubView("marketing-templates")}
+                            style={{ borderColor: "#10b981", color: "#065f46", fontSize: 12 }}
+                          >
+                            🎨 Manage Marketing Kit
+                          </Button>
                         </div>
                         <Row gutter={[10, 10]}>
-                          {ADMIN_MARKETING_PRESETS.map((p) => {
+                          {allMarketingPresets.map((p: any) => {
                             const isSelected = broadcastImageUrl === p.imageUrl;
                             return (
                               <Col xs={12} sm={8} md={4} key={p.id}>
                                 <div
                                   onClick={() => {
                                     setBroadcastImageUrl(p.imageUrl);
-                                    setBroadcastText(p.text);
-                                    setBroadcastSegment(p.segment);
+                                    let copyText = p.text;
+                                    copyText = copyText
+                                      .replace(/\{bizName\}|\{businessName\}/g, "{{name}}")
+                                      .replace(/\{storeUrl\}/g, "https://app.ginie.space")
+                                      .replace(/\{phone\}/g, "+91 92792 59690")
+                                      .replace(/\{offer\}/g, "Special Festive Discount!");
+                                    setBroadcastText(copyText);
+                                    setBroadcastSegment(p.segment || "all");
                                     message.success(`${p.title} template loaded!`);
                                   }}
                                   style={{
@@ -3311,7 +3569,7 @@ export default function AdminPage() {
                                   <div style={{ fontSize: 11, fontWeight: 700, color: isSelected ? "#15803d" : "#1e293b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                                     {p.title}
                                   </div>
-                                  <Tag color={isSelected ? "green" : "default"} style={{ fontSize: 10, marginTop: 4, marginInlineEnd: 0 }}>
+                                  <Tag color={isSelected ? "green" : (p.isCustom ? "cyan" : "default")} style={{ fontSize: 10, marginTop: 4, marginInlineEnd: 0 }}>
                                     {p.tag}
                                   </Tag>
                                 </div>
@@ -3345,11 +3603,36 @@ export default function AdminPage() {
                             </div>
 
                             <Form.Item
-                              label="Promotional Banner Image URL (Optional)"
-                              extra="Enter a publicly accessible image URL. Select a preset above or enter custom image URL."
+                              label="Promotional Banner Image (Optional)"
+                              extra="Upload an image from your device or select a preset above / enter an image URL."
                             >
+                              <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 8, flexWrap: "wrap" }}>
+                                <Upload
+                                  accept="image/*"
+                                  showUploadList={false}
+                                  beforeUpload={handleBroadcastImageUpload}
+                                  disabled={uploadingBroadcastImage}
+                                >
+                                  <Button
+                                    icon={<UploadOutlined />}
+                                    loading={uploadingBroadcastImage}
+                                    style={{ borderColor: "#10b981", color: "#065f46", fontWeight: 600 }}
+                                  >
+                                    Upload Banner From Device
+                                  </Button>
+                                </Upload>
+                                {broadcastImageUrl && (
+                                  <Button
+                                    size="small"
+                                    danger
+                                    onClick={() => setBroadcastImageUrl("")}
+                                  >
+                                    Remove Banner
+                                  </Button>
+                                )}
+                              </div>
                               <Input
-                                placeholder="https://app.ginie.space/marketing/diwali-dhanteras.png"
+                                placeholder="https://app.ginie.space/marketing/diwali-dhanteras.png or uploaded image"
                                 prefix={<PictureOutlined style={{ color: "#25D366" }} />}
                                 value={broadcastImageUrl}
                                 onChange={(e) => setBroadcastImageUrl(e.target.value)}
@@ -3452,6 +3735,262 @@ export default function AdminPage() {
                           </div>
                         </Col>
                       </Row>
+                    </Card>
+                  </div>
+                ) : whatsappSubView === "marketing-templates" ? (
+                  <div>
+                    {/* MARKETING KIT & WHATSAPP TEMPLATES STUDIO */}
+                    <Card
+                      title={
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+                          <Space>
+                            <PictureOutlined style={{ color: "#10b981", fontSize: 18 }} />
+                            <span style={{ fontWeight: 700 }}>Marketing Kit & WhatsApp Templates Studio</span>
+                            <Tag color="green">{customCreatives.length} Custom Published</Tag>
+                          </Space>
+                          <Button
+                            type="primary"
+                            icon={<PlusOutlined />}
+                            onClick={handleOpenNewCreative}
+                            style={{ background: "#10b981", borderColor: "#10b981", fontWeight: 600 }}
+                          >
+                            + Upload New Creative / Template
+                          </Button>
+                        </div>
+                      }
+                      styles={{ body: { padding: isMobile ? 14 : 20 } }}
+                      style={{ borderRadius: 12, marginBottom: 20 }}
+                    >
+                      <Paragraph type="secondary" style={{ fontSize: 13, marginBottom: 18 }}>
+                        Yahan se aap merchants ke liye naye festival posters, marketing banners aur WhatsApp pitch templates create aur upload kar sakte hain. Aapke dwara banaye gaye templates turant sabhi merchants ke <strong>Marketing Kit</strong> page par live ho jate hain, aur unhe direct 1-click WhatsApp Broadcast me bhi bhej sakte hain.
+                      </Paragraph>
+
+                      {/* STATS STRIP */}
+                      <Row gutter={[14, 14]} style={{ marginBottom: 20 }}>
+                        <Col xs={12} sm={6}>
+                          <div style={{ background: "#f8fafc", padding: "12px 14px", borderRadius: 10, border: "1px solid #e2e8f0" }}>
+                            <Text type="secondary" style={{ fontSize: 11 }}>Active Templates</Text>
+                            <div style={{ fontSize: 20, fontWeight: 700, color: "#065f46" }}>
+                              {6 + customCreatives.length} Total
+                            </div>
+                            <Text style={{ fontSize: 11, color: "#10b981" }}>6 Built-in + {customCreatives.length} Custom</Text>
+                          </div>
+                        </Col>
+                        <Col xs={12} sm={6}>
+                          <div style={{ background: "#f8fafc", padding: "12px 14px", borderRadius: 10, border: "1px solid #e2e8f0" }}>
+                            <Text type="secondary" style={{ fontSize: 11 }}>Merchant Sync</Text>
+                            <div style={{ fontSize: 20, fontWeight: 700, color: "#2563eb" }}>
+                              100% Live
+                            </div>
+                            <Text style={{ fontSize: 11, color: "#64748b" }}>Synced across all stores</Text>
+                          </div>
+                        </Col>
+                        <Col xs={12} sm={6}>
+                          <div style={{ background: "#f8fafc", padding: "12px 14px", borderRadius: 10, border: "1px solid #e2e8f0" }}>
+                            <Text type="secondary" style={{ fontSize: 11 }}>Image Format</Text>
+                            <div style={{ fontSize: 20, fontWeight: 700, color: "#d97706" }}>
+                              HD Web / JPG
+                            </div>
+                            <Text style={{ fontSize: 11, color: "#64748b" }}>Optimized for WhatsApp</Text>
+                          </div>
+                        </Col>
+                        <Col xs={12} sm={6}>
+                          <div style={{ background: "#f8fafc", padding: "12px 14px", borderRadius: 10, border: "1px solid #e2e8f0" }}>
+                            <Text type="secondary" style={{ fontSize: 11 }}>Broadcast Ready</Text>
+                            <div style={{ fontSize: 20, fontWeight: 700, color: "#059669" }}>
+                              1-Click
+                            </div>
+                            <Text style={{ fontSize: 11, color: "#64748b" }}>Instant bot dispatch</Text>
+                          </div>
+                        </Col>
+                      </Row>
+
+                      {/* CUSTOM CREATIVES SECTION */}
+                      <div style={{ marginBottom: 24 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                          <Text strong style={{ fontSize: 14, color: "#0f172a" }}>
+                            🎨 Admin Uploaded Marketing Creatives ({customCreatives.length})
+                          </Text>
+                          <Button
+                            size="small"
+                            icon={<SyncOutlined spin={loadingCreatives} />}
+                            onClick={loadMarketingCreatives}
+                          >
+                            Refresh
+                          </Button>
+                        </div>
+
+                        {customCreatives.length === 0 ? (
+                          <div
+                            style={{
+                              background: "#f8fafc",
+                              borderRadius: 10,
+                              border: "1px dashed #cbd5e1",
+                              padding: "36px 20px",
+                              textAlign: "center",
+                            }}
+                          >
+                            <PictureOutlined style={{ fontSize: 36, color: "#94a3b8", marginBottom: 12 }} />
+                            <div style={{ fontSize: 15, fontWeight: 600, color: "#334155" }}>
+                              Abhi koi custom marketing creative upload nahi kiya gaya hai
+                            </div>
+                            <Paragraph type="secondary" style={{ fontSize: 13, maxWidth: 500, margin: "6px auto 16px" }}>
+                              Apne merchants ke liye naya festival poster, flash sale banner aur WhatsApp pitch copy upload karein taaki wo ise apne Marketing Kit me use kar sakein.
+                            </Paragraph>
+                            <Button
+                              type="primary"
+                              icon={<PlusOutlined />}
+                              onClick={handleOpenNewCreative}
+                              style={{ background: "#10b981", borderColor: "#10b981" }}
+                            >
+                              Upload First Marketing Creative
+                            </Button>
+                          </div>
+                        ) : (
+                          <Row gutter={[16, 16]}>
+                            {customCreatives.map((c) => (
+                              <Col xs={24} sm={12} lg={8} key={c.id}>
+                                <Card
+                                  hoverable
+                                  style={{ borderRadius: 10, overflow: "hidden", height: "100%", display: "flex", flexDirection: "column" }}
+                                  styles={{ body: { padding: 14, display: "flex", flexDirection: "column", flex: 1 } }}
+                                  cover={
+                                    <div
+                                      style={{ position: "relative", background: "#0f172a", cursor: "pointer", height: 180, overflow: "hidden" }}
+                                      onClick={() => {
+                                        setPreviewCreativeItem(c);
+                                        setCreativePreviewOpen(true);
+                                      }}
+                                    >
+                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                      <img
+                                        src={c.imageUrl}
+                                        alt={c.title}
+                                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                      />
+                                      <Tag
+                                        color={c.badgeColor || "gold"}
+                                        style={{ position: "absolute", top: 10, left: 10, fontWeight: 700 }}
+                                      >
+                                        {c.badge}
+                                      </Tag>
+                                      <Tag
+                                        color="blue"
+                                        style={{ position: "absolute", bottom: 8, right: 8, margin: 0, fontSize: 10 }}
+                                      >
+                                        {c.category ? c.category.toUpperCase() : "FESTIVAL"}
+                                      </Tag>
+                                    </div>
+                                  }
+                                >
+                                  <div style={{ flex: 1 }}>
+                                    <Text strong style={{ fontSize: 15, display: "block", marginBottom: 4, color: "#0f172a" }}>
+                                      {c.title}
+                                    </Text>
+                                    <Paragraph type="secondary" ellipsis={{ rows: 2 }} style={{ fontSize: 12, marginBottom: 8 }}>
+                                      {c.headline || c.subhead || c.templateText}
+                                    </Paragraph>
+                                    <div
+                                      style={{
+                                        background: "#f1f5f9",
+                                        padding: "6px 8px",
+                                        borderRadius: 6,
+                                        fontSize: 11,
+                                        fontFamily: "monospace",
+                                        color: "#334155",
+                                        maxHeight: 60,
+                                        overflow: "hidden",
+                                        textOverflow: "ellipsis",
+                                        marginBottom: 10,
+                                      }}
+                                    >
+                                      {c.templateText}
+                                    </div>
+                                  </div>
+
+                                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
+                                    <Button
+                                      size="small"
+                                      type="primary"
+                                      icon={<SendOutlined />}
+                                      onClick={() => handleUseCreativeInBroadcast(c)}
+                                      style={{ background: "#25D366", borderColor: "#25D366", flex: 1, fontSize: 11 }}
+                                    >
+                                      Use in Broadcast
+                                    </Button>
+                                    <Button
+                                      size="small"
+                                      icon={<EditOutlined />}
+                                      onClick={() => handleEditCreative(c)}
+                                      style={{ fontSize: 11 }}
+                                    >
+                                      Edit
+                                    </Button>
+                                    <Popconfirm
+                                      title="Delete this creative?"
+                                      description="Are you sure you want to delete this marketing creative from merchants' Marketing Kit?"
+                                      onConfirm={() => handleDeleteCreative(c.id)}
+                                      okText="Yes, Delete"
+                                      cancelText="Cancel"
+                                      okButtonProps={{ danger: true }}
+                                    >
+                                      <Button size="small" danger icon={<DeleteOutlined />} style={{ fontSize: 11 }} />
+                                    </Popconfirm>
+                                  </div>
+                                </Card>
+                              </Col>
+                            ))}
+                          </Row>
+                        )}
+                      </div>
+
+                      <Divider style={{ margin: "20px 0" }} />
+
+                      {/* BUILT-IN PRESETS OVERVIEW */}
+                      <div>
+                        <Text strong style={{ fontSize: 14, color: "#0f172a", display: "block", marginBottom: 12 }}>
+                          🏛️ Default Built-in Platform Festive Presets (6 Presets)
+                        </Text>
+                        <Row gutter={[12, 12]}>
+                          {ADMIN_MARKETING_PRESETS.map((p) => (
+                            <Col xs={12} sm={8} md={4} key={p.id}>
+                              <div
+                                style={{
+                                  border: "1px solid #e2e8f0",
+                                  borderRadius: 8,
+                                  padding: 8,
+                                  background: "#ffffff",
+                                  textAlign: "center",
+                                }}
+                              >
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={p.imageUrl}
+                                  alt={p.title}
+                                  style={{ width: "100%", height: 60, objectFit: "cover", borderRadius: 4, marginBottom: 6 }}
+                                />
+                                <div style={{ fontSize: 11, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                  {p.title}
+                                </div>
+                                <Button
+                                  size="small"
+                                  type="link"
+                                  style={{ fontSize: 11, padding: 0, marginTop: 2, color: "#059669" }}
+                                  onClick={() => {
+                                    setBroadcastImageUrl(p.imageUrl);
+                                    setBroadcastText(p.text);
+                                    setBroadcastSegment(p.segment);
+                                    setWhatsappSubView("broadcast");
+                                    message.success(`Loaded "${p.title}" into Broadcast!`);
+                                  }}
+                                >
+                                  Load in Broadcast ↗
+                                </Button>
+                              </div>
+                            </Col>
+                          ))}
+                        </Row>
+                      </div>
                     </Card>
                   </div>
                 ) : (
@@ -4306,6 +4845,293 @@ export default function AdminPage() {
               }
             />
           </div>
+        )}
+      </Modal>
+
+      {/* CREATE / EDIT MARKETING CREATIVE MODAL */}
+      <Modal
+        title={
+          <Space>
+            <PictureOutlined style={{ color: "#10b981", fontSize: 18 }} />
+            <span>{editingCreativeId ? "Edit Marketing Creative" : "🎨 Create & Upload New Marketing Creative"}</span>
+          </Space>
+        }
+        open={creativeModalOpen}
+        onCancel={() => !savingCreative && setCreativeModalOpen(false)}
+        footer={[
+          <Button key="cancel" disabled={savingCreative} onClick={() => setCreativeModalOpen(false)}>
+            Cancel
+          </Button>,
+          <Button
+            key="save"
+            type="primary"
+            icon={<SaveOutlined />}
+            loading={savingCreative}
+            onClick={handleSaveCreative}
+            style={{ background: "#10b981", borderColor: "#10b981", fontWeight: 600 }}
+          >
+            {editingCreativeId ? "Update & Sync Creative" : "Publish to Merchants Marketing Kit"}
+          </Button>,
+        ]}
+        width={isMobile ? "95%" : 760}
+        centered
+      >
+        <Form layout="vertical" style={{ marginTop: 12 }}>
+          <Row gutter={[16, 0]}>
+            <Col xs={24} sm={16}>
+              <Form.Item label="Creative Title (त्योहार / कैंपेन का नाम)" required>
+                <Input
+                  placeholder="उदा. Eid-ul-Fitr Mubarak & Festive Sale"
+                  value={creativeTitle}
+                  onChange={(e) => setCreativeTitle(e.target.value)}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Form.Item label="Category (श्रेणी)">
+                <Select
+                  value={creativeCategory}
+                  onChange={setCreativeCategory}
+                  options={[
+                    { label: "🪔 Festivals (त्योहार)", value: "festival" },
+                    { label: "📈 Growth & Accounts", value: "growth" },
+                    { label: "🇮🇳 Swadeshi Dukan", value: "national" },
+                    { label: "⚡ Feature / UPI", value: "feature" },
+                    { label: "🎁 Special Offer", value: "offer" },
+                  ]}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={[16, 0]}>
+            <Col xs={24} sm={14}>
+              <Form.Item label="Banner Badge Text (बैनर टैग)">
+                <Input
+                  placeholder="उदा. 🌙 Eid Mubarak ya ⭐ 50% OFF"
+                  value={creativeBadge}
+                  onChange={(e) => setCreativeBadge(e.target.value)}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={10}>
+              <Form.Item label="Badge Color">
+                <Select
+                  value={creativeBadgeColor}
+                  onChange={setCreativeBadgeColor}
+                  options={[
+                    { label: "Gold / Yellow", value: "gold" },
+                    { label: "Green (Success)", value: "green" },
+                    { label: "Blue (Primary)", value: "blue" },
+                    { label: "Magenta / Pink", value: "magenta" },
+                    { label: "Volcano / Orange", value: "volcano" },
+                    { label: "Cyan / Sky", value: "cyan" },
+                    { label: "Red (Urgent)", value: "red" },
+                  ]}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          {/* Banner Image Upload & URL */}
+          <Form.Item label="Banner Image (पोस्टर / बैनर इमेज)" required extra="Apne computer ya mobile se high resolution poster upload karein, ya image URL paste karein.">
+            <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 8, flexWrap: "wrap" }}>
+              <Upload
+                accept="image/*"
+                showUploadList={false}
+                beforeUpload={handleCreativeImageUpload}
+              >
+                <Button
+                  icon={<UploadOutlined />}
+                  style={{ borderColor: "#10b981", color: "#065f46", fontWeight: 600 }}
+                >
+                  Choose Image File From Device
+                </Button>
+              </Upload>
+              {creativeImageUrl && (
+                <Button
+                  size="small"
+                  danger
+                  onClick={() => {
+                    setCreativeImageUrl("");
+                    setCreativeImageData("");
+                  }}
+                >
+                  Remove Image
+                </Button>
+              )}
+            </div>
+            <Input
+              placeholder="Or enter image URL: https://... or leave as uploaded"
+              prefix={<PictureOutlined style={{ color: "#10b981" }} />}
+              value={creativeImageUrl}
+              onChange={(e) => {
+                setCreativeImageUrl(e.target.value);
+                setCreativeImageData("");
+              }}
+              allowClear
+            />
+            {creativeImageUrl && (
+              <div style={{ marginTop: 10, textAlign: "center", background: "#0f172a", borderRadius: 8, padding: 8, maxHeight: 220, overflow: "hidden" }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={creativeImageUrl}
+                  alt="Banner Preview"
+                  style={{ maxHeight: 200, maxWidth: "100%", objectFit: "contain", borderRadius: 6 }}
+                />
+              </div>
+            )}
+          </Form.Item>
+
+          <Row gutter={[16, 0]}>
+            <Col xs={24} sm={12}>
+              <Form.Item label="Headline (मुख्य शीर्षक)">
+                <Input
+                  placeholder="उदा. खुशियों का त्योहार, व्यापार में बरकत!"
+                  value={creativeHeadline}
+                  onChange={(e) => setCreativeHeadline(e.target.value)}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item label="Subhead / Tagline">
+                <Input
+                  placeholder="उदा. ईद पर अपने ग्राहकों को डिजिटल कैटलॉग भेजिए..."
+                  value={creativeSubhead}
+                  onChange={(e) => setCreativeSubhead(e.target.value)}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          {/* WhatsApp Message Template */}
+          <Form.Item
+            label="WhatsApp Pitch Message Template"
+            required
+            extra="Merchants is message ko 1-click me apne customers ko bhej sakenge. Click variable pills below to insert."
+          >
+            <div style={{ marginBottom: 6, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+              <Text type="secondary" style={{ fontSize: 12 }}>Insert Variables:</Text>
+              <Tag
+                color="green"
+                style={{ cursor: "pointer" }}
+                onClick={() => setCreativeTemplateText((prev) => prev + " {bizName}")}
+              >
+                + {"{bizName}"} (Store Name)
+              </Tag>
+              <Tag
+                color="blue"
+                style={{ cursor: "pointer" }}
+                onClick={() => setCreativeTemplateText((prev) => prev + " {storeUrl}")}
+              >
+                + {"{storeUrl}"} (Online Store Link)
+              </Tag>
+              <Tag
+                color="purple"
+                style={{ cursor: "pointer" }}
+                onClick={() => setCreativeTemplateText((prev) => prev + " {phone}")}
+              >
+                + {"{phone}"} (Merchant Phone)
+              </Tag>
+              <Tag
+                color="orange"
+                style={{ cursor: "pointer" }}
+                onClick={() => setCreativeTemplateText((prev) => prev + " {offer}")}
+              >
+                + {"{offer}"} (Custom Discount)
+              </Tag>
+            </div>
+            <Input.TextArea
+              rows={5}
+              placeholder={`🌙 *Eid Mubarak! खुशियों का त्योहार, व्यापार में बरकत!* 🌟\n\nनमस्ते,\n{bizName} की तरफ से आपको और आपके पूरे परिवार को ईद की हार्दिक शुभकामनाएं!\n\n{offer}\n\n👉 *हमारा ऑनलाइन कैटलॉग देखें:* {storeUrl}\n\nघर बैठे ऑर्डर करें!\n*{bizName}*\n📞 {phone}`}
+              value={creativeTemplateText}
+              onChange={(e) => setCreativeTemplateText(e.target.value)}
+              style={{ fontFamily: "monospace", fontSize: 12 }}
+            />
+          </Form.Item>
+
+          <Form.Item label="Target Business Audience">
+            <Select
+              value={creativeSegment}
+              onChange={setCreativeSegment}
+              options={[
+                { label: "All Businesses (Sabhi Dukandaron Ke Liye)", value: "all" },
+                { label: "Retail Stores Only", value: "retail" },
+                { label: "Wholesale Businesses Only", value: "wholesale" },
+                { label: "Services / Salons / Repairs", value: "services" },
+              ]}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* CREATIVE PREVIEW MODAL */}
+      <Modal
+        title={
+          <Space>
+            <PictureOutlined style={{ color: "#10b981" }} />
+            <span>{previewCreativeItem?.title || "Creative Preview"}</span>
+          </Space>
+        }
+        open={creativePreviewOpen}
+        onCancel={() => setCreativePreviewOpen(false)}
+        footer={[
+          <Button key="close" onClick={() => setCreativePreviewOpen(false)}>
+            Close
+          </Button>,
+          <Button
+            key="broadcast"
+            type="primary"
+            icon={<SendOutlined />}
+            style={{ background: "#25D366", borderColor: "#25D366" }}
+            onClick={() => {
+              if (previewCreativeItem) {
+                setCreativePreviewOpen(false);
+                handleUseCreativeInBroadcast(previewCreativeItem);
+              }
+            }}
+          >
+            Use in WhatsApp Broadcast
+          </Button>,
+        ]}
+        width={isMobile ? "94%" : 700}
+        centered
+      >
+        {previewCreativeItem && (
+          <Row gutter={[16, 16]} style={{ marginTop: 12 }}>
+            <Col xs={24} md={12}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={previewCreativeItem.imageUrl}
+                alt={previewCreativeItem.title}
+                style={{ width: "100%", borderRadius: 8, boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}
+              />
+              <div style={{ marginTop: 10 }}>
+                <Tag color={previewCreativeItem.badgeColor || "gold"}>{previewCreativeItem.badge}</Tag>
+                <Tag color="blue">{previewCreativeItem.category?.toUpperCase()}</Tag>
+              </div>
+            </Col>
+            <Col xs={24} md={12}>
+              <Text strong style={{ fontSize: 14, color: "#065f46", display: "block", marginBottom: 6 }}>
+                WhatsApp Pitch Copy:
+              </Text>
+              <div
+                style={{
+                  background: "#efeae2",
+                  padding: 12,
+                  borderRadius: 8,
+                  fontSize: 12,
+                  lineHeight: 1.5,
+                  whiteSpace: "pre-wrap",
+                  border: "1px solid #dcd7ce",
+                  maxHeight: 300,
+                  overflowY: "auto",
+                }}
+              >
+                {previewCreativeItem.templateText}
+              </div>
+            </Col>
+          </Row>
         )}
       </Modal>
     </AppLayout>

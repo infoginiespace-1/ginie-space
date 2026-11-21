@@ -2,6 +2,8 @@ import { Router, Request, Response } from "express";
 import { Server } from "socket.io";
 import { randomUUID } from "crypto";
 import bcrypt from "bcryptjs";
+import fs from "fs";
+import path from "path";
 import { IDatabase, LeadStatus, BusinessType } from "@giniespace/sheets-db";
 import { WhatsAppSessionManager } from "@giniespace/whatsapp-engine";
 import { GooglePlacesClient } from "@giniespace/places-client";
@@ -372,6 +374,236 @@ export function createAdminRouter(
       });
     } catch (err: any) {
       res.status(500).json({ error: err.message || "Failed to send broadcast" });
+    }
+  });
+
+  // 7b. Banner Upload for WhatsApp Broadcast and Templates
+  router.post("/upload-banner", async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { imageData, fileName } = req.body;
+      if (!imageData || typeof imageData !== "string") {
+        res.status(400).json({ error: "Image data is required" });
+        return;
+      }
+
+      let base64 = imageData;
+      let ext = "jpg";
+      if (imageData.startsWith("data:")) {
+        const match = imageData.match(/^data:image\/([a-zA-Z0-9+]+);base64,/);
+        if (match) {
+          ext = match[1] === "jpeg" ? "jpg" : match[1];
+          base64 = imageData.slice(match[0].length);
+        }
+      }
+
+      const buffer = Buffer.from(base64, "base64");
+      const safeName = (fileName || `banner_${Date.now()}_${randomUUID().slice(0, 6)}.${ext}`).replace(/[^a-zA-Z0-9._-]/g, "_");
+      const uploadsDir = path.join(process.cwd(), "uploads");
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+
+      const filePath = path.join(uploadsDir, safeName);
+      fs.writeFileSync(filePath, buffer);
+
+      const imageUrl = `/uploads/${safeName}`;
+      const protocol = req.headers["x-forwarded-proto"] || req.protocol || "https";
+      const host = req.get("host") || "giniespace-api.onrender.com";
+      const fullUrl = `${protocol}://${host}${imageUrl}`;
+
+      res.json({
+        success: true,
+        imageUrl: fullUrl,
+        relativePath: imageUrl,
+      });
+    } catch (err: any) {
+      console.error("[AdminUploadBanner] Failed to upload banner:", err.message);
+      res.status(500).json({ error: err.message || "Failed to upload image" });
+    }
+  });
+
+  // 7c. Marketing Creatives Management
+  router.get("/marketing-creatives", async (_req: Request, res: Response): Promise<void> => {
+    try {
+      const setting = await db.settings.findOne({ userId: "admin", key: "marketing_creatives" }).catch(() => null);
+      let creatives: any[] = [];
+      if (setting?.value) {
+        try {
+          creatives = JSON.parse(setting.value);
+        } catch {}
+      }
+      res.json({ creatives: Array.isArray(creatives) ? creatives : [] });
+    } catch (err: any) {
+      console.error("[AdminMarketing] Failed to fetch creatives:", err.message);
+      res.status(500).json({ error: "Failed to fetch marketing creatives" });
+    }
+  });
+
+  router.post("/marketing-creatives", async (req: Request, res: Response): Promise<void> => {
+    try {
+      const adminEmail = (req as any).user?.email || "admin";
+      const {
+        id: providedId,
+        title,
+        badge,
+        badgeColor,
+        category,
+        imageUrl: providedImageUrl,
+        imageData,
+        headline,
+        subhead,
+        templateText,
+        targetSegment,
+      } = req.body;
+
+      if (!title || !title.trim()) {
+        res.status(400).json({ error: "Title is required" });
+        return;
+      }
+
+      const id = (providedId || `mkt_${Date.now()}_${randomUUID().slice(0, 4)}`).replace(/[^a-zA-Z0-9_-]/g, "");
+      let finalImageUrl = (providedImageUrl || "").trim();
+
+      // If base64 image data was uploaded, save it persistently in db.settings and cache to disk
+      if (imageData && typeof imageData === "string" && imageData.length > 50) {
+        let base64 = imageData;
+        if (imageData.startsWith("data:")) {
+          const match = imageData.match(/^data:([^;]+);base64,/);
+          if (match) {
+            base64 = imageData.slice(match[0].length);
+          }
+        }
+
+        // Cache to local disk
+        try {
+          const uploadsDir = path.join(process.cwd(), "uploads");
+          if (!fs.existsSync(uploadsDir)) {
+            fs.mkdirSync(uploadsDir, { recursive: true });
+          }
+          fs.writeFileSync(path.join(uploadsDir, `mkt_${id}.jpg`), Buffer.from(base64, "base64"));
+        } catch (diskErr: any) {
+          console.warn("[AdminMarketing] Disk cache warning:", diskErr.message);
+        }
+
+        // Store persistently in db.settings (each image has its own row)
+        const imgKey = `mkt_img_${id}`;
+        const existingImg = await db.settings.findOne({ userId: "admin", key: imgKey }).catch(() => null);
+        if (existingImg) {
+          await db.settings.update(existingImg.id, { value: imageData });
+        } else {
+          await db.settings.create({
+            userId: "admin",
+            key: imgKey,
+            value: imageData,
+          });
+        }
+
+        finalImageUrl = `/api/marketing/creative-image/${id}`;
+      }
+
+      // Load existing creatives
+      const setting = await db.settings.findOne({ userId: "admin", key: "marketing_creatives" }).catch(() => null);
+      let creatives: any[] = [];
+      if (setting?.value) {
+        try {
+          creatives = JSON.parse(setting.value);
+        } catch {}
+      }
+      if (!Array.isArray(creatives)) creatives = [];
+
+      const newCreative = {
+        id,
+        title: title.trim(),
+        badge: (badge || "⭐ SPECIAL OFFER").trim(),
+        badgeColor: badgeColor || "gold",
+        category: category || "festival",
+        imageUrl: finalImageUrl || "/marketing/product-catalog-pos.png",
+        downloadFilename: `GinieSpace_${title.trim().replace(/[^a-zA-Z0-9]/g, "_")}.jpg`,
+        headline: (headline || title).trim(),
+        subhead: (subhead || "").trim(),
+        templateText: (templateText || "").trim(),
+        targetSegment: targetSegment || "all",
+        createdAt: new Date().toISOString(),
+      };
+
+      const existingIdx = creatives.findIndex((c) => c.id === id);
+      if (existingIdx >= 0) {
+        creatives[existingIdx] = { ...creatives[existingIdx], ...newCreative, updatedAt: new Date().toISOString() };
+      } else {
+        creatives = [newCreative, ...creatives];
+      }
+
+      if (setting) {
+        await db.settings.update(setting.id, { value: JSON.stringify(creatives) });
+      } else {
+        await db.settings.create({
+          userId: "admin",
+          key: "marketing_creatives",
+          value: JSON.stringify(creatives),
+        });
+      }
+
+      await recordAuditLog(
+        db,
+        adminEmail,
+        "MARKETING_CREATIVE_SAVE",
+        `Admin saved marketing creative: "${title}" (ID: ${id})`
+      );
+
+      res.json({
+        success: true,
+        creative: newCreative,
+      });
+    } catch (err: any) {
+      console.error("[AdminMarketing] Failed to save creative:", err.message);
+      res.status(500).json({ error: err.message || "Failed to save marketing creative" });
+    }
+  });
+
+  router.delete("/marketing-creatives/:id", async (req: Request, res: Response): Promise<void> => {
+    try {
+      const adminEmail = (req as any).user?.email || "admin";
+      const { id } = req.params;
+      const cleanId = id.replace(/[^a-zA-Z0-9_-]/g, "");
+
+      const setting = await db.settings.findOne({ userId: "admin", key: "marketing_creatives" }).catch(() => null);
+      if (setting?.value) {
+        let creatives: any[] = [];
+        try {
+          creatives = JSON.parse(setting.value);
+        } catch {}
+        if (Array.isArray(creatives)) {
+          const removed = creatives.find((c) => c.id === cleanId);
+          creatives = creatives.filter((c) => c.id !== cleanId);
+          await db.settings.update(setting.id, { value: JSON.stringify(creatives) });
+
+          // Also clean up image setting if exists
+          const imgSetting = await db.settings.findOne({ userId: "admin", key: `mkt_img_${cleanId}` }).catch(() => null);
+          if (imgSetting) {
+            await db.settings.delete(imgSetting.id).catch(() => null);
+          }
+
+          // Clean up disk cache
+          try {
+            const diskPath = path.join(process.cwd(), "uploads", `mkt_${cleanId}.jpg`);
+            if (fs.existsSync(diskPath)) {
+              fs.unlinkSync(diskPath);
+            }
+          } catch {}
+
+          await recordAuditLog(
+            db,
+            adminEmail,
+            "MARKETING_CREATIVE_DELETE",
+            `Admin deleted marketing creative: "${removed?.title || cleanId}"`
+          );
+        }
+      }
+
+      res.json({ success: true, message: "Marketing creative deleted successfully" });
+    } catch (err: any) {
+      console.error("[AdminMarketing] Failed to delete creative:", err.message);
+      res.status(500).json({ error: err.message || "Failed to delete marketing creative" });
     }
   });
 
